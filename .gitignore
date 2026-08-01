@@ -175,26 +175,3 @@ x86/
 
 # Built Visual Studio Code Extensions
 *.vsix
-
-### Unity
-# Unity generated directories
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
-/[Mm]emory[Cc]aptures/
-
-# Addressables
-ServerData/
-
-# Rider
-.idea/
-
-# Crash Reports
-sysinfo.txt
-
-# Asset meta data should only be ignored when the corresponding asset is also ignored
-!/[Aa]ssets/**/*.meta
