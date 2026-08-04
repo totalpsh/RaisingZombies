@@ -1,16 +1,21 @@
 using UnityEngine;
 
-public class UnitStats : MonoBehaviour
+public readonly struct UnitStats
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
+    public float MaxHealth { get; }
+    public float HealthRegen { get; }
+    public float AttackPower { get; }
+    public float AttackInterval { get; }
+    public float AttackRange { get; }
+    public float MoveSpeed { get; }
 
-    // Update is called once per frame
-    void Update()
+    public UnitStats(UnitData data)
     {
-        
+        MaxHealth = data.MaxHealth;
+        HealthRegen = data.HealthRegen;
+        AttackPower = data.AttackPower;
+        AttackInterval = data.AttackInterval;
+        AttackRange = data.AttackRange;
+        MoveSpeed = data.MoveSpeed;
     }
 }
