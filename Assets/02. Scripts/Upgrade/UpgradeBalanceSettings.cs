@@ -76,7 +76,7 @@ public sealed class UpgradeBalanceSettings : ScriptableObject
         return null;
     }
 
-    /// <summary>지정한 가챠 레벨 정의를 반환하며, 정의가 없으면 null을 반환합니다.</summary>
+    // 지정한 가챠 레벨 정의를 반환하며, 정의가 없으면 null을 반환합니다.
     public GachaLevelDefinition GetGachaLevel(int level)
     {
         if (gachaLevels == null)
@@ -95,7 +95,7 @@ public sealed class UpgradeBalanceSettings : ScriptableObject
         return null;
     }
 
-    /// <summary>Inspector와 설정 도구에서 표시할 밸런스 오류를 수집합니다.</summary>
+    // Inspector와 설정 도구에서 표시할 밸런스 오류를 수집합니다.
     public void CollectValidationErrors(List<string> errors)
     {
         if (errors == null)
@@ -108,7 +108,7 @@ public sealed class UpgradeBalanceSettings : ScriptableObject
         ValidateGachaLevels(errors);
     }
 
-    /// <summary>현재 밸런스 오류를 콘솔에 명확히 출력합니다.</summary>
+    // 현재 밸런스 오류를 콘솔에 명확히 출력합니다.
     [ContextMenu("밸런스 검증")]
     private void LogValidationResult()
     {
