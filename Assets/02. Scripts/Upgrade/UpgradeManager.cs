@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 //가챠, 연구, 저장과 최종 스탯 조회를 담당하는 독립 서비스입니다.
-public sealed class UpgradeManager : MonoBehaviour
+public sealed class UpgradeManager : Singleton<UpgradeManager>
 {
     private const string SaveKey = "RaisingZombies.Upgrade.State";
     [SerializeField] private UpgradeBalanceSettings balanceSettings; // 전체 업그레이드 밸런스 에셋

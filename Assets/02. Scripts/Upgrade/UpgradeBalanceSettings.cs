@@ -4,16 +4,16 @@ using UnityEngine;
 
 public enum UpgradeStatType
 {
-    Health,
-    Defense,
-    Attack,
-    InfectionCount,
-    MoveSpeed,
-    AttackSpeed,
-    ZombieCount,
-    StatIncrease,
-    CriticalChance,
-    CriticalDamage
+    Health,           // 체력
+    Defense,          // 방어력
+    Attack,           // 공격력
+    InfectionCount,   // 감염 시킬 수 있는 수
+    MoveSpeed,        // 이동 속도
+    AttackSpeed,      // 공격 속도
+    ZombieCount,      // 좀비를 한번에 생성 가능한 수
+    StatIncrease,     // 전체 스탯 강화
+    CriticalChance,   // 크리티컬 확률
+    CriticalDamage    // 크리티컬 데미지
 }
 
 public enum UpgradeResultKind

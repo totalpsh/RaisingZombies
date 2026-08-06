@@ -5,12 +5,10 @@ public sealed class UnitModel
     public UnitStats Stats { get; }
 
     public float CurrentHealth { get; private set; }
-
     public float AttackCooldown { get; private set; }
 
     public bool IsDead => CurrentHealth <= 0f;
-
-    public bool CanAttack => AttackCooldown <= 0f;
+    public bool CanAttack => !IsDead && AttackCooldown <= 0f;
 
     public UnitModel(UnitStats stats)
     {
@@ -26,6 +24,7 @@ public sealed class UnitModel
             return;
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
+        Debug.Log(CurrentHealth);
     }
 
     public void Heal(float amount)
@@ -33,14 +32,14 @@ public sealed class UnitModel
         if (IsDead)
             return;
 
-        CurrentHealth = Mathf.Min(Stats.MaxHealth,
-            CurrentHealth + amount);
+        CurrentHealth = Mathf.Min(Stats.MaxHealth, CurrentHealth + amount);
     }
 
     public void TickAttackCooldown(float deltaTime)
     {
-        AttackCooldown =
-            Mathf.Max(0f, AttackCooldown - deltaTime);
+        if (deltaTime <= 0f || AttackCooldown <= 0f) return;
+        
+        AttackCooldown = Mathf.Max(0f, AttackCooldown - deltaTime);
     }
 
     public void ResetAttackCooldown()

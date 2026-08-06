@@ -3,32 +3,51 @@ using UnityEngine;
 
 public class UnitController : MonoBehaviour
 {
-    [SerializeField] private UnitData data;
-
+    [SerializeField] private Animator _animator;
+    
     [SerializeField] private LayerMask unitLayer;
     [SerializeField, Min(0.01f)] private float targetSearchRange = 3f;
-    
-    private UnitModel _model;
+
+    [SerializeField]private UnitData _data;
+    [SerializeField]private UnitModel _model;
     private UnitController _currentTarget;
+    
     private bool _isInitialized;
 
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
     
     // 프로퍼티
+    public UnitData Data => _data;
     public UnitModel Model => _model;
-    public UnitTeam Team => data.Team;
-    public bool IsDead => _model == null || _model.IsDead;
+    public UnitTeam Team => _data.Team;
+    public bool IsDead => !_isInitialized || _model.IsDead;
 
-    
     private void Awake()
     {
-        Init();
+        UpgradeStatSnapshot healthSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Health);
+        UpgradeStatSnapshot attackSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Attack);
+        UpgradeStatSnapshot attackSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.AttackSpeed);
+        UpgradeStatSnapshot regenSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Defense);
+        UpgradeStatSnapshot moveSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.MoveSpeed);
+        
+        UnitStats stats = new UnitStats
+        (
+            _data,
+            healthSnapshot,
+            attackSnapshot,
+            attackSpeedSnapshot,
+            regenSnapshot,
+            moveSpeedSnapshot
+            );
+        
+        Initialize(_data, stats);
     }
 
     private void Update()
     {
-        Move();
+        if (!_isInitialized || _model.IsDead)
+            return;
         
         float deltaTime = Time.deltaTime;
         
@@ -39,24 +58,22 @@ public class UnitController : MonoBehaviour
         TryAction();
     }
 
-    private void Init()
+    public void Initialize(UnitData data, UnitStats stats)
     {
-        if (data == null)
+        if (_data == null)
         {
-            enabled = false;
+            Debug.LogError(
+                $"[{nameof(UnitController)}] UnitData가 null입니다.",
+                this);
+
             return;
         }
 
-        UnitStats stats = new UnitStats(data);
+        _data = data;
         _model = new UnitModel(stats);
-    }
-    
-    private void Move()
-    {
-        float direction = Team == UnitTeam.Zombie ? 1f : -1f;
-        float distance = _model.Stats.MoveSpeed * Time.deltaTime;
 
-        transform.Translate(Vector3.right * (direction * distance));
+        _currentTarget = null;
+        _isInitialized = true;
     }
     
     private void UpdateRegeneration(float deltaTime)
@@ -140,6 +157,7 @@ public class UnitController : MonoBehaviour
         if (!IsValidEnemy(_currentTarget))
             return;
 
+        _animator.SetTrigger("Attack");
         _currentTarget.TakeDamage(
             _model.Stats.AttackPower);
 
@@ -188,12 +206,12 @@ public class UnitController : MonoBehaviour
             transform.position,
             targetSearchRange);
 
-        if (data == null)
+        if (_data == null)
             return;
 
         Gizmos.DrawWireSphere(
             transform.position,
-            data.AttackRange);
+            _data.AttackRange);
     }
 #endif
     
