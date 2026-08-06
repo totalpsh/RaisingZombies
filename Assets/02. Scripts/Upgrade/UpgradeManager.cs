@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 
 //가챠, 연구, 저장과 최종 스탯 조회를 담당하는 독립 서비스입니다.
-public sealed class UpgradeManager : MonoBehaviour
+public sealed class UpgradeManager : Singleton<UpgradeManager>
 {
     private const string SaveKey = "RaisingZombies.Upgrade.State";
     [SerializeField] private UpgradeBalanceSettings balanceSettings; // 전체 업그레이드 밸런스 에셋
     [SerializeField, Min(0)] private int startingCurrency = 10000; // 최초 저장 파일 생성 시 지급할 테스트 재화
-    private UpgradeState state;
-    public event Action StateChanged;
-    public event Action<IReadOnlyList<GachaDrawResult>> DrawCompleted;
-    public int Currency => state == null ? 0 : state.currency;
-    public int GachaLevel => state == null ? 1 : state.gachaLevel;
-    public int DrawsAtCurrentLevel => state == null ? 0 : state.drawsAtCurrentLevel;
+    private UpgradeState _state;
+    public event Action stateChanged;
+    public event Action<IReadOnlyList<GachaDrawResult>> drawCompleted;
+    public int Currency => _state == null ? 0 : _state.currency;
+    public int GachaLevel => _state == null ? 1 : _state.gachaLevel;
+    public int DrawsAtCurrentLevel => _state == null ? 0 : _state.drawsAtCurrentLevel;
     public UpgradeBalanceSettings BalanceSettings => balanceSettings;
 
     private void Awake()
@@ -29,7 +29,7 @@ public sealed class UpgradeManager : MonoBehaviour
     public void AddCurrency(int amount)
     {
         if (amount <= 0) return;
-        state.currency += amount;
+        _state.currency += amount;
         SaveAndNotify();
     }
 
@@ -43,7 +43,7 @@ public sealed class UpgradeManager : MonoBehaviour
     private void ResetSavedState()
     {
         PlayerPrefs.DeleteKey(SaveKey);
-        state = CreateInitialState();
+        _state = CreateInitialState();
         SaveAndNotify();
     }
 
@@ -51,10 +51,10 @@ public sealed class UpgradeManager : MonoBehaviour
     public bool TryDrawOne(out GachaDrawResult result)
     {
         result = default;
-        if (!CanUseBalance() || !HasUnlockedDrawPool() || state.currency < GetCurrentDrawCost()) return false;
+        if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetCurrentDrawCost()) return false;
         result = ExecuteOneDraw();
         SaveAndNotify();
-        DrawCompleted?.Invoke(new[] { result });
+        drawCompleted?.Invoke(new[] { result });
         return true;
     }
 
@@ -62,12 +62,12 @@ public sealed class UpgradeManager : MonoBehaviour
     public bool TryDrawTen(out IReadOnlyList<GachaDrawResult> results)
     {
         results = null;
-        if (!CanUseBalance() || !HasUnlockedDrawPool() || state.currency < GetDrawCostForCount(10)) return false;
+        if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetDrawCostForCount(10)) return false;
         var values = new List<GachaDrawResult>(10);
         for (var i = 0; i < 10; i++) values.Add(ExecuteOneDraw());
         SaveAndNotify();
         results = values;
-        DrawCompleted?.Invoke(values);
+        drawCompleted?.Invoke(values);
         return true;
     }
 
@@ -78,8 +78,8 @@ public sealed class UpgradeManager : MonoBehaviour
         if (definition == null || !IsUnlocked(type)) return false;
         var value = GetValue(type);
         var cost = GetResearchCost(type);
-        if (state.currency < cost) return false;
-        state.currency -= cost;
+        if (_state.currency < cost) return false;
+        _state.currency -= cost;
         value.researchLevel++;
         SaveAndNotify();
         return true;
@@ -87,15 +87,15 @@ public sealed class UpgradeManager : MonoBehaviour
 
     public int GetCurrentDrawCost()
     {
-        var level = balanceSettings == null || state == null ? null : balanceSettings.GetGachaLevel(state.gachaLevel);
+        var level = balanceSettings == null || _state == null ? null : balanceSettings.GetGachaLevel(_state.gachaLevel);
         return level == null ? 0 : level.drawCost;
     }
 
     public int GetDrawCostForCount(int count)
     {
         if (count <= 0 || !CanUseBalance()) return 0;
-        var level = state.gachaLevel;
-        var progress = state.drawsAtCurrentLevel;
+        var level = _state.gachaLevel;
+        var progress = _state.drawsAtCurrentLevel;
         var total = 0;
         for (var i = 0; i < count; i++)
         {
@@ -132,7 +132,7 @@ public sealed class UpgradeManager : MonoBehaviour
     {
         var result = new List<UpgradeStatType>();
         if (!CanUseBalance()) return result;
-        for (var level = 1; level <= state.gachaLevel; level++)
+        for (var level = 1; level <= _state.gachaLevel; level++)
         {
             var definition = balanceSettings.GetGachaLevel(level);
             if (definition?.newlyUnlockedStats == null) continue;
@@ -162,25 +162,25 @@ public sealed class UpgradeManager : MonoBehaviour
     private GachaDrawResult ExecuteOneDraw()
     {
         var cost = GetCurrentDrawCost();
-        state.currency -= cost;
+        _state.currency -= cost;
         var pool = GetUnlockedStats();
         var type = pool[UnityEngine.Random.Range(0, pool.Count)];
         var amount = UnityEngine.Random.Range(1, 11);
         var value = GetValue(type);
         value.accumulatedValue += amount;
         var increased = AdvanceGachaLevel();
-        return new GachaDrawResult(type, amount, value.accumulatedValue, increased, state.gachaLevel);
+        return new GachaDrawResult(type, amount, value.accumulatedValue, increased, _state.gachaLevel);
     }
 
     private bool AdvanceGachaLevel()
     {
-        var definition = balanceSettings.GetGachaLevel(state.gachaLevel);
+        var definition = balanceSettings.GetGachaLevel(_state.gachaLevel);
         if (definition == null || definition.drawsToNextLevel <= 0) return false;
-        state.drawsAtCurrentLevel++;
-        if (state.drawsAtCurrentLevel < definition.drawsToNextLevel ||
-            balanceSettings.GetGachaLevel(state.gachaLevel + 1) == null) return false;
-        state.gachaLevel++;
-        state.drawsAtCurrentLevel = 0;
+        _state.drawsAtCurrentLevel++;
+        if (_state.drawsAtCurrentLevel < definition.drawsToNextLevel ||
+            balanceSettings.GetGachaLevel(_state.gachaLevel + 1) == null) return false;
+        _state.gachaLevel++;
+        _state.drawsAtCurrentLevel = 0;
         return true;
     }
 
@@ -209,19 +209,19 @@ public sealed class UpgradeManager : MonoBehaviour
 
     private UpgradeStatValue GetValue(UpgradeStatType type)
     {
-        if (state == null) state = CreateInitialState();
-        if (state.stats == null) state.stats = new List<UpgradeStatValue>();
-        foreach (var item in state.stats)
+        if (_state == null) _state = CreateInitialState();
+        if (_state.stats == null) _state.stats = new List<UpgradeStatValue>();
+        foreach (var item in _state.stats)
             if (item != null && item.statType == type)
                 return item;
         var added = new UpgradeStatValue { statType = type };
-        state.stats.Add(added);
+        _state.stats.Add(added);
         return added;
     }
 
     private bool CanUseBalance()
     {
-        return state != null && balanceSettings != null && balanceSettings.GetGachaLevel(1) != null;
+        return _state != null && balanceSettings != null && balanceSettings.GetGachaLevel(1) != null;
     }
 
     private bool HasUnlockedDrawPool()
@@ -231,11 +231,11 @@ public sealed class UpgradeManager : MonoBehaviour
 
     private void LoadState()
     {
-        state = PlayerPrefs.HasKey(SaveKey)
+        _state = PlayerPrefs.HasKey(SaveKey)
             ? JsonUtility.FromJson<UpgradeState>(PlayerPrefs.GetString(SaveKey))
             : CreateInitialState();
-        if (state == null) state = CreateInitialState();
-        if (state.stats == null) state.stats = new List<UpgradeStatValue>();
+        if (_state == null) _state = CreateInitialState();
+        if (_state.stats == null) _state.stats = new List<UpgradeStatValue>();
         SaveAndNotify();
     }
 
@@ -246,8 +246,8 @@ public sealed class UpgradeManager : MonoBehaviour
 
     private void SaveAndNotify()
     {
-        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(state));
+        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(_state));
         PlayerPrefs.Save();
-        StateChanged?.Invoke();
+        stateChanged?.Invoke();
     }
 }

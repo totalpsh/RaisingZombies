@@ -116,10 +116,10 @@ public sealed class UpgradePanel : MonoBehaviour
             return;
         }
 
-        upgradeManager.StateChanged -= HandleStateChanged;
-        upgradeManager.DrawCompleted -= HandleDrawCompleted;
-        upgradeManager.StateChanged += HandleStateChanged;
-        upgradeManager.DrawCompleted += HandleDrawCompleted;
+        upgradeManager.stateChanged -= HandleStateChanged;
+        upgradeManager.drawCompleted -= HandleDrawCompleted;
+        upgradeManager.stateChanged += HandleStateChanged;
+        upgradeManager.drawCompleted += HandleDrawCompleted;
     }
 
     private void UnsubscribeManagerEvents()
@@ -129,8 +129,8 @@ public sealed class UpgradePanel : MonoBehaviour
             return;
         }
 
-        upgradeManager.StateChanged -= HandleStateChanged;
-        upgradeManager.DrawCompleted -= HandleDrawCompleted;
+        upgradeManager.stateChanged -= HandleStateChanged;
+        upgradeManager.drawCompleted -= HandleDrawCompleted;
     }
 
     private void HandleStateChanged()
