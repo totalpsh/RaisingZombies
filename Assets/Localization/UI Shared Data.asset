@@ -19,6 +19,18 @@ MonoBehaviour:
     m_Key: 1Draw
     m_Metadata:
       m_Items: []
+  - m_Id: 1768972543348736
+    m_Key: CurrencyUpgrade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1769384084262912
+    m_Key: ProductionUpgrade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1769750809038848
+    m_Key: StatUpgrade
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

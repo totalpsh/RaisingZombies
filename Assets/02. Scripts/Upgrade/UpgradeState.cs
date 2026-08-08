@@ -5,11 +5,16 @@ using System.Collections.Generic;
 [Serializable]
 public sealed class UpgradeState
 {
-    public int version = 1;
+    public int version = 2;
     public int currency;
     public int gachaLevel = 1;
     public int drawsAtCurrentLevel;
     public List<UpgradeStatValue> stats = new List<UpgradeStatValue>();
+    public int currencyPerSecondLevel; // 초당 재화 강화 레벨
+    public int humanKillBonusLevel; // 인간 처치 추가 재화 강화 레벨
+    public int offlineMaxTimeLevel; // 오프라인 최대 적립 시간 강화 레벨
+    public int offlineEfficiencyLevel; // 오프라인 적립 효율 강화 레벨
+    public string lastActivityUtc = string.Empty; // 마지막 정상 저장 시각을 기록한 UTC 문자열
 }
 
 [Serializable]
