@@ -25,23 +25,7 @@ public class UnitController : MonoBehaviour
 
     private void Awake()
     {
-        UpgradeStatSnapshot healthSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Health);
-        UpgradeStatSnapshot attackSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Attack);
-        UpgradeStatSnapshot attackSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.AttackSpeed);
-        UpgradeStatSnapshot regenSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Defense);
-        UpgradeStatSnapshot moveSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.MoveSpeed);
         
-        UnitStats stats = new UnitStats
-        (
-            _data,
-            healthSnapshot,
-            attackSnapshot,
-            attackSpeedSnapshot,
-            regenSnapshot,
-            moveSpeedSnapshot
-            );
-        
-        Initialize(_data, stats);
     }
 
     private void Update()
@@ -180,7 +164,7 @@ public class UnitController : MonoBehaviour
         _currentTarget = null;
         enabled = false;
 
-        Destroy(gameObject);
+        PoolManager.Instance.Release(this.gameObject);
     }
 
     private bool IsValidEnemy(UnitController target)
