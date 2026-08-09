@@ -290,7 +290,7 @@ GameObject:
   m_Component:
   - component: {fileID: 873406367}
   m_Layer: 0
-  m_Name: SpawnRoot
+  m_Name: SpawnerRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

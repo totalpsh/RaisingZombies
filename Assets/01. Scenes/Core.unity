@@ -347,37 +347,6 @@ MonoBehaviour:
   balanceSettings: {fileID: 11400000, guid: ca3bfeee574456b4197d75c2cc2b0050, type: 2}
   currencyUpgradeBalance: {fileID: 11400000, guid: a7418af1122f4e12a8f794e7df7c6f01, type: 2}
   startingCurrency: 10000
---- !u!1 &840186816
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 840186817}
-  m_Layer: 0
-  m_Name: UIRoot
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &840186817
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 840186816}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1407098691
 GameObject:
   m_ObjectHideFlags: 0
@@ -489,6 +458,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreScene
   initializeList: []
+  initializeAsyncList:
+  - {fileID: 1935785605}
 --- !u!4 &1662974037
 Transform:
   m_ObjectHideFlags: 0
@@ -548,7 +519,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a0e355e1d22c7a84bb4448385b9b6898, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  uiRoot: {fileID: 840186817}
+  uiRoot: {fileID: 0}
 --- !u!1 &2058841687
 GameObject:
   m_ObjectHideFlags: 0
@@ -607,4 +578,3 @@ SceneRoots:
   - {fileID: 571361028}
   - {fileID: 1662974037}
   - {fileID: 1407098692}
-  - {fileID: 840186817}

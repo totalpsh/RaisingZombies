@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class CoreScene : BaseScene
@@ -7,6 +8,7 @@ public class CoreScene : BaseScene
     public override SceneLoadState LoadState { get; }
     
     [SerializeField] private List<MonoBehaviour> initializeList;
+    [SerializeField] private List<MonoBehaviour>  initializeAsyncList; 
     
     private void Start()
     {
@@ -15,7 +17,7 @@ public class CoreScene : BaseScene
 
     private void Initialize()
     {
-        foreach (BaseScene behaviour in initializeList)
+        foreach (MonoBehaviour behaviour in initializeList)
         {
             if (behaviour is not IInitializable initializable)
             {
@@ -34,6 +36,8 @@ public class CoreScene : BaseScene
                 return;
             }
         }
+
+        _ = UIManager.Instance.Init();
         
         Debug.Log("Core 초기화 완료");
 
@@ -44,8 +48,8 @@ public class CoreScene : BaseScene
     {
         // 콘텐츠 씬 로드
         _ = SceneLoadManager.Instance.LoadContentSceneAsync("BattleScene", false);
-        
-        // UIManager.Instance.OpenUI<UpgradeMenuController>("")
+
+        Debug.Log("Dsdfsdfd");
     }
 
     

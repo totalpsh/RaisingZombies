@@ -94,6 +94,7 @@ public sealed class UpgradeMenuController : BaseUI
     // 기존 좀비 스탯 강화 화면을 표시합니다.
     public void ShowStatUpgrade()
     {
+        Debug.Log("ShowStatUpgrade");
         SetState(UpgradeMenuState.StatUpgrade);
     }
 

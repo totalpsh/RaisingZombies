@@ -1,8 +1,7 @@
 using System.Threading;
-using Cysharp.Threading.Tasks;
-using UnityEngine;
+using System.Threading.Tasks;
 
 public interface IAsyncInitializable
 {
-    UniTask InitializeAsync(CancellationToken cancellationToken);
+    Task InitializeAsync();
 }
