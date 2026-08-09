@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: beacf98501c4f82468d7e11ea572d02e, type: 3}
+  m_Name: CurrencyUpgradeBalanceSettings_Default
+  m_EditorClassIdentifier: Assembly-CSharp::CurrencyUpgradeBalanceSettings
+  baseCurrencyPerSecond: 1
+  baseOfflineMaxHours: 2
+  baseOfflineEfficiency: 0.5
+  maximumOfflineEfficiency: 1
+  definitions:
+  - type: 0
+    id: currency_per_second
+    displayName: 초당 재화
+    description: 매초 획득하는 재화를 고정 수치만큼 증가시킵니다.
+    maxLevel: 20
+    baseCost: 50
+    costGrowth: 1.45
+    valuePerLevel: 1
+  - type: 1
+    id: human_kill_bonus
+    displayName: 인간 처치 보너스
+    description: 인간을 처치할 때 추가 재화를 획득합니다.
+    maxLevel: 20
+    baseCost: 80
+    costGrowth: 1.5
+    valuePerLevel: 1
+  - type: 2
+    id: offline_max_time
+    displayName: 오프라인 적립 시간
+    description: 오프라인 재화가 저장되는 최대 시간을 늘립니다.
+    maxLevel: 10
+    baseCost: 200
+    costGrowth: 1.7
+    valuePerLevel: 1
+  - type: 3
+    id: offline_efficiency
+    displayName: 오프라인 적립 효율
+    description: 오프라인 시간에 적용되는 재화 생산 효율을 높입니다.
+    maxLevel: 5
+    baseCost: 300
+    costGrowth: 2
+    valuePerLevel: 0.1
