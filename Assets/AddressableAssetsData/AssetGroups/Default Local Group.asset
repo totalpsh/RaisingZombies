@@ -15,11 +15,15 @@ MonoBehaviour:
   m_GroupName: Default Local Group
   m_GUID: d3552ddd886034e4f95147d4883645da
   m_SerializeEntries:
-  - m_GUID: bfd291b8865c60d4b90a9f26178b230d
-    m_Address: UpgradeMenuController
+  - m_GUID: 97dde6cf8debf5546b9aca8faede41cc
+    m_Address: Canvas
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - UI
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d7bb7a49f82ece6478d128ea9e98257a
+    m_Address: EventSystem
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 46f0a33da75605f49b78bca90df5e8de, type: 2}

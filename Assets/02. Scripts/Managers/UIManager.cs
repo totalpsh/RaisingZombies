@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -9,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 public enum UILayer { Main, HUD, PopUp }
 
-public class UIManager : Singleton<UIManager>
+public class UIManager : Singleton<UIManager>, IAsyncInitializable
 {
     public const string UICommonPath = "UI/Common/";
     public const string UIPrefabPath = "UI/Elements/";
@@ -74,8 +76,15 @@ public class UIManager : Singleton<UIManager>
     {
         await CreateCanvasAndEventSystem();
         CreateLayers();
-        await CreateModalPanel();
+        // await CreateModalPanel();
 
+    }
+    
+    public async Task InitializeAsync()
+    {
+        await CreateCanvasAndEventSystem();
+        CreateLayers();
+        await CreateModalPanel();
     }
 
     protected override void OnDestroy()
@@ -98,6 +107,7 @@ public class UIManager : Singleton<UIManager>
     #region Initialization
     private async Task CreateCanvasAndEventSystem()
     {
+        Debug.Log("UIManager.CreateCanvasAndEventSystem");
         if (uiRoot == null)
         {
             GameObject canvasPrefab = await ResourceManager.Instance.CreateAsync<GameObject>("Canvas");
@@ -105,12 +115,12 @@ public class UIManager : Singleton<UIManager>
             uiRoot = canvasPrefab.transform;
         }
 
-        // if (eventSystem == null)
-        // {
-        //     GameObject eventSystemPrefab = await ResourceManager.Instance.CreateAsync<GameObject>("EventSystem");
-        //     eventSystemPrefab.transform.SetParent(transform);
-        //     eventSystem = eventSystemPrefab.GetComponent<EventSystem>();
-        // }
+        if (eventSystem == null)
+        {
+            GameObject eventSystemPrefab = await ResourceManager.Instance.CreateAsync<GameObject>("EventSystem");
+            eventSystemPrefab.transform.SetParent(transform);
+            eventSystem = eventSystemPrefab.GetComponent<EventSystem>();
+        }
 
         await Task.Yield();
     }
