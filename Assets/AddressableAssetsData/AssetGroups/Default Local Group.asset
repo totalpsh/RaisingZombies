@@ -16,7 +16,7 @@ MonoBehaviour:
   m_GUID: d3552ddd886034e4f95147d4883645da
   m_SerializeEntries:
   - m_GUID: bfd291b8865c60d4b90a9f26178b230d
-    m_Address: UpradeMenuController
+    m_Address: UpgradeMenuController
     m_ReadOnly: 0
     m_SerializedLabels:
     - UI

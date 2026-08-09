@@ -16,6 +16,8 @@ public sealed class CurrencyUpgradePanel : MonoBehaviour
     // 활성화 중에만 상태 변경 이벤트를 구독하고 최신 값을 표시합니다.
     private void OnEnable()
     {
+        upgradeManager = UpgradeManager.Instance;
+        SetUpgradeManager(upgradeManager);
         Subscribe();
         Refresh();
     }

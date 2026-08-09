@@ -47,6 +47,9 @@ public sealed class UpgradePanel : MonoBehaviour
         {
             drawTenButton.onClick.AddListener(HandleDrawTenClicked);
         }
+
+        upgradeManager = UpgradeManager.Instance;
+        SetUpgradeManager(upgradeManager);
     }
 
     private void OnEnable()
