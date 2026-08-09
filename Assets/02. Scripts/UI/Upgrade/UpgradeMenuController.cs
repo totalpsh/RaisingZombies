@@ -14,7 +14,7 @@ public enum UpgradeMenuState
 }
 
 // 스탯, 생산, 재화 강화 화면 전환을 관리합니다.
-public sealed class UpgradeMenuController : MonoBehaviour
+public sealed class UpgradeMenuController : BaseUI
 {
     [Header("화면")]
 

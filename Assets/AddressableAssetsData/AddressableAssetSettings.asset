@@ -15,7 +15,7 @@ MonoBehaviour:
   m_DefaultGroup: d3552ddd886034e4f95147d4883645da
   m_currentHash:
     serializedVersion: 2
-    Hash: 8eeb5b78cd6cc7a2c4b65a325bffb638
+    Hash: 00000000000000000000000000000000
   m_OptimizeCatalogSize: 0
   m_BuildRemoteCatalog: 0
   m_CatalogRequestsTimeout: 0
@@ -107,6 +107,9 @@ MonoBehaviour:
     - Locale
     - Locale-en
     - Locale-ko
+    - UI
+    - Enemy
+    - Zombies
   m_SchemaTemplates: []
   m_GroupTemplateObjects:
   - {fileID: 11400000, guid: 83116898e03af13438209fddc27c2fbb, type: 2}
