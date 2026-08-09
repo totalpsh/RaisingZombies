@@ -43,8 +43,9 @@ public class CoreScene : BaseScene
     private void LoadFirstContent()
     {
         // 콘텐츠 씬 로드
-
         _ = SceneLoadManager.Instance.LoadContentSceneAsync("BattleScene", false);
+        
+        // UIManager.Instance.OpenUI<UpgradeMenuController>("")
     }
 
     

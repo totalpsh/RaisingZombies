@@ -345,6 +345,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeManager
   balanceSettings: {fileID: 11400000, guid: ca3bfeee574456b4197d75c2cc2b0050, type: 2}
+  currencyUpgradeBalance: {fileID: 11400000, guid: a7418af1122f4e12a8f794e7df7c6f01, type: 2}
   startingCurrency: 10000
 --- !u!1 &840186816
 GameObject:

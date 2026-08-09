@@ -761,6 +761,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeManager
   balanceSettings: {fileID: 11400000, guid: ca3bfeee574456b4197d75c2cc2b0050, type: 2}
+  currencyUpgradeBalance: {fileID: 0}
   startingCurrency: 10000
 --- !u!4 &1449636498
 Transform:

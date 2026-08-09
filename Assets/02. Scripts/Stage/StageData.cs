@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum StageClearCondition
@@ -12,4 +13,11 @@ public class StageData : ScriptableObject
 {
     [SerializeField] private int stageNumber;
     [SerializeField] private StageClearCondition clearCondition;
+    // [SerializeField] private List<StageEnemyData> enemies;
+    // [SerializeField] private StageDefenseData defenseData;
+    
+    public int StageNumber => stageNumber;
+    public StageClearCondition ClearCondition => clearCondition;
+    // public IReadOnlyList<StageEnemyData> Enemies => enemies;
+    // public StageDefenseData DefenseData => defenseData;
 }
