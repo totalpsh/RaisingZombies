@@ -6,8 +6,11 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/01. Scenes/DevScenes/PSH.unity
-    guid: 8c9cfa26abfee488c85f1582747f6a02
+    path: Assets/01. Scenes/Core.unity
+    guid: 2a862e10c3d25ec4cba95401f33c84c7
+  - enabled: 0
+    path: Assets/01. Scenes/Battle.unity
+    guid: e74011938a31b4842bfeae0789068474
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 09a8b44b0fc5b8543b4c2cfef448c82e, type: 2}
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

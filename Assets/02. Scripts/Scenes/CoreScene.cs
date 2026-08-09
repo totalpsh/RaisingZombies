@@ -15,7 +15,7 @@ public class CoreScene : BaseScene
 
     private void Initialize()
     {
-        foreach (MonoBehaviour behaviour in initializeList)
+        foreach (BaseScene behaviour in initializeList)
         {
             if (behaviour is not IInitializable initializable)
             {
@@ -43,6 +43,8 @@ public class CoreScene : BaseScene
     private void LoadFirstContent()
     {
         // 콘텐츠 씬 로드
+
+        _ = SceneLoadManager.Instance.LoadContentSceneAsync("BattleScene", false);
     }
 
     

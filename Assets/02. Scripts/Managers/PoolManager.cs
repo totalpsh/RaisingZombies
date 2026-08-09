@@ -107,6 +107,7 @@ public class PoolManager : Singleton<PoolManager>
                 _instanceToKey[obj] = key;
                 ApplyName(obj, key);
                 obj.transform.SetParent(GetKeyRoot(key), false);
+                
                 obj.SetActive(true);
                 
                 return obj;
@@ -140,6 +141,74 @@ public class PoolManager : Singleton<PoolManager>
             _loadingTasks.Remove(key);
         }
     }
+    
+    public async Task<GameObject> GetAsync(string key, bool activateOnGet = true)
+    {
+        if (string.IsNullOrEmpty(key))
+        {
+            Debug.LogError($"{nameof(GetAsync)} called with a null key");
+            return null;
+        }
+        
+        // 풀에 남아 있는게 있으면 꺼내서 사용
+        if (_pool.TryGetValue(key, out var stack))
+        {
+            while (stack.Count > 0)
+            {
+                var obj = stack.Pop();
+                if (obj == null) continue;
+                
+                _instanceToKey[obj] = key;
+                ApplyName(obj, key);
+                obj.transform.SetParent(GetKeyRoot(key), false);
+                
+                if (activateOnGet)
+                    obj.SetActive(true);
+                
+                return obj;
+            }
+        }
+        // 캐시에 prefab 있으면 Instantiate
+        if (_prefabsCash.TryGetValue(key, out var prefab))
+        {
+            var obj = Instantiate(prefab, GetKeyRoot(key));
+            _instanceToKey[obj] = key;
+            ApplyName(obj, key);
+            
+            if (!activateOnGet)
+                obj.SetActive(false);
+            
+            return obj;
+        }
+        // 이미 같은 키를 로드 중이면 기다리기
+        if (_loadingTasks.TryGetValue(key, out var loadingTask))
+        {
+            GameObject loadedObj = await loadingTask;
+            
+            if (loadedObj != null && !activateOnGet) 
+                loadedObj.SetActive(false);
+            
+            return loadedObj;
+        }
+
+        var task = LoadAndCreateAsync(key);
+        _loadingTasks[key] = task;
+
+        try
+        {
+            GameObject loadedObj = await task;
+            
+            if (loadedObj != null && !activateOnGet)
+                loadedObj.SetActive(false);
+            
+            return loadedObj;
+        }
+        finally
+        {
+            _loadingTasks.Remove(key);
+        }
+    }
+    
     private async Task<GameObject> LoadAndCreateAsync(string key)
     {
         var prefab = await ResourceManager.Instance.LoadAsync<GameObject>(key);
