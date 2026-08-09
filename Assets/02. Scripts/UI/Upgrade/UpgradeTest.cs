@@ -4,52 +4,15 @@ using UnityEngine.UI;
 public class UpgradeTest : MonoBehaviour
 {
     [SerializeField] private UpgradeManager upgradeManager;
-    [SerializeField] private Button oneDraw;
-    [SerializeField] private Button tenDraw;
+    [SerializeField] private UIManager uiManager;
+    [SerializeField] private RectTransform upgradePanelRoot;
 
-    private void Awake()
+    private async void Awake()
     {
-        if (oneDraw != null)
-        {
-            oneDraw.onClick.AddListener(DrawOne);
-        }
-
-        if (tenDraw != null)
-        {
-            tenDraw.onClick.AddListener(DrawTen);
-        }
-    }
-
-    private void OnDestroy()
-    {
-        if (oneDraw != null)
-        {
-            oneDraw.onClick.RemoveListener(DrawOne);
-        }
-
-        if (tenDraw != null)
-        {
-            tenDraw.onClick.RemoveListener(DrawTen);
-        }
-    }
-
-    public void DrawOne()
-    {
-        if (upgradeManager == null)
-        {
-            return;
-        }
-
-        upgradeManager.TryDrawOne(out _);
-    }
-
-    public void DrawTen()
-    {
-        if (upgradeManager == null)
-        {
-            return;
-        }
-
-        upgradeManager.TryDrawTen(out _);
+        upgradeManager = UpgradeManager.Instance;
+        uiManager = UIManager.Instance;
+        var testObj = uiManager.OpenUI<UpgradeMenuController>("UpgradeMenuController");
+        testObj.Result.gameObject.SetActive(true);
+        testObj.Result.transform.SetParent(upgradePanelRoot);
     }
 }
