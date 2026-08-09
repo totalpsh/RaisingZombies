@@ -31,6 +31,18 @@ MonoBehaviour:
     m_Key: StatUpgrade
     m_Metadata:
       m_Items: []
+  - m_Id: 2012599307751424
+    m_Key: c
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2020918407745536
+    m_Key: CurrentCurrency
+    m_Metadata:
+      m_Items: []
+  - m_Id: 2022072235610112
+    m_Key: Currencypersecond
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
