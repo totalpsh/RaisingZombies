@@ -10,5 +10,5 @@ public class StageDefenseData
 
     public bool Enabled => enabled;
     public string DefenseKey => defenseKey;
-    public Vector3 SpawnPosition => spawnOffset;
+    public Vector3 SpawnOffset => spawnOffset;
 }
