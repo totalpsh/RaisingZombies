@@ -11,6 +11,6 @@ public class StageEnemyData
     
     public string EnemyKey => enemyKey;
     public int Count => count;
-    public Vector3 SpawnPosition => spawnOffset;
+    public Vector3 SpawnOffset => spawnOffset;
     public float SpawnSpacing => spawnSpacing;
 }

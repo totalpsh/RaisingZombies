@@ -23,6 +23,8 @@ public class UnitController : MonoBehaviour
     public UnitTeam Team => _data.Team;
     public bool IsDead => !_isInitialized || _model.IsDead;
 
+    public event Action<UnitController> Died; 
+
     private void Awake()
     {
         
@@ -58,6 +60,7 @@ public class UnitController : MonoBehaviour
 
         _currentTarget = null;
         _isInitialized = true;
+        enabled = true;
     }
     
     private void UpdateRegeneration(float deltaTime)
@@ -164,6 +167,8 @@ public class UnitController : MonoBehaviour
         _currentTarget = null;
         enabled = false;
 
+        Died?.Invoke(this);
+        
         PoolManager.Instance.Release(this.gameObject);
     }
 

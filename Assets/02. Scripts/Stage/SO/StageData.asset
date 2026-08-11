@@ -12,7 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 813b0005b2718c04c9923233bccb1e00, type: 3}
   m_Name: StageData
   m_EditorClassIdentifier: Assembly-CSharp::StageData
-  stageNumber: 0
-  clearCondition: 0
-  enemies: []
-  defenseData: {fileID: 0}
+  stageNumber: 1
+  clearCondition: 1
+  enemies:
+  - enemyKey: Human
+    count: 3
+    spawnOffset: {x: 0, y: 0, z: 0}
+    spawnSpacing: 1
+  defenseData:
+    enabled: 0
+    defenseKey: 
+    spawnOffset: {x: 0, y: 0, z: 0}

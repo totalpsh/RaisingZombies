@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -7,11 +8,12 @@ public class ZombieSpawner : MonoBehaviour
 {
     [SerializeField] private string zombieKey;
     [SerializeField] private Transform spawnPoint;
-    
     [SerializeField, Min(0.1f)] private float baseSpawnTime = 30f;
 
+    private List<UnitController> _spawnedZombies = new();
     private float _elapsedTime;
     private bool _isSpawning;
+    private bool _isProducing;
 
     public float SpawnTime => baseSpawnTime;
     public float SpawnProgress => Mathf.Clamp01(_elapsedTime / SpawnTime);
@@ -23,24 +25,44 @@ public class ZombieSpawner : MonoBehaviour
     
     private void Start()
     {
-        _ = SpawnAsync();
+        StartProduction();
     }
 
     private void Update()
     {
         Debug.Log("Spawner Update");
 
+        if (!_isProducing)
+            return;
+        
         _elapsedTime += Time.deltaTime;
 
-        if (_elapsedTime < baseSpawnTime)
+        if (_elapsedTime < SpawnTime || _isSpawning)
             return;
 
         if (_isSpawning)
             return;
 
-        _elapsedTime -= baseSpawnTime;
+        _elapsedTime -= SpawnTime;
         _ = SpawnAsync();
+    }
+    
+    public void StartProduction()
+    {
+        if (_isProducing)
+            return;
 
+        _isProducing = true;
+        _elapsedTime = 0f;
+
+        // 스테이지 시작 즉시 한 마리 생산
+        _ = SpawnAsync();
+    }
+
+    public void StopProduction()
+    {
+        _isProducing = false;
+        _elapsedTime = 0f;
     }
     
     public async Task SpawnAsync()
@@ -51,7 +73,6 @@ public class ZombieSpawner : MonoBehaviour
         _isSpawning = true;
         
         GameObject zombieObj = await PoolManager.Instance.GetAsync(zombieKey, activateOnGet: false);
-        UnitController zombieController = zombieObj.GetComponent<UnitController>();
         
         if (zombieObj == null)
         {
@@ -59,7 +80,13 @@ public class ZombieSpawner : MonoBehaviour
             return;
         }
 
-        if (!zombieObj.TryGetComponent(out UnitController zombieController2))
+        if (!_isProducing)
+        {
+            PoolManager.Instance.Release(zombieObj);
+            return;
+        }
+        
+        if (!zombieObj.TryGetComponent(out UnitController zombieController))
         {
             Debug.LogError("zombieController가 없음");
             PoolManager.Instance.Release(zombieObj);
@@ -67,14 +94,16 @@ public class ZombieSpawner : MonoBehaviour
         }
         
         zombieObj.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
-        UnitInitialize(zombieController);
-        
+        InitializeZombie(zombieController);
+        zombieController.Died += HandleZombieDied;
+        _spawnedZombies.Add(zombieController);
         zombieObj.SetActive(true);
         
         _isSpawning = false;
     }
 
-    private void UnitInitialize(UnitController controller)
+    // 좀비 초기화
+    private void InitializeZombie(UnitController controller)
     {
         UpgradeStatSnapshot healthSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Health);
         UpgradeStatSnapshot attackSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Attack);
@@ -93,5 +122,30 @@ public class ZombieSpawner : MonoBehaviour
         );
         
         controller.Initialize(controller.Data, stats);
+    }
+    
+    // 좀비 사망시 리스트에서 처리
+    private void HandleZombieDied(UnitController zombie)
+    {
+        zombie.Died -= HandleZombieDied;
+        _spawnedZombies.Remove(zombie);
+    }
+    
+    // 스테이지 전환 시 남은 좀비 정리
+    // 페이드 연출 이후 호출로 변경할 예정
+    public void ReleaseAllZombies()
+    {
+        UnitController[] zombies = _spawnedZombies.ToArray();
+
+        _spawnedZombies.Clear();
+
+        foreach (UnitController zombie in zombies)
+        {
+            if (zombie == null)
+                continue;
+
+            zombie.Died -= HandleZombieDied;
+            PoolManager.Instance.Release(zombie.gameObject);
+        }
     }
 }
