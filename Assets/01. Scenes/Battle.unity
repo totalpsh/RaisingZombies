@@ -466,6 +466,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
   stages:
   - {fileID: 11400000, guid: 5fdceafbd16aea14c88c180465ab4dcb, type: 2}
+  - {fileID: 11400000, guid: d61a19b436b97bb4f9f2f20b8fa61802, type: 2}
   stageSpawner: {fileID: 1712586537}
   zombieSpawner: {fileID: 447328353}
 --- !u!4 &1977440663

@@ -92,13 +92,12 @@ public class StageManager : MonoBehaviour
 
         _isStageCleared = true;
         
-        zombieSpawner.StopProduction();
-        zombieSpawner.ReleaseAllZombies();
-        
         Debug.Log(
             $"[StageManager] Stage " +
             $"{stageData.StageNumber} 클리어"
         );
+
+        _ = MoveToNextStageAsync();
     }
 
     private void ClearEnemySubscriptions()
@@ -116,5 +115,25 @@ public class StageManager : MonoBehaviour
     private void OnDestroy()
     {
         ClearEnemySubscriptions();
+    }
+
+    private async Task MoveToNextStageAsync()
+    {
+        zombieSpawner.StopProduction();
+        zombieSpawner.ReleaseAllZombies();
+        
+        ClearEnemySubscriptions();
+        
+        _currentStageIndex++;
+        
+        if(_currentStageIndex >= stages.Count)
+        {
+            Debug.Log("모든 스테이지 완료");
+            return;
+        }
+        
+        await StartStageAsync(_currentStageIndex);
+        
+        zombieSpawner.StartProduction();
     }
 }
