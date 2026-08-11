@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-/// PlayerPrefs JSON으로 저장하는 업그레이드 런타임 상태입니다.
+// 통합 JSON 저장에 사용하는 업그레이드 영구 원본 DTO입니다.
 [Serializable]
 public sealed class UpgradeState
 {
@@ -20,6 +20,7 @@ public sealed class UpgradeState
 [Serializable]
 public sealed class UpgradeStatValue
 {
+    public string statId = string.Empty; // enum 순서가 바뀌어도 유지되는 안정적인 스탯 ID
     public UpgradeStatType statType;
     public int accumulatedValue;
     public int researchLevel;

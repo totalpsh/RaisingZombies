@@ -4,9 +4,10 @@ using System.Globalization;
 using UnityEngine;
 
 // 가챠, 연구, 재화 강화, 저장과 최종 스탯 조회를 담당합니다.
-public sealed class UpgradeManager : Singleton<UpgradeManager>
+public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvider
 {
-    private const string SaveKey = "RaisingZombies.Upgrade.State"; // 기존 PlayerPrefs 저장 키
+    private const string ProviderKey = "upgrade"; // 통합 저장에서 사용할 안정적인 Provider 키
+    private const string LegacyPlayerPrefsKey = "RaisingZombies.Upgrade.State"; // 기존 PlayerPrefs 저장 키
     [SerializeField] private UpgradeBalanceSettings balanceSettings; // 좀비 가챠 및 연구 밸런스
     [SerializeField] private CurrencyUpgradeBalanceSettings currencyUpgradeBalance; // 재화 강화 및 오프라인 보상 밸런스
     [SerializeField, Min(0)] private int startingCurrency = 10000; // 최초 저장 생성 시 지급할 테스트 재화
@@ -25,14 +26,21 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
     public int DrawsAtCurrentLevel => _state == null ? 0 : _state.drawsAtCurrentLevel;
     public UpgradeBalanceSettings BalanceSettings => balanceSettings;
     public CurrencyUpgradeBalanceSettings CurrencyUpgradeBalance => currencyUpgradeBalance;
+    string ISaveDataProvider.SaveKey => ProviderKey; // 통합 저장에 노출하는 Provider 키
+    Type ISaveDataProvider.SaveDataType => typeof(UpgradeState); // 업그레이드 저장 DTO 형식
 
     // 싱글턴을 등록하고 기존 저장 및 오프라인 보상을 불러옵니다.
     protected override void Awake()
     {
         base.Awake();
+        if (Instance != this) return;
         if (currencyUpgradeBalance == null)
             Debug.LogError("[UpgradeManager] CurrencyUpgradeBalanceSettings 참조가 없습니다. 재화 생산과 오프라인 보상이 비활성화됩니다.", this);
-        LoadState();
+        SaveManager saveManager = SaveManager.EnsureInstance(); // 업그레이드 Provider를 등록할 통합 저장 매니저
+        bool hasUnifiedData = saveManager.HasProviderData(ProviderKey); // 이미 통합 저장으로 이전됐는지 여부
+        bool importedLegacyData = !hasUnifiedData && TryImportLegacyState(); // 기존 PlayerPrefs를 가져왔는지 여부
+        if (hasUnifiedData) DeleteLegacySave();
+        saveManager.RegisterProvider(this, importedLegacyData);
     }
 
     // Time.timeScale 영향을 받는 초 단위 재화를 지급합니다.
@@ -80,7 +88,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         if (amount <= 0) return;
         if (_state == null) _state = CreateInitialState();
         _state.currency = (int)Math.Min(int.MaxValue, (long)_state.currency + amount);
-        SaveAndNotify();
+        SaveAndNotify(false);
     }
 
     // 현재 재화에서 요청 금액을 한 번만 차감합니다.
@@ -88,7 +96,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
     {
         if (_state == null || amount < 0 || _state.currency < amount) return false;
         _state.currency -= amount;
-        SaveAndNotify();
+        SaveAndNotify(true);
         return true;
     }
 
@@ -103,9 +111,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
     [ContextMenu("업그레이드 저장 초기화")]
     private void ResetSavedState()
     {
-        PlayerPrefs.DeleteKey(SaveKey);
-        _state = CreateInitialState();
-        SaveAndNotify();
+        SaveManager.Instance.ResetSave();
     }
 
     // 현재 가챠 표에서 1회 뽑고 결과를 영구 저장합니다.
@@ -114,7 +120,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         result = default;
         if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetCurrentDrawCost()) return false;
         result = ExecuteOneDraw();
-        SaveAndNotify();
+        SaveAndNotify(true);
         drawCompleted?.Invoke(new[] { result });
         return true;
     }
@@ -126,7 +132,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetDrawCostForCount(10)) return false;
         List<GachaDrawResult> values = new(10); // 이번 10회 뽑기 결과
         for (int index = 0; index < 10; index++) values.Add(ExecuteOneDraw()); // 뽑기 순번
-        SaveAndNotify();
+        SaveAndNotify(true);
         results = values;
         drawCompleted?.Invoke(values);
         return true;
@@ -142,7 +148,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         if (_state.currency < cost) return false;
         _state.currency -= cost;
         value.researchLevel++;
-        SaveAndNotify();
+        SaveAndNotify(true);
         return true;
     }
 
@@ -264,7 +270,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         if (_state == null || _state.currency < cost) return false;
         _state.currency -= cost;
         SetCurrencyUpgradeLevel(type, level + 1);
-        SaveAndNotify();
+        SaveAndNotify(true);
         return true;
     }
 
@@ -344,9 +350,17 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
     {
         if (_state == null) _state = CreateInitialState();
         if (_state.stats == null) _state.stats = new List<UpgradeStatValue>();
+        string targetStatId = GetStableStatId(type); // 찾을 스탯의 안정적인 저장 ID
         foreach (UpgradeStatValue item in _state.stats) // 저장된 스탯 항목
-            if (item != null && item.statType == type) return item;
-        UpgradeStatValue added = new() { statType = type }; // 새로 추가할 스탯 값
+        {
+            if (item == null || (!string.Equals(item.statId, targetStatId, StringComparison.Ordinal) &&
+                !(string.IsNullOrWhiteSpace(item.statId) && item.statType == type))) continue;
+            item.statId = targetStatId;
+            item.statType = type;
+            return item;
+        }
+
+        UpgradeStatValue added = new() { statId = targetStatId, statType = type }; // 새로 추가할 스탯 값
         _state.stats.Add(added);
         return added;
     }
@@ -366,12 +380,141 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
     // 기존 키에서 상태를 불러오고 오프라인 보상을 정확히 한 번 처리합니다.
     private void LoadState()
     {
-        _state = PlayerPrefs.HasKey(SaveKey) ? JsonUtility.FromJson<UpgradeState>(PlayerPrefs.GetString(SaveKey)) : CreateInitialState();
-        if (_state == null) _state = CreateInitialState();
-        if (_state.stats == null) _state.stats = new List<UpgradeStatValue>();
+        SaveManager saveManager = SaveManager.EnsureInstance(); // 수동 재로드를 처리할 통합 저장 매니저
+        if (TryImportLegacyState())
+        {
+            saveManager.RegisterProvider(this, true);
+            saveManager.MarkDirty();
+            saveManager.SaveGame();
+            stateChanged?.Invoke();
+            return;
+        }
+
+        saveManager.LoadGame();
+    }
+
+    // 현재 업그레이드 영구 원본 DTO를 반환합니다.
+    public object CaptureSaveData()
+    {
+        NormalizeState();
+        return _state;
+    }
+
+    // 통합 저장에서 읽은 업그레이드 DTO를 런타임 원본에 적용합니다.
+    public void RestoreSaveData(object data)
+    {
+        _state = data as UpgradeState ?? CreateInitialState();
+        NormalizeState();
         ProcessOfflineReward();
+        SaveManager.Instance.MarkDirty();
+        stateChanged?.Invoke();
+    }
+
+    // 업그레이드 영구 원본을 새 게임 기본값으로 되돌립니다.
+    public void ResetSaveData()
+    {
+        _state = CreateInitialState();
+        _currencyProductionSeconds = 0f;
+        _currencyProductionRemainder = 0f;
+        _pendingOfflineReward = default;
+        _hasPendingOfflineReward = false;
+        stateChanged?.Invoke();
+    }
+
+    // 기존 PlayerPrefs JSON을 통합 저장으로 한 번만 가져옵니다.
+    private bool TryImportLegacyState()
+    {
+        if (!PlayerPrefs.HasKey(LegacyPlayerPrefsKey)) return false;
+
+        try
+        {
+            UpgradeState legacyState = JsonUtility.FromJson<UpgradeState>(PlayerPrefs.GetString(LegacyPlayerPrefsKey)); // 기존 PlayerPrefs에서 읽은 업그레이드 DTO
+            if (legacyState == null) return false;
+            _state = legacyState;
+            NormalizeState();
+            ProcessOfflineReward();
+            Debug.Log("[Save] 기존 PlayerPrefs 업그레이드 데이터를 통합 저장으로 이전했습니다.");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[Save] 기존 PlayerPrefs 업그레이드 데이터 이전 실패: {exception.Message}");
+            return false;
+        }
+        finally
+        {
+            DeleteLegacySave();
+        }
+    }
+
+    // 이전이 끝난 기존 PlayerPrefs 저장 키를 삭제합니다.
+    private static void DeleteLegacySave()
+    {
+        if (!PlayerPrefs.HasKey(LegacyPlayerPrefsKey)) return;
+        PlayerPrefs.DeleteKey(LegacyPlayerPrefsKey);
+        PlayerPrefs.Save();
+    }
+
+    // 누락되거나 손상된 업그레이드 원본 값을 안전 범위로 보정합니다.
+    private void NormalizeState()
+    {
+        if (_state == null) _state = CreateInitialState();
         _state.version = 2;
-        SaveAndNotify();
+        _state.currency = Mathf.Max(0, _state.currency);
+        _state.gachaLevel = Mathf.Max(1, _state.gachaLevel);
+        _state.drawsAtCurrentLevel = Mathf.Max(0, _state.drawsAtCurrentLevel);
+        _state.currencyPerSecondLevel = Mathf.Max(0, _state.currencyPerSecondLevel);
+        _state.humanKillBonusLevel = Mathf.Max(0, _state.humanKillBonusLevel);
+        _state.offlineMaxTimeLevel = Mathf.Max(0, _state.offlineMaxTimeLevel);
+        _state.offlineEfficiencyLevel = Mathf.Max(0, _state.offlineEfficiencyLevel);
+        if (_state.stats == null) _state.stats = new List<UpgradeStatValue>();
+
+        foreach (UpgradeStatValue value in _state.stats) // 보정할 저장 스탯 원본
+        {
+            if (value == null) continue;
+            if (string.IsNullOrWhiteSpace(value.statId)) value.statId = GetStableStatId(value.statType);
+            else if (TryGetStatType(value.statId, out UpgradeStatType restoredType)) value.statType = restoredType;
+            value.accumulatedValue = Mathf.Max(0, value.accumulatedValue);
+            value.researchLevel = Mathf.Max(0, value.researchLevel);
+        }
+    }
+
+    // 스탯 enum과 무관하게 유지되는 저장 ID를 반환합니다.
+    private static string GetStableStatId(UpgradeStatType type)
+    {
+        return type switch
+        {
+            UpgradeStatType.Health => "stat_health",
+            UpgradeStatType.Defense => "stat_defense",
+            UpgradeStatType.Attack => "stat_attack",
+            UpgradeStatType.InfectionCount => "stat_infection_count",
+            UpgradeStatType.MoveSpeed => "stat_move_speed",
+            UpgradeStatType.AttackSpeed => "stat_attack_speed",
+            UpgradeStatType.ZombieCount => "stat_zombie_count",
+            UpgradeStatType.StatIncrease => "stat_global_increase",
+            UpgradeStatType.CriticalChance => "stat_critical_chance",
+            UpgradeStatType.CriticalDamage => "stat_critical_damage",
+            _ => "stat_unknown"
+        };
+    }
+
+    // 저장 ID를 현재 스탯 enum으로 안전하게 변환합니다.
+    private static bool TryGetStatType(string statId, out UpgradeStatType type)
+    {
+        switch (statId)
+        {
+            case "stat_health": type = UpgradeStatType.Health; return true;
+            case "stat_defense": type = UpgradeStatType.Defense; return true;
+            case "stat_attack": type = UpgradeStatType.Attack; return true;
+            case "stat_infection_count": type = UpgradeStatType.InfectionCount; return true;
+            case "stat_move_speed": type = UpgradeStatType.MoveSpeed; return true;
+            case "stat_attack_speed": type = UpgradeStatType.AttackSpeed; return true;
+            case "stat_zombie_count": type = UpgradeStatType.ZombieCount; return true;
+            case "stat_global_increase": type = UpgradeStatType.StatIncrease; return true;
+            case "stat_critical_chance": type = UpgradeStatType.CriticalChance; return true;
+            case "stat_critical_damage": type = UpgradeStatType.CriticalDamage; return true;
+            default: type = default; return false;
+        }
     }
 
     // 이전 저장과 호환되는 초기 상태를 생성합니다.
@@ -406,6 +549,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         _lastActivitySaveFrame = Time.frameCount;
         _state.lastActivityUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         SaveState(false);
+        SaveManager.Instance.SaveGame();
     }
 
     // 현재 강화 종류의 저장 레벨을 반환합니다.
@@ -484,18 +628,25 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>
         return Mathf.Clamp(efficiency, 0f, currencyUpgradeBalance.maximumOfflineEfficiency);
     }
 
-    // 현재 상태를 기존 PlayerPrefs 키에 저장하고 필요하면 UI에 알립니다.
+    // 현재 상태를 Dirty 처리하고 필요하면 UI에 알립니다.
     private void SaveState(bool notify)
     {
         if (_state == null) return;
-        PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(_state));
-        PlayerPrefs.Save();
+        SaveManager.Instance.MarkDirty();
         if (notify) stateChanged?.Invoke();
     }
 
-    // 상태를 저장하고 구독 중인 UI를 갱신합니다.
-    private void SaveAndNotify()
+    // 상태 변경을 알리고 중요한 진행이면 즉시 파일에 저장합니다.
+    private void SaveAndNotify(bool saveImmediately)
     {
         SaveState(true);
+        if (saveImmediately) SaveManager.Instance.SaveGame();
+    }
+
+    // 파괴되는 인스턴스의 Provider 등록을 해제합니다.
+    protected override void OnDestroy()
+    {
+        if (SaveManager.HasInstance) SaveManager.Instance.UnregisterProvider(this);
+        base.OnDestroy();
     }
 }
