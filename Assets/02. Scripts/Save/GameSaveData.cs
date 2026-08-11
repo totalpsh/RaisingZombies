@@ -52,6 +52,54 @@ public sealed class GameSaveData
 
         sections.Add(new SaveDataSection { key = key, json = json ?? string.Empty });
     }
+
+    // 전체 Save Container의 필수 메타데이터와 Section 식별 구조를 검증합니다.
+    public bool TryValidate(out string error)
+    {
+        error = string.Empty;
+        if (saveVersion <= 0)
+        {
+            error = "Save Version이 유효하지 않습니다.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(saveId))
+        {
+            error = "Save ID가 비어 있습니다.";
+            return false;
+        }
+
+        if (sections == null)
+        {
+            error = "Save Section 목록이 null입니다.";
+            return false;
+        }
+
+        HashSet<string> keys = new(StringComparer.Ordinal); // 중복 Provider 키를 검사할 집합
+        foreach (SaveDataSection section in sections) // 구조를 검증할 Provider 저장 구역
+        {
+            if (section == null)
+            {
+                error = "null Save Section이 존재합니다.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(section.key))
+            {
+                error = "Save Section 키가 비어 있습니다.";
+                return false;
+            }
+
+            if (!keys.Add(section.key))
+            {
+                error = $"중복 Save Section 키입니다: {section.key}";
+                return false;
+            }
+
+        }
+
+        return true;
+    }
 }
 
 // 한 Save Provider의 키와 직렬화 결과를 보관하는 DTO입니다.

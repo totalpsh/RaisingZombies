@@ -4,7 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-// 통합 저장의 신규·저장·로드·초기화·백업·누락 Provider를 검증합니다.
+// 통합 저장의 생성·로드·백업·검증·부분 Provider 손상을 검증합니다.
 public static class SaveSystemSmokeTestTool
 {
     // 격리된 임시 디렉터리에서 저장 시나리오를 순서대로 실행합니다.
@@ -47,9 +47,40 @@ public static class SaveSystemSmokeTestTool
             Assert(SaveMigrationService.TryMigrate(legacySave), "Migration: 과거 저장 버전 변환에 실패했습니다.");
             Assert(legacySave.saveVersion == SaveMigrationService.CurrentSaveVersion, "Migration: 현재 버전으로 올라오지 않았습니다.");
 
+            Assert(service.DeleteAll(), "Validation: 검증 테스트 전 저장 파일 정리에 실패했습니다.");
+            GameSaveData duplicateSave = CreateSave(10); // 동일 Provider 키를 두 번 가진 잘못된 저장
+            duplicateSave.sections.Add(new SaveDataSection { key = "upgrade", json = JsonUtility.ToJson(new UpgradeState()) });
+            Assert(!service.TrySave(duplicateSave), "Duplicate Section: 중복 Provider 키 저장을 허용했습니다.");
+
+            GameSaveData futureSave = CreateSave(20); // 현재 게임보다 높은 Container 버전 저장
+            futureSave.saveVersion = SaveMigrationService.CurrentSaveVersion + 1;
+            Assert(!service.TrySave(futureSave), "Future Version: 지원하지 않는 미래 버전을 저장으로 허용했습니다.");
+
+            GameSaveData corruptProviderSave = CreateSave(123); // 한 Provider JSON만 손상된 전체 저장
+            corruptProviderSave.SetSection("broken_provider", "{invalid provider json");
+            Assert(service.TrySave(corruptProviderSave), "Provider Corruption: 부분 손상 Container 저장에 실패했습니다.");
+            GameSaveData partialSave; // 부분 손상 Container에서 다시 읽을 전체 저장 데이터
+            Assert(service.TryLoad(out partialSave, out loadedFromBackup), "Provider Corruption: 부분 손상 Container 로드에 실패했습니다.");
+            Assert(!loadedFromBackup && ReadCurrency(partialSave) == 123, "Provider Corruption: 정상 Provider 데이터가 보존되지 않았습니다.");
+            Assert(partialSave.TryGetSection("broken_provider", out _), "Provider Corruption: 알 수 없는 Section이 유실되었습니다.");
+
+            GameSaveData emptyProviderSave = CreateSave(456); // 한 Provider JSON만 비어 있는 전체 저장
+            emptyProviderSave.SetSection("broken_provider", string.Empty);
+            Assert(service.TrySave(emptyProviderSave), "Provider Empty JSON: 빈 Provider Section 때문에 Container 저장이 실패했습니다.");
+            GameSaveData emptySectionLoadedSave; // 빈 Provider Section과 함께 다시 읽을 전체 저장 데이터
+            Assert(service.TryLoad(out emptySectionLoadedSave, out loadedFromBackup), "Provider Empty JSON: Container 로드에 실패했습니다.");
+            Assert(!loadedFromBackup && ReadCurrency(emptySectionLoadedSave) == 456, "Provider Empty JSON: 정상 Provider 데이터가 보존되지 않았습니다.");
+            SaveDataSection emptySection; // 다시 읽은 빈 Provider 저장 구역
+            Assert(emptySectionLoadedSave.TryGetSection("broken_provider", out emptySection) && string.IsNullOrEmpty(emptySection.json),
+                "Provider Empty JSON: 빈 Provider Section이 유실되거나 변경됐습니다.");
+
+            File.WriteAllText(service.TemporaryPath, "stale tmp", System.Text.Encoding.UTF8);
+            Assert(service.TrySave(CreateSave(321)), "Temporary File: 남은 tmp를 덮어쓰는 저장에 실패했습니다.");
+            Assert(!File.Exists(service.TemporaryPath), "Temporary File: 정상 저장 뒤 tmp 파일이 남았습니다.");
+
             Assert(service.DeleteAll(), "Reset: 저장 파일 삭제에 실패했습니다.");
             Assert(!service.HasSave(), "Reset: 메인 또는 백업 파일이 남았습니다.");
-            Debug.Log("[SaveSmokeTest] 통과: New Save, Save, Load, Reset, Backup, Provider 누락, Migration");
+            Debug.Log("[SaveSmokeTest] 통과: New Save, Save, Load, Reset, Backup, Backup Preservation, Provider Missing, Provider Corruption, Provider Empty JSON, Duplicate Section, Migration, Future Version, Temporary File");
         }
         finally
         {

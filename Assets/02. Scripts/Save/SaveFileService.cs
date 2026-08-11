@@ -39,6 +39,12 @@ public sealed class SaveFileService
     public bool TrySave(GameSaveData data, bool preserveBackup = false)
     {
         if (data == null || !SaveMigrationService.TryMigrate(data)) return false;
+        string validationError; // 저장 컨테이너 검증 실패 이유
+        if (!data.TryValidate(out validationError))
+        {
+            Debug.LogError($"[Save] 저장 데이터 검증 실패: {validationError}");
+            return false;
+        }
 
         try
         {
@@ -93,7 +99,12 @@ public sealed class SaveFileService
             string json = File.ReadAllText(path, Encoding.UTF8); // 읽어 온 전체 저장 JSON
             if (string.IsNullOrWhiteSpace(json)) return false;
             data = JsonUtility.FromJson<GameSaveData>(json);
-            return SaveMigrationService.TryMigrate(data);
+            if (!SaveMigrationService.TryMigrate(data)) return false;
+            string validationError; // 읽은 컨테이너 검증 실패 이유
+            if (data.TryValidate(out validationError)) return true;
+            Debug.LogWarning($"[Save] 파일 구조 검증 실패 ({Path.GetFileName(path)}): {validationError}");
+            data = null;
+            return false;
         }
         catch (Exception exception)
         {
