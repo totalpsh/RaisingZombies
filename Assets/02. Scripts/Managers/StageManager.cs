@@ -7,133 +7,183 @@ public class StageManager : MonoBehaviour
 {
     [SerializeField] private List<StageData> stages;
     [SerializeField] private StageSpawner stageSpawner;
+    [SerializeField] private StructureController zombieCamp;
+    [SerializeField] private StructureController humanFortress;
     [SerializeField] private ZombieSpawner zombieSpawner;
+    [SerializeField] private HumanSpawner humanSpawner;
     
-    private List<UnitController> _trackedEnemies = new();
-
     private int _currentStageIndex;
-    private int _remainingEnemyCount;
-    private bool _isStageCleared;
-    
+    private bool _isStageRunning;
+    private bool _isTransitioning;
+
     public int CurrentStageNumber => stages[_currentStageIndex].StageNumber;
-    private bool StageCleared => _isStageCleared;
-    
+
     private async void Start()
     {
         await StartStageAsync(_currentStageIndex);
-        zombieSpawner.StartProduction();
     }
 
     private async Task StartStageAsync(int stageIndex)
     {
-        if (stageIndex < 0 || stageIndex >= stages.Count)
+        if (!IsValidStageIndex(stageIndex))
         {
-            Debug.Log("스테이지 인덱스랑 데이터 확인하세요");
+            Debug.LogError($"잘못된 스테이지 인덱스: " + $"Stage{stageIndex}");
             return;
         }
 
-        ClearEnemySubscriptions();
+        if (!ValidateReferences())
+            return;
 
-        _isStageCleared = false;
+        StopBattle();
+        ClearObjectiveSubscriptions();
 
         StageData stageData = stages[stageIndex];
 
-        IReadOnlyList<UnitController> enemies =
-            await stageSpawner.SpawnAsync(stageData);
+        zombieCamp.Initialize();
+        humanFortress.Initialize();
 
-        foreach (UnitController enemy in enemies)
-        {
-            enemy.Died += HandleEnemyDied;
-            _trackedEnemies.Add(enemy);
-        }
+        zombieCamp.Destroyed += HandleZombieCampDestroyed;
+        humanFortress.Destroyed += HandleHumanFortressDestroyed;
 
-        _remainingEnemyCount = _trackedEnemies.Count;
+        stageSpawner.Spawn(stageData);
 
-        Debug.Log(
-            $"[StageManager] Stage {stageData.StageNumber} 시작, " +
-            $"남은 인간: {_remainingEnemyCount}"
-        );
-
-        CheckStageClear();
-    }
-    
-    private void HandleEnemyDied(UnitController enemy)
-    {
-        enemy.Died -= HandleEnemyDied;
-
-        if (!_trackedEnemies.Remove(enemy))
-            return;
-
-        _remainingEnemyCount = _trackedEnemies.Count;
-
-        Debug.Log(
-            $"[StageManager] 인간 사망, " +
-            $"남은 인간: {_remainingEnemyCount}"
-        );
-
-        CheckStageClear();
-    }
-
-    private void CheckStageClear()
-    {
-        if (_isStageCleared)
-            return;
-
-        StageData stageData = stages[_currentStageIndex];
-
-        if (stageData.ClearCondition !=
-            StageClearCondition.DefeatAllEnemies)
-        {
-            return;
-        }
-
-        if (_remainingEnemyCount > 0)
-            return;
-
-        _isStageCleared = true;
+        zombieSpawner.SetSpawnOrigin(zombieCamp.SpawnPoint);
+        humanSpawner.SetSpawnOrigin(humanFortress.SpawnPoint);
         
-        Debug.Log(
-            $"[StageManager] Stage " +
-            $"{stageData.StageNumber} 클리어"
-        );
+
+        _isStageRunning = true;
+        _isTransitioning = false;
+
+        humanSpawner.StartProduction(stageData);
+        zombieSpawner.StartProduction();
+
+        Debug.Log($"Stage " + $"{stageData.StageNumber} 시작");
+
+        await Task.Yield();
+    }
+
+    private void HandleHumanFortressDestroyed(StructureController fortress)
+    {
+        if (!_isStageRunning || _isTransitioning)
+            return;
+
+        _isStageRunning = false;
+        _isTransitioning = true;
+
+        Debug.Log($"tage " + $"{CurrentStageNumber} 승리");
 
         _ = MoveToNextStageAsync();
     }
 
-    private void ClearEnemySubscriptions()
+    private void HandleZombieCampDestroyed(StructureController camp)
     {
-        foreach (UnitController enemy in _trackedEnemies)
-        {
-            if (enemy != null)
-                enemy.Died -= HandleEnemyDied;
-        }
+        if (!_isStageRunning || _isTransitioning)
+            return;
 
-        _trackedEnemies.Clear();
-        _remainingEnemyCount = 0;
-    }
+        _isStageRunning = false;
+        _isTransitioning = true;
 
-    private void OnDestroy()
-    {
-        ClearEnemySubscriptions();
+        StopBattle();
+
+        Debug.Log($"Stage " + $"{CurrentStageNumber} 패배");
+
+        // 재도전 방식은 이후 추가한다.
     }
 
     private async Task MoveToNextStageAsync()
     {
-        zombieSpawner.StopProduction();
+        StopBattle();
+
+        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+
+        if (fadeUI != null)
+            await fadeUI.FadeOutAsync();
+
+        ClearObjectiveSubscriptions();
+
         zombieSpawner.ReleaseAllZombies();
-        
-        ClearEnemySubscriptions();
-        
+        humanSpawner.ReleaseAllHumans();
+        stageSpawner.Clear();
+
         _currentStageIndex++;
-        
-        if(_currentStageIndex >= stages.Count)
+
+        if (_currentStageIndex >= stages.Count)
         {
-            Debug.Log("모든 스테이지 완료");
+            Debug.Log("[StageManager] 모든 스테이지 완료");
+
+            if (fadeUI != null)
+                await fadeUI.FadeInAsync();
+
             return;
         }
-        
+
         await StartStageAsync(_currentStageIndex);
+
+        if (fadeUI != null)
+            await fadeUI.FadeInAsync();
+    }
+
+    private void StopBattle()
+    {
+        if (zombieSpawner != null)
+            zombieSpawner.StopProduction();
         
-        zombieSpawner.StartProduction();
+        if (humanSpawner != null)
+            humanSpawner.StopProduction();
+    }
+
+    private void ClearObjectiveSubscriptions()
+    {
+        if (zombieCamp != null)
+        {
+            zombieCamp.Destroyed -=
+                HandleZombieCampDestroyed;
+        }
+
+        if (humanFortress != null)
+        {
+            humanFortress.Destroyed -=
+                HandleHumanFortressDestroyed;
+        }
+    }
+
+    private bool IsValidStageIndex(int stageIndex)
+    {
+        return stages != null
+               && stageIndex >= 0
+               && stageIndex < stages.Count
+               && stages[stageIndex] != null;
+    }
+
+    private bool ValidateReferences()
+    {
+        if (stageSpawner == null || zombieCamp == null || humanFortress == null || zombieSpawner == null)
+        {
+            Debug.LogError("참조 누락.");
+
+            return false;
+        }
+
+        if (zombieCamp.SpawnPoint == null)
+        {
+            Debug.LogError("ZombieCamp의 " + "SpawnPoint가 엄서영");
+
+            return false;
+        }
+        
+        if (humanSpawner == null || humanFortress.SpawnPoint == null)
+        {
+            Debug.LogError("HumanSpawner/HumanFortress SpawnPoint가 엄서영");
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private void OnDestroy()
+    {
+        StopBattle();
+        ClearObjectiveSubscriptions();
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class UnitController : MonoBehaviour
+public class UnitController : MonoBehaviour, ICombatTarget
 {
     [SerializeField] private Animator _animator;
     
@@ -10,10 +10,11 @@ public class UnitController : MonoBehaviour
 
     [SerializeField]private UnitData _data;
     [SerializeField]private UnitModel _model;
-    private UnitController _currentTarget;
+    // private UnitController _currentTarget;
     
     private bool _isInitialized;
 
+    private ICombatTarget _currentTarget;
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
     
@@ -23,13 +24,10 @@ public class UnitController : MonoBehaviour
     public UnitTeam Team => _data.Team;
     public bool IsDead => !_isInitialized || _model.IsDead;
 
+    public Transform TargetTransform => transform;
+
     public event Action<UnitController> Died; 
-
-    private void Awake()
-    {
-        
-    }
-
+    
     private void Update()
     {
         if (!_isInitialized || _model.IsDead)
@@ -48,9 +46,7 @@ public class UnitController : MonoBehaviour
     {
         if (_data == null)
         {
-            Debug.LogError(
-                $"[{nameof(UnitController)}] UnitData가 null입니다.",
-                this);
+            Debug.LogError($"[{nameof(UnitController)}] UnitData가 null입니다.", this);
 
             return;
         }
@@ -58,7 +54,7 @@ public class UnitController : MonoBehaviour
         _data = data;
         _model = new UnitModel(stats);
 
-        _currentTarget = null;
+        // _currentTarget = null;
         _isInitialized = true;
         enabled = true;
     }
@@ -80,19 +76,18 @@ public class UnitController : MonoBehaviour
 
         _currentTarget = null;
 
-        Collider2D[] results = Physics2D.OverlapCircleAll(
-            transform.position,
-            targetSearchRange,
-            unitLayer);
+        Collider2D[] results = Physics2D.OverlapCircleAll(transform.position, targetSearchRange, unitLayer);
 
         float nearestDistance = float.MaxValue;
 
         foreach (Collider2D result in results)
         {
-            UnitController candidate =
-                result.GetComponentInParent<UnitController>();
+            ICombatTarget candidate = result.GetComponentInParent<ICombatTarget>();
 
             if (!IsValidEnemy(candidate))
+                continue;
+
+            if (!IsAhead(candidate))
                 continue;
 
             float distance = GetHorizontalDistance(candidate);
@@ -103,6 +98,17 @@ public class UnitController : MonoBehaviour
             _currentTarget = candidate;
             nearestDistance = distance;
         }
+    }
+    
+    private bool IsAhead(ICombatTarget target)
+    {
+        float offset =
+            target.TargetTransform.position.x
+            - transform.position.x;
+
+        return Team == UnitTeam.Zombie
+            ? offset > 0f
+            : offset < 0f;
     }
 
     private void TryAction()
@@ -132,8 +138,7 @@ public class UnitController : MonoBehaviour
         float distance =
             _model.Stats.MoveSpeed * Time.deltaTime;
 
-        transform.Translate(
-            Vector3.right * direction * distance);
+        transform.Translate(Vector3.right * (direction * distance));
     }
 
     private void TryAttack()
@@ -145,8 +150,8 @@ public class UnitController : MonoBehaviour
             return;
 
         _animator.SetTrigger("Attack");
-        _currentTarget.TakeDamage(
-            _model.Stats.AttackPower);
+        
+        _currentTarget.TakeDamage(_model.Stats.AttackPower);
 
         _model.ResetAttackCooldown();
     }
@@ -172,20 +177,19 @@ public class UnitController : MonoBehaviour
         PoolManager.Instance.Release(this.gameObject);
     }
 
-    private bool IsValidEnemy(UnitController target)
+    private bool IsValidEnemy(ICombatTarget target)
     {
-        return target != null
-               && target != this
-               && !target.IsDead
-               && target.Team != Team;
+        if (target == null)
+            return false;
+        
+        MonoBehaviour targetObj = target as MonoBehaviour;
+        
+        return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && target.Team != Team;
     }
 
-    private float GetHorizontalDistance(
-        UnitController target)
+    private float GetHorizontalDistance(ICombatTarget target)
     {
-        return Mathf.Abs(
-            target.transform.position.x
-            - transform.position.x);
+        return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
     }
 
 #if UNITY_EDITOR

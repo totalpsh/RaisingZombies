@@ -2,14 +2,14 @@ using System;
 using UnityEngine;
 
 [Serializable]
-public class StageEnemyData
+public class HumanFormationEntryData
 {
-    [SerializeField] private string enemyKey;
+    [SerializeField] private string humanKey;
     [SerializeField, Min(1)] private int count = 1;
     [SerializeField] private Vector3 spawnOffset;
-    [SerializeField] private float spawnSpacing = 1f;
-    
-    public string EnemyKey => enemyKey;
+    [SerializeField, Min(0f)] private float spawnSpacing = 0.5f;
+
+    public string HumanKey => humanKey;
     public int Count => count;
     public Vector3 SpawnOffset => spawnOffset;
     public float SpawnSpacing => spawnSpacing;

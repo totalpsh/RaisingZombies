@@ -24,9 +24,7 @@ public class UnitStats
         HealthRegen = data.HealthRegen + healthRegenUpgrade.FinalBonus;
 
         AttackPower = data.AttackPower + attackUpgrade.FinalBonus;
-        AttackInterval = CalculateAttackInterval(
-            data.AttackInterval,
-            attackSpeedUpgrade.FinalBonus);
+        AttackInterval = CalculateAttackInterval(data.AttackInterval, attackSpeedUpgrade.FinalBonus);
 
         AttackRange = data.AttackRange;
         MoveSpeed = data.MoveSpeed * (1f + moveSpeedUpgrade.FinalBonus);
@@ -45,9 +43,23 @@ public class UnitStats
         MoveSpeed = data.MoveSpeed;
     }
     
-    private static float CalculateAttackInterval(
-        float baseInterval,
-        float attackSpeedBonus)
+    public UnitStats(
+        float maxHealth,
+        float healthRegen,
+        float attackPower,
+        float attackInterval,
+        float attackRange,
+        float moveSpeed)
+    {
+        MaxHealth = maxHealth;
+        HealthRegen = healthRegen;
+        AttackPower = attackPower;
+        AttackInterval = attackInterval;
+        AttackRange = attackRange;
+        MoveSpeed = moveSpeed;
+    }
+    
+    private static float CalculateAttackInterval(float baseInterval, float attackSpeedBonus)
     {
         return baseInterval / (1f + attackSpeedBonus);
     }

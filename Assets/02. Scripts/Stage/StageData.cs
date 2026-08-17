@@ -11,13 +11,13 @@ public enum StageClearCondition
 [CreateAssetMenu(fileName = "StageData", menuName = "Game/Stage/StageData")]
 public class StageData : ScriptableObject
 {
-    [SerializeField] private int stageNumber;
-    [SerializeField] private StageClearCondition clearCondition;
-    [SerializeField] private List<StageEnemyData> enemies;
-    [SerializeField] private StageDefenseData defenseData;
+    [SerializeField, Min(1)] private int stageNumber;
+    [SerializeField] private StageDifficultyData difficulty;
+    [SerializeField] private List<StageDefenseData> defenses;
+    [SerializeField] private StageHumanDeploymentData humanDeployment;
     
     public int StageNumber => stageNumber;
-    public StageClearCondition ClearCondition => clearCondition;
-    public IReadOnlyList<StageEnemyData> Enemies => enemies;
-    public StageDefenseData DefenseData => defenseData;
+    public StageDifficultyData Difficulty => difficulty;
+    public List<StageDefenseData> Defenses => defenses;
+    public StageHumanDeploymentData HumanDeployment => humanDeployment;
 }

@@ -9,7 +9,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.SceneManagement;
 
-public enum UILayer { Main, HUD, PopUp }
+public enum UILayer { Main, HUD, PopUp, Transition }
 
 public class UIManager : Singleton<UIManager>, IAsyncInitializable
 {
@@ -31,6 +31,7 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
     private bool isCleaning = false;
 
     private LoadingUI _loadingUI;
+    private StageFadeUI _stageFadeUI;
     
     protected override void Awake()
     {
@@ -41,20 +42,45 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
     
     public async Task<LoadingUI> GetOrCreateLoadingUIAsync()
     {
-        if (_loadingUI != null)
+        if (_loadingUI != null) 
             return _loadingUI;
 
-        var obj = await ResourceManager.Instance.CreateAsync<GameObject>("LoadingUI", uiRoot);
-        _loadingUI = obj.GetComponent<LoadingUI>();
+        if (uiRoot == null)
+            await CreateCanvasAndEventSystem();
         
-        if (_loadingUI == null)
-        {
-            Debug.LogError("LoadingUI 생성 실패");
-            return null;
-        }
+        if (!layers.ContainsKey(UILayer.Transition))
+            CreateLayers();
+        
+        if (!layers.TryGetValue(
+            UILayer.Transition,
+            out Transform transitionLayer))
+    {
+        Debug.LogError(
+            "[UIManager] Transition 레이어가 생성되지 않았습니다."
+        );
 
-        _loadingUI.HideImmediate();
-        return _loadingUI;
+        return null;
+    }
+
+    GameObject obj =
+        await ResourceManager.Instance.CreateAsync<GameObject>(
+            nameof(LoadingUI),
+            transitionLayer
+        );
+
+    if (obj == null ||
+        !obj.TryGetComponent(out _loadingUI))
+    {
+        Debug.LogError("[UIManager] LoadingUI 생성 실패");
+
+        if (obj != null)
+            Destroy(obj);
+
+        return null;
+    }
+
+    _loadingUI.HideImmediate();
+    return _loadingUI;
     }
     
     public async Task ShowLoadingAsync(string text = "Loading...")
@@ -491,4 +517,55 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
         yield break;
     }
     #endregion
+    
+    public async Task<StageFadeUI> GetOrCreateStageFadeUIAsync()
+    {
+        if (_stageFadeUI != null)
+            return _stageFadeUI;
+
+        if (uiRoot == null)
+            await CreateCanvasAndEventSystem();
+        
+        if (!layers.ContainsKey(UILayer.Transition))
+            CreateLayers();
+        
+        if (!layers.TryGetValue(
+                UILayer.Transition,
+                out Transform transitionLayer))
+        {
+            Debug.LogError(
+                "[UIManager] Transition 레이어가 생성되지 않았습니다."
+            );
+
+            return null;
+        }
+
+        
+        GameObject obj =
+            await ResourceManager.Instance.CreateAsync<GameObject>(
+                "StageFadeUI",
+                transitionLayer
+            );
+
+        if (obj == null)
+        {
+            Debug.LogError(
+                "[UIManager] StageTransitionUI 생성 실패"
+            );
+
+            return null;
+        }
+
+        if (!obj.TryGetComponent(out _stageFadeUI))
+        {
+            Debug.LogError(
+                "[UIManager] StageTransitionUI 컴포넌트가 없습니다."
+            );
+
+            Destroy(obj);
+            return null;
+        }
+
+        return _stageFadeUI;
+    }
 }

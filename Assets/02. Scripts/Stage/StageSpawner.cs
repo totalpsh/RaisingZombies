@@ -5,76 +5,86 @@ using UnityEngine;
 public class StageSpawner : MonoBehaviour
 {
     [SerializeField] private Transform stageOrigin;
+    private List<StructureController> _spawnedDefenses = new();
+    public List<StructureController> SpawnedDefenses => _spawnedDefenses;
     
-    private List<UnitController> _spawnedEnemies = new();
-    private GameObject defense;
-    public List<UnitController> SpawnedObjects => _spawnedEnemies;
-
-    public async Task<List<UnitController>> SpawnAsync(StageData stageData)
+    public IReadOnlyList<StructureController> Spawn(
+        StageData stageData)
     {
-        _spawnedEnemies.Clear();
-        
+        Clear();
+
         if (stageData == null)
         {
-            Debug.LogError($"스테이지 데이터가 엄서요");
-            return _spawnedEnemies;
+            Debug.LogError(
+                "[StageSpawner] StageData가 null입니다.");
+
+            return _spawnedDefenses;
         }
 
-        await SpawnEnemiesAsync(stageData);
-        await SpawnDefenseAsync(stageData);
-        
-        return _spawnedEnemies;
-    }
-
-    private async Task SpawnEnemiesAsync(StageData stageData)
-    {
-        foreach (StageEnemyData enemyData in stageData.Enemies)
+        if (stageOrigin == null)
         {
-            for (int i = 0; i < enemyData.Count; i++)
-            {
-                GameObject enemyObj = await PoolManager.Instance.GetAsync(enemyData.EnemyKey, activateOnGet: false);
+            Debug.LogError(
+                "[StageSpawner] StageOrigin이 없습니다.");
 
-                if (enemyObj == null)
-                {
-                    Debug.LogError("적 생성 안댐, 에너미가 널임");
-                    continue;
-                }
-
-                Vector3 spacing = Vector3.right * enemyData.SpawnSpacing * i;
-                Vector3 position = stageOrigin.position + enemyData.SpawnOffset + spacing;
-                
-                enemyObj.transform.SetPositionAndRotation(position, stageOrigin.rotation);
-                
-                UnitController enemy = enemyObj.GetComponent<UnitController>();
-                enemy.Initialize(enemy.Data, new UnitStats(enemy.Data));
-                
-                _spawnedEnemies.Add(enemy);
-                enemyObj.SetActive(true);
-                
-            }
+            return _spawnedDefenses;
         }
-    }
-    
-    private async Task SpawnDefenseAsync(StageData stageData)
-    {
-        StageDefenseData defenseData = stageData.DefenseData;
 
-        if (defenseData == null || !defenseData.Enabled)
+        if (stageData.Defenses == null)
+            return _spawnedDefenses;
+
+        foreach (StageDefenseData defenseData
+                 in stageData.Defenses)
+        {
+            SpawnDefense(defenseData);
+        }
+
+        return _spawnedDefenses;
+    }
+
+    private void SpawnDefense(
+        StageDefenseData defenseData)
+    {
+        if (defenseData == null)
             return;
 
-        GameObject defenceObj = await PoolManager.Instance.GetAsync(defenseData.DefenseKey, activateOnGet: false);
-
-        if (defenceObj == null)
+        if (defenseData.Prefab == null)
         {
-            Debug.LogError("디펜스 생성 모대");
+            Debug.LogError(
+                "[StageSpawner] 방어시설 프리팹이 없습니다.");
+
             return;
         }
 
-        Vector3 position = stageOrigin.position + defenseData.SpawnOffset;
-        
-        defenceObj.transform.SetPositionAndRotation(position, stageOrigin.rotation);
-        
-        // _spawnedEnemies.Add(defenceObj);
-        defenceObj.SetActive(true);
+        Vector3 position =
+            stageOrigin.position
+            + defenseData.SpawnOffset;
+
+        StructureController defense =
+            Instantiate(
+                defenseData.Prefab,
+                position,
+                stageOrigin.rotation);
+
+        defense.Initialize(
+            defenseData.HealthMultiplier);
+
+        _spawnedDefenses.Add(defense);
+    }
+
+    public void Clear()
+    {
+        foreach (StructureController defense
+                 in _spawnedDefenses)
+        {
+            if (defense != null)
+                Destroy(defense.gameObject);
+        }
+
+        _spawnedDefenses.Clear();
+    }
+
+    private void OnDestroy()
+    {
+        Clear();
     }
 }

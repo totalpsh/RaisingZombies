@@ -124,6 +124,11 @@ public class ZombieSpawner : MonoBehaviour
         controller.Initialize(controller.Data, stats);
     }
     
+    public void SetSpawnOrigin(Transform spawnOrigin)
+    {
+        spawnPoint = spawnOrigin;
+    }
+    
     // 좀비 사망시 리스트에서 처리
     private void HandleZombieDied(UnitController zombie)
     {

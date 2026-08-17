@@ -16,6 +16,7 @@ public sealed class UnitModel
 
         CurrentHealth = stats.MaxHealth;
         AttackCooldown = 0f;
+        Debug.Log($"최대{stats.MaxHealth}, 현재 {CurrentHealth}");
     }
 
     public void TakeDamage(float damage)
@@ -24,7 +25,6 @@ public sealed class UnitModel
             return;
 
         CurrentHealth = Mathf.Max(0f, CurrentHealth - damage);
-        Debug.Log(CurrentHealth);
     }
 
     public void Heal(float amount)

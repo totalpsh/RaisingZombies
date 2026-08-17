@@ -13,13 +13,20 @@ MonoBehaviour:
   m_Name: Stage1
   m_EditorClassIdentifier: Assembly-CSharp::StageData
   stageNumber: 1
-  clearCondition: 1
-  enemies:
-  - enemyKey: Human
-    count: 3
-    spawnOffset: {x: 0, y: 0, z: 0}
-    spawnSpacing: 1
-  defenseData:
-    enabled: 0
-    defenseKey: 
-    spawnOffset: {x: 0, y: 0, z: 0}
+  difficulty:
+    healthMultiplier: 1
+    attackMultiplier: 1
+    moveSpeedMultiplier: 1
+    attackSpeedMultiplier: 1
+  defenses: []
+  humanDeployment:
+    populationData:
+    - humanKey: Human
+      initialCount: 3
+      targetCount: 3
+      replenishCount: 1
+      replenishInterval: 5
+      spawnOffset: {x: 0, y: 0, z: 0}
+      spawnSpacing: 1
+    repeatRules: []
+    timedWaves: []

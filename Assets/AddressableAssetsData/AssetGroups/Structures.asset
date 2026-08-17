@@ -10,33 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: UI
+  m_Name: Structures
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
-  m_GroupName: UI
-  m_GUID: 7e470fa8ecc752d4c98155246a32b177
+  m_GroupName: Structures
+  m_GUID: a09a7a8aef37af241ab422bc531439a5
   m_SerializeEntries:
-  - m_GUID: 369c360843e088a4ba97215497b8bf82
-    m_Address: LoadingUI
+  - m_GUID: 309243127796ba3448d3a1614b6fa7bc
+    m_Address: DefenseLine
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 83fb69d66b86e014684fc3a1daed1cbc
-    m_Address: StageFadeUI
+  - m_GUID: 78189b9871a7b49438adb62ef6c15af1
+    m_Address: HumanFortress
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 97dde6cf8debf5546b9aca8faede41cc
-    m_Address: Canvas
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: bfd291b8865c60d4b90a9f26178b230d
-    m_Address: UpgradeMenuController
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: d7bb7a49f82ece6478d128ea9e98257a
-    m_Address: EventSystem
+  - m_GUID: a1a6a19d2adebc54bade1edc66f8178d
+    m_Address: ZombieCamp
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -44,5 +34,5 @@ MonoBehaviour:
   m_Settings: {fileID: 11400000, guid: 46f0a33da75605f49b78bca90df5e8de, type: 2}
   m_SchemaSet:
     m_Schemas:
-    - {fileID: 11400000, guid: 45b825530e30daf4192b96a63da35949, type: 2}
-    - {fileID: 11400000, guid: 47fefbad91200b043a9d702467be60be, type: 2}
+    - {fileID: 11400000, guid: ab0a9125f597ea74d99217c57fb64ca6, type: 2}
+    - {fileID: 11400000, guid: 17ca2ef292a517a4ba0e5a2ef9d85be7, type: 2}
