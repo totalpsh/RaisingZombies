@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LoadingUI : MonoBehaviour
+public class LoadingUI : BaseUI
 {
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Slider progressBar;

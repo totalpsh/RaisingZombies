@@ -1,571 +1,649 @@
-using System;
+
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public enum UILayer { Main, HUD, PopUp, Transition }
 
-public class UIManager : Singleton<UIManager>, IAsyncInitializable
+public class UIManager : Singleton<UIManager>
 {
-    public const string UICommonPath = "UI/Common/";
-    public const string UIPrefabPath = "UI/Elements/";
-    
-    [SerializeField]private Transform uiRoot;                                 // 캔버스
-    public Transform Root => uiRoot;                          // 캠버스 위치 가지고 가기.
-    private EventSystem eventSystem;                          // 이벤트 시스템
-    private GameObject modalPanel;                            // 팝업 아래 UI 상호작용 차단용
+    [SerializeField] private RectTransform uiRoot;
+    [SerializeField] private EventSystem eventSystem;
 
-    private readonly Dictionary<UILayer, Transform> layers = new();
-    private readonly Dictionary<string, Stack<BaseUI>> pooledUI = new();
-    private readonly Dictionary<string, BaseUI> activeUI = new();
+    [SerializeField] private Canvas mainCanvas;
+    [SerializeField] private Canvas hudCanvas;
+    [SerializeField] private Canvas popUpCanvas;
+    [SerializeField] private Canvas transitionCanvas;
 
-    private readonly Stack<BaseUI> popUpStack = new();
-    private readonly Stack<BaseUI> reverseStack = new();
+    // 캔버스
+    public Transform Root => uiRoot; // 캠버스 위치 가지고 가기.// 이벤트 시스템
 
-    private bool isCleaning = false;
+    private readonly Dictionary<UILayer, Transform> _layers = new();
+    private readonly Dictionary<string, Stack<BaseUI>> _pooledUI = new();
+    private readonly Dictionary<string, BaseUI> _activeUI = new();
 
+    private readonly Stack<BaseUI> _popUpStack = new();
+    private readonly Stack<BaseUI> _reverseStack = new();
+
+    private GameObject _modalPanel; // 팝업 아래 UI 상호작용 차단용
     private LoadingUI _loadingUI;
     private StageFadeUI _stageFadeUI;
-    
+
+    private Task _initializationTask;
+    private Task<LoadingUI> _loadingUICreationTask;
+    private Task<StageFadeUI> _stageFadeUICreationTask;
+
+    private bool _isInitialized;
+    private bool _isCleaning = false;
+
     protected override void Awake()
     {
         base.Awake();
-
-        // SceneManager.sceneUnloaded += OnSceneUnloaded;
-    }
-    
-    public async Task<LoadingUI> GetOrCreateLoadingUIAsync()
-    {
-        if (_loadingUI != null) 
-            return _loadingUI;
-
-        if (uiRoot == null)
-            await CreateCanvasAndEventSystem();
-        
-        if (!layers.ContainsKey(UILayer.Transition))
-            CreateLayers();
-        
-        if (!layers.TryGetValue(
-            UILayer.Transition,
-            out Transform transitionLayer))
-    {
-        Debug.LogError(
-            "[UIManager] Transition 레이어가 생성되지 않았습니다."
-        );
-
-        return null;
-    }
-
-    GameObject obj =
-        await ResourceManager.Instance.CreateAsync<GameObject>(
-            nameof(LoadingUI),
-            transitionLayer
-        );
-
-    if (obj == null ||
-        !obj.TryGetComponent(out _loadingUI))
-    {
-        Debug.LogError("[UIManager] LoadingUI 생성 실패");
-
-        if (obj != null)
-            Destroy(obj);
-
-        return null;
-    }
-
-    _loadingUI.HideImmediate();
-    return _loadingUI;
-    }
-    
-    public async Task ShowLoadingAsync(string text = "Loading...")
-    {
-        var ui = await GetOrCreateLoadingUIAsync();
-        if (ui == null) return;
-
-        ui.SetText(text);
-        await ui.ShowAsync();
-    }
-
-    public async Task HideLoadingAsync()
-    {
-        if (_loadingUI == null) return;
-        await _loadingUI.HideAsync();
-    }
-
-    public async Task Init()
-    {
-        await CreateCanvasAndEventSystem();
-        CreateLayers();
-        // await CreateModalPanel();
-
-    }
-    
-    public async Task InitializeAsync()
-    {
-        await CreateCanvasAndEventSystem();
-        CreateLayers();
-        await CreateModalPanel();
     }
 
     protected override void OnDestroy()
     {
-        // SceneManager.sceneUnloaded -= OnSceneUnloaded;
-    }
-
-    public Transform GetLayer(UILayer layer) // 레이어 정의
-    {
-        if (layers.TryGetValue(layer, out var t))
-            return t;
-        return null;
-    }
-
-    public bool HasPopup()
-    {
-        return popUpStack.Count > 0;
+        base.OnDestroy();
     }
 
     #region Initialization
-    private async Task CreateCanvasAndEventSystem()
+
+    public Task InitializeAsync()
     {
-        Debug.Log("UIManager.CreateCanvasAndEventSystem");
+        if (_isInitialized)
+            return Task.CompletedTask;
+
+        return _initializationTask ??= InitializeInternalAsync();
+    }
+
+
+    private async Task InitializeInternalAsync()
+    {
+        if (!ValidateReferences())
+        {
+            _initializationTask = null;
+            return;
+        }
+
+        RegisterLayers();
+        await CreateModalPanel();
+
+        _isInitialized = true;
+    }
+
+    private bool ValidateReferences()
+    {
+        bool isValid = true;
+
         if (uiRoot == null)
         {
-            GameObject canvasPrefab = await ResourceManager.Instance.CreateAsync<GameObject>("Canvas");
-            canvasPrefab.transform.SetParent(transform);
-            uiRoot = canvasPrefab.transform;
+            Debug.LogError("[UIManager] UIRoot가 연결되지 않았습니다.");
+            isValid = false;
         }
 
         if (eventSystem == null)
         {
-            GameObject eventSystemPrefab = await ResourceManager.Instance.CreateAsync<GameObject>("EventSystem");
-            eventSystemPrefab.transform.SetParent(transform);
-            eventSystem = eventSystemPrefab.GetComponent<EventSystem>();
+            Debug.LogError("[UIManager] EventSystem이 연결되지 않았습니다.");
+            isValid = false;
         }
 
-        await Task.Yield();
+        if (mainCanvas == null)
+        {
+            Debug.LogError("[UIManager] MainLayer가 연결되지 않았습니다.");
+            isValid = false;
+        }
+
+        if (hudCanvas == null)
+        {
+            Debug.LogError("[UIManager] HUDLayer가 연결되지 않았습니다.");
+            isValid = false;
+        }
+
+        if (popUpCanvas == null)
+        {
+            Debug.LogError("[UIManager] PopUpLayer가 연결되지 않았습니다.");
+            isValid = false;
+        }
+
+        if (transitionCanvas == null)
+        {
+            Debug.LogError("[UIManager] TransitionLayer가 연결되지 않았습니다.");
+            isValid = false;
+        }
+
+        return isValid;
     }
 
-    private void CreateLayers()
+    private void RegisterLayers()
     {
-        if (uiRoot == null) return;
-        
-        foreach (UILayer layer in Enum.GetValues(typeof(UILayer)))
-        {
-            if (!layers.ContainsKey(layer))
-            {
-                GameObject obj = new GameObject(layer.ToString() + "Layer", typeof(RectTransform));
-                RectTransform rt = obj.GetComponent<RectTransform>();
-                
-                rt.SetParent(uiRoot, false);
-                rt.anchorMin = Vector2.zero;
-                rt.anchorMax = Vector2.one;
-                rt.sizeDelta = Vector2.zero;
-                rt.anchoredPosition = Vector2.zero;
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                
-                layers[layer] = rt;
-            }
-        }
+        _layers.Clear();
+
+        _layers[UILayer.Main] = mainCanvas.transform;
+        _layers[UILayer.HUD] = hudCanvas.transform;
+        _layers[UILayer.PopUp] = popUpCanvas.transform;
+        _layers[UILayer.Transition] = transitionCanvas.transform;
     }
 
     private async Task CreateModalPanel()
     {
-        if (modalPanel != null) return;
+        if (_modalPanel != null) return;
 
-        modalPanel = await ResourceManager.Instance.CreateAsync<GameObject>("ModalPanel", layers[UILayer.PopUp]);
-        modalPanel.SetActive(false);
+        GameObject createdPanel = await ResourceManager.Instance.CreateAsync<GameObject>("ModalPanel", popUpCanvas.transform);
+
+        if (createdPanel == null)
+        {
+            Debug.LogError("[UIManager] ModalPanel 생성 실패");
+            return;
+        }
+
+        // 팝업보다 뒤에 렌더링되도록 첫 번째 자식으로 배치
+        createdPanel.transform.SetAsFirstSibling();
+        createdPanel.SetActive(false);
+
+        _modalPanel = createdPanel;
     }
-    #endregion
 
+    private async Task<bool> EnsureInitializedAsync()
+    {
+        await InitializeAsync();
+
+        if (_isInitialized)
+            return true;
+
+        Debug.LogError("[UIManager] 초기화되지 않았습니다.");
+        return false;
+    }
+
+    #endregion
+    
     #region Open/Close UI
+
     public async Task<T> OpenUI<T>(object param = null, UILayer layer = UILayer.Main) where T : BaseUI
     {
-        if (!layers.ContainsKey(layer))
-            CreateLayers();
-        
-        if (layers.TryGetValue(layer, out var layerRoot) && !layerRoot.gameObject.activeSelf)
+        if (!await EnsureInitializedAsync())
+            return null;
+
+        if (!_layers.TryGetValue(layer, out Transform layerRoot))
+        {
+            Debug.LogError($"[UIManager] {layer} 레이어를 찾을 수 없습니다.");
+            return null;
+        }
+
+        if (!layerRoot.gameObject.activeSelf)
             layerRoot.gameObject.SetActive(true);
-        
+
         BaseUI ui = await GetOrCreateUI<T>(layer);
+
         if (ui == null)
         {
-            Debug.LogError($"{typeof(T).Name} 열기 실패");
+            Debug.LogError($"[UIManager] {typeof(T).Name} 열기 실패");
             return null;
         }
 
         ui.gameObject.SetActive(true);
-        // UIButtonSfxAutoBinder.BindButtonsIn(ui.transform);
-        
+
         string key = typeof(T).Name;
-        activeUI[key] = ui;
+        _activeUI[key] = ui;
 
-        // reverseStack 중복 방지
-        if (!reverseStack.Contains(ui)) reverseStack.Push(ui);
+        if (!_reverseStack.Contains(ui))
+            _reverseStack.Push(ui);
 
-        if (layer == UILayer.PopUp && !popUpStack.Contains(ui)) popUpStack.Push(ui);
+        if (layer == UILayer.PopUp)
+        {
+            if (!_popUpStack.Contains(ui))
+                _popUpStack.Push(ui);
 
-        ui?.Init(param);
+            // ModalPanel보다 앞에 오도록 보장
+            ui.transform.SetAsLastSibling();
+        }
+
+        ui.Init(param);
 
         UpdateModal();
-        
+
         return ui as T;
     }
 
     public void CloseUI<T>() where T : BaseUI
     {
-        string uiName = typeof(T).Name;
-        if (activeUI.TryGetValue(uiName, out var ui))
+        string key = typeof(T).Name;
+
+        if (_activeUI.TryGetValue(key, out BaseUI ui))
             CloseUI(ui);
     }
 
     public void CloseUI(BaseUI ui)
     {
-        if (ui == null) return;
+        if (ui == null)
+            return;
 
         string key = ui.GetType().Name;
-        
+
         ui.CloseUI();
-        
-        activeUI.Remove(key);
 
-        if (!pooledUI.ContainsKey(key))
-            pooledUI[key] = new Stack<BaseUI>();
-        pooledUI[key].Push(ui);
+        _activeUI.Remove(key);
 
-        RemoveFromStack(popUpStack, ui);
-        RemoveFromStack(reverseStack, ui);
+        if (!_pooledUI.TryGetValue(key, out Stack<BaseUI> stack))
+        {
+            stack = new Stack<BaseUI>();
+            _pooledUI[key] = stack;
+        }
+
+        if (!stack.Contains(ui))
+            stack.Push(ui);
+
+        RemoveFromStack(_popUpStack, ui);
+        RemoveFromStack(_reverseStack, ui);
 
         UpdateModal();
     }
 
-    private void RemoveFromStack(Stack<BaseUI> stack, BaseUI ui)
-    {
-        if (stack.Count == 0) return;
-
-        Stack<BaseUI> temp = new();
-        while (stack.Count > 0)
-        {
-            BaseUI top = stack.Pop();
-            if (top != ui)
-                temp.Push(top);
-        }
-        while (temp.Count > 0)
-            stack.Push(temp.Pop());
-    }
-
     public void CloseTopPopUp()
     {
-        while (popUpStack.Count > 0)
+        while (_popUpStack.Count > 0)
         {
-            BaseUI ui = popUpStack.Pop();
+            BaseUI ui = _popUpStack.Pop();
 
-            if (ui.gameObject.activeSelf)
-            {
-                CloseUI(ui);
-                break;
-            }
+            if (ui == null || !ui.gameObject.activeSelf)
+                continue;
+
+            CloseUI(ui);
+            return;
         }
+
+        UpdateModal();
     }
+
+    private void RemoveFromStack(Stack<BaseUI> stack, BaseUI target)
+    {
+        if (stack.Count == 0)
+            return;
+
+        Stack<BaseUI> temporaryStack = new();
+
+        while (stack.Count > 0)
+        {
+            BaseUI current = stack.Pop();
+
+            if (current != target)
+                temporaryStack.Push(current);
+        }
+
+        while (temporaryStack.Count > 0)
+            stack.Push(temporaryStack.Pop());
+    }
+
     #endregion
 
     #region Get / Create UI
+
     public T GetUI<T>() where T : BaseUI
     {
-        return activeUI.TryGetValue(typeof(T).Name, out var ui) ? ui as T : null;
+        return _activeUI.TryGetValue(typeof(T).Name, out BaseUI ui) ? ui as T : null;
     }
 
-    public T FindUI<T>() where T : BaseUI // UI 찾기
+    public T FindUI<T>() where T : BaseUI
     {
         string key = typeof(T).Name;
-        
-        if(activeUI.TryGetValue(key, out var active))
+
+        if (_activeUI.TryGetValue(key, out BaseUI active))
             return active as T;
-        
-        if(pooledUI.TryGetValue(key, out var stack))
+
+        if (!_pooledUI.TryGetValue(key, out Stack<BaseUI> stack))
+            return null;
+
+        foreach (BaseUI ui in stack)
         {
-            foreach (var ui in stack)
-            {
-                if (ui != null)
-                    return ui as T;
-            }
+            if (ui != null)
+                return ui as T;
         }
 
         return null;
     }
 
-    private async Task<BaseUI> GetOrCreateUI<T>(UILayer layer) where T : BaseUI
+    private async Task<BaseUI> GetOrCreateUI<T>(
+        UILayer layer
+    ) where T : BaseUI
     {
         string uiName = typeof(T).Name;
-        BaseUI ui;
 
-        if (activeUI.TryGetValue(uiName, out var active))
+        if (!_layers.TryGetValue(layer, out Transform layerRoot))
         {
-            if (active == null || active.gameObject == null) // Destroy된 참조
+            Debug.LogError($"[UIManager] {layer} 레이어가 없습니다.");
+            return null;
+        }
+
+        if (_activeUI.TryGetValue(uiName, out BaseUI active))
+        {
+            if (active == null)
             {
-                activeUI.Remove(uiName);
+                _activeUI.Remove(uiName);
             }
             else
             {
-                // 이미 켜져 있음 → 그대로 사용
+                active.transform.SetParent(layerRoot, false);
                 active.gameObject.SetActive(true);
-                active.transform.SetParent(layers[layer], false);
-                // UIButtonSfxAutoBinder.BindButtonsIn(active.transform);
+
                 return active;
             }
         }
 
-        if (pooledUI.TryGetValue(uiName, out var stack))
+        if (_pooledUI.TryGetValue(uiName, out Stack<BaseUI> stack))
         {
             while (stack.Count > 0)
             {
-                ui = stack.Pop();
+                BaseUI pooled = stack.Pop();
 
-                // Destroy된 UI 제거
-                if (ui == null || ui.gameObject == null)
+                if (pooled == null)
                     continue;
 
-                // 정상 UI라면 활성화
-                ui.transform.SetParent(layers[layer], false);
-                ui.gameObject.SetActive(true);
-                // UIButtonSfxAutoBinder.BindButtonsIn(ui.transform);
+                pooled.transform.SetParent(layerRoot, false);
+                pooled.gameObject.SetActive(true);
 
-                activeUI[uiName] = ui;
-                return ui;
+                _activeUI[uiName] = pooled;
+
+                return pooled;
             }
         }
 
-        string path = uiName;
-        GameObject go = await ResourceManager.Instance.CreateAsync<GameObject>(path, layers[layer]);
+        GameObject createdObject = await ResourceManager.Instance.CreateAsync<GameObject>(uiName, layerRoot);
 
-        if (go == null)
+        if (createdObject == null)
         {
-            Debug.LogError($"UI 생성 실패: {uiName}");
+            Debug.LogError($"[UIManager] UI 생성 실패: {uiName}");
             return null;
         }
 
-        ui = go.GetComponent<BaseUI>();
-        if (ui == null)
+        if (!createdObject.TryGetComponent(out BaseUI createdUI))
         {
-            Debug.LogError($"{uiName} 은 BaseUI가 없음");
-            GameObject.Destroy(go);
+            Debug.LogError($"[UIManager] {uiName} 프리팹에 BaseUI가 없습니다.");
+            Destroy(createdObject);
             return null;
         }
 
-        ui.name = uiName;
-        activeUI[uiName] = ui;
-        // UIButtonSfxAutoBinder.BindButtonsIn(ui.transform);
+        createdUI.name = uiName;
+        _activeUI[uiName] = createdUI;
 
-        return ui;
+        return createdUI;
     }
 
     public async Task<T> CreateSlotUI<T>(Transform parent = null) where T : BaseUI
     {
-        string path = typeof(T).Name;
-        
-        T ui = await ResourceManager.Instance.CreateAsync<T>(path, parent);
-        
-        // if (ui != null)
-            // UIButtonSfxAutoBinder.BindButtonsIn(ui.transform);
+        if (!await EnsureInitializedAsync())
+            return null;
 
-        return ui;
+        Transform targetParent = parent != null ? parent : mainCanvas.transform;
+
+        return await ResourceManager.Instance.CreateAsync<T>(typeof(T).Name, targetParent);
     }
+
     #endregion
 
     #region Modal Panel
+
     private void UpdateModal()
     {
-        if (modalPanel == null) return;
+        if (_modalPanel == null)
+            return;
 
-        if (popUpStack.Count == 0)
+        BaseUI topPopup = GetTopActivePopup();
+
+        if (topPopup == null)
         {
-            modalPanel.SetActive(false);
+            _modalPanel.SetActive(false);
             return;
         }
 
-        modalPanel.SetActive(true);
+        _modalPanel.SetActive(true);
 
-        // Modal 항상 팝업 최상단 SortingOrder + 1
-        Canvas modalCanvas = modalPanel.GetComponent<Canvas>();
-        if (modalCanvas != null)
-        {
-            modalCanvas.overrideSorting = true;
-
-            BaseUI top = null;
-            foreach (var ui in popUpStack)
-            {
-                if (ui.gameObject.activeSelf)
-                {
-                    top = ui;
-                    break;
-                }
-            }
-
-            if (top != null)
-            {
-                Canvas topCanvas = top.GetComponent<Canvas>();
-                int topOrder = topCanvas != null ? topCanvas.sortingOrder : 1000;
-                modalCanvas.sortingOrder = topOrder + 1;
-            }
-        }
+        // PopupLayer 안에서 순서를 다음처럼 유지
+        // ModalPanel → 팝업 UI
+        _modalPanel.transform.SetAsFirstSibling();
+        topPopup.transform.SetAsLastSibling();
     }
+
+    private BaseUI GetTopActivePopup()
+    {
+        foreach (BaseUI ui in _popUpStack)
+        {
+            if (ui != null && ui.gameObject.activeSelf)
+                return ui;
+        }
+
+        return null;
+    }
+
     #endregion
 
-    #region Scene / Cleanup
-    private void OnSceneUnloaded(Scene scene)
+    #region Loading UI
+
+    public async Task<LoadingUI> GetOrCreateLoadingUIAsync()
     {
-        StartCoroutine(CleanupAllUI());
+        if (!await EnsureInitializedAsync())
+            return null;
+
+        if (_loadingUI != null)
+            return _loadingUI;
+
+        _loadingUICreationTask ??= CreateLoadingUIInternalAsync();
+
+        LoadingUI result = await _loadingUICreationTask;
+
+        if (result == null)
+            _loadingUICreationTask = null;
+
+        return result;
     }
 
-    public void CloseAllUI()
+    private async Task<LoadingUI> CreateLoadingUIInternalAsync()
     {
-        Debug.Log("CloseAllUI");
-        
-        // activeUI → 모두 UI 닫기 + 풀로 이동
-        foreach (var kv in activeUI)
+        GameObject createdObject =
+            await ResourceManager.Instance.CreateAsync<GameObject>(nameof(LoadingUI), transitionCanvas.transform);
+
+        if (createdObject == null || !createdObject.TryGetComponent(out LoadingUI createdUI))
         {
-            BaseUI ui = kv.Value;
-            if (ui == null) 
-                continue;
-            if (ui is LoadingUI)
-                continue;
-            
-            ui.gameObject.SetActive(false);
+            Debug.LogError("[UIManager] LoadingUI 생성 실패");
 
-            if (!pooledUI.ContainsKey(kv.Key))
-                pooledUI[kv.Key] = new Stack<BaseUI>();
+            if (createdObject != null)
+                Destroy(createdObject);
 
-            // 중복 푸시 방지
-            if (!pooledUI[kv.Key].Contains(ui))
-                pooledUI[kv.Key].Push(ui);
+            return null;
         }
 
-        activeUI.Clear();
-        popUpStack.Clear();
-        reverseStack.Clear();
-        PoolManager.Instance.ClearAll();
-        
-        if (uiRoot != null)
-        {
-            var allUIs = uiRoot.GetComponentsInChildren<BaseUI>(true);
-            foreach (var ui in allUIs)
-            {
-                if (ui == null) continue;
+        _loadingUI = createdUI;
+        _loadingUI.HideImmediate();
 
-                ui.gameObject.SetActive(false);
-
-                string key = ui.GetType().Name;
-                if (!pooledUI.ContainsKey(key)) pooledUI[key] = new Stack<BaseUI>();
-                if (!pooledUI[key].Contains(ui)) pooledUI[key].Push(ui);
-            }
-        }
+        return _loadingUI;
     }
-    
-    
-    // 전부 정리해야할때 아래 코드 로 직접 호출하기
-    // StartCoroutine(UIManager.Instance.CleanupAllUIs());
-    public IEnumerator CleanupAllUI()
+
+    public async Task ShowLoadingAsync(string text = "Loading...")
     {
-        if (isCleaning) yield break;
-        isCleaning = true;
+        LoadingUI ui = await GetOrCreateLoadingUIAsync();
 
-        List<string> activeRemoveList = new List<string>();
-        foreach (var uiValue in activeUI)
-        {
-            BaseUI ui = uiValue.Value;
+        if (ui == null)
+            return;
 
-            // Destroy된 오브젝트 제거
-            if (ui == null)
-            {
-                activeRemoveList.Add(uiValue.Key);
-                continue;
-            }
+        ui.transform.SetAsLastSibling();
+        ui.SetText(text);
 
-            // 비활성화
-            ui.gameObject.SetActive(false);
-        }
-        
-        foreach (var key in activeRemoveList)
-            activeUI.Remove(key);
-
-        foreach (var kv in pooledUI)
-        {
-            Stack<BaseUI> original = kv.Value;
-            Stack<BaseUI> cleaned = new Stack<BaseUI>();
-
-            foreach (var ui in original)
-            {
-                if (ui != null)   // Destroy된 UI는 null로 인식됨
-                {
-                    ui.gameObject.SetActive(false);
-                    cleaned.Push(ui);
-                }
-            }
-
-            pooledUI[kv.Key] = cleaned; // 정리된 스택으로 교체
-        }
-        
-        popUpStack.Clear();
-        reverseStack.Clear();
-
-        isCleaning = false;
-        yield break;
+        await ui.ShowAsync();
     }
+
+    public async Task HideLoadingAsync()
+    {
+        if (_loadingUI == null)
+            return;
+
+        await _loadingUI.HideAsync();
+    }
+
     #endregion
-    
+
+    #region Stage Fade UI
+
     public async Task<StageFadeUI> GetOrCreateStageFadeUIAsync()
     {
+        if (!await EnsureInitializedAsync())
+            return null;
+
         if (_stageFadeUI != null)
             return _stageFadeUI;
 
-        if (uiRoot == null)
-            await CreateCanvasAndEventSystem();
-        
-        if (!layers.ContainsKey(UILayer.Transition))
-            CreateLayers();
-        
-        if (!layers.TryGetValue(
-                UILayer.Transition,
-                out Transform transitionLayer))
-        {
-            Debug.LogError(
-                "[UIManager] Transition 레이어가 생성되지 않았습니다."
-            );
+        _stageFadeUICreationTask ??= CreateStageFadeUIInternalAsync();
 
+        StageFadeUI result = await _stageFadeUICreationTask;
+
+        if (result == null)
+            _stageFadeUICreationTask = null;
+
+        return result;
+    }
+
+    private async Task<StageFadeUI> CreateStageFadeUIInternalAsync()
+    {
+        GameObject createdObject = await ResourceManager.Instance.CreateAsync<GameObject>(nameof(StageFadeUI), transitionCanvas.transform);
+
+        if (createdObject == null)
+        {
+            Debug.LogError("[UIManager] StageFadeUI 생성 실패");
             return null;
         }
 
-        
-        GameObject obj =
-            await ResourceManager.Instance.CreateAsync<GameObject>(
-                "StageFadeUI",
-                transitionLayer
-            );
-
-        if (obj == null)
+        if (!createdObject.TryGetComponent(out StageFadeUI createdUI))
         {
-            Debug.LogError(
-                "[UIManager] StageTransitionUI 생성 실패"
-            );
-
+            Debug.LogError("[UIManager] StageFadeUI 컴포넌트가 없습니다.");
+            Destroy(createdObject);
             return null;
         }
 
-        if (!obj.TryGetComponent(out _stageFadeUI))
-        {
-            Debug.LogError(
-                "[UIManager] StageTransitionUI 컴포넌트가 없습니다."
-            );
-
-            Destroy(obj);
-            return null;
-        }
+        _stageFadeUI = createdUI;
 
         return _stageFadeUI;
     }
+
+    #endregion
+    
+    #region Cleanup
+
+    public void CloseAllUI()
+    {
+        foreach (KeyValuePair<string, BaseUI> pair in _activeUI)
+        {
+            BaseUI ui = pair.Value;
+
+            if (ui == null || IsPersistentTransitionUI(ui))
+                continue;
+
+            ui.gameObject.SetActive(false);
+            AddToPool(pair.Key, ui);
+        }
+
+        _activeUI.Clear();
+        _popUpStack.Clear();
+        _reverseStack.Clear();
+
+        if (_modalPanel != null)
+            _modalPanel.SetActive(false);
+
+        if (uiRoot != null)
+        {
+            BaseUI[] allUIs =
+                uiRoot.GetComponentsInChildren<BaseUI>(true);
+
+            foreach (BaseUI ui in allUIs)
+            {
+                if (ui == null || IsPersistentTransitionUI(ui))
+                    continue;
+
+                ui.gameObject.SetActive(false);
+                AddToPool(ui.GetType().Name, ui);
+            }
+        }
+
+        PoolManager.Instance.ClearAll();
+    }
+
+    public IEnumerator CleanupAllUI()
+    {
+        if (_isCleaning)
+            yield break;
+
+        _isCleaning = true;
+
+        List<string> removeList = new();
+
+        foreach (KeyValuePair<string, BaseUI> pair in _activeUI)
+        {
+            BaseUI ui = pair.Value;
+
+            if (ui == null)
+            {
+                removeList.Add(pair.Key);
+                continue;
+            }
+
+            if (!IsPersistentTransitionUI(ui))
+                ui.gameObject.SetActive(false);
+        }
+
+        foreach (string key in removeList)
+            _activeUI.Remove(key);
+
+        List<string> poolKeys = new(_pooledUI.Keys);
+
+        foreach (string key in poolKeys)
+        {
+            Stack<BaseUI> original = _pooledUI[key];
+            Stack<BaseUI> cleaned = new();
+
+            foreach (BaseUI ui in original)
+            {
+                if (ui == null)
+                    continue;
+
+                if (!IsPersistentTransitionUI(ui))
+                    ui.gameObject.SetActive(false);
+
+                cleaned.Push(ui);
+            }
+
+            _pooledUI[key] = cleaned;
+        }
+
+        _popUpStack.Clear();
+        _reverseStack.Clear();
+
+        if (_modalPanel != null)
+            _modalPanel.SetActive(false);
+
+        _isCleaning = false;
+    }
+
+    private void AddToPool(string key, BaseUI ui)
+    {
+        if (ui == null)
+            return;
+
+        if (!_pooledUI.TryGetValue(
+                key,
+                out Stack<BaseUI> stack))
+        {
+            stack = new Stack<BaseUI>();
+            _pooledUI[key] = stack;
+        }
+
+        if (!stack.Contains(ui))
+            stack.Push(ui);
+    }
+
+    private bool IsPersistentTransitionUI(BaseUI ui)
+    {
+        return ui == _loadingUI || ui == _stageFadeUI;
+    }
+
+    #endregion
+    
 }

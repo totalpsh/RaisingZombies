@@ -15,6 +15,11 @@ MonoBehaviour:
   m_GroupName: UI
   m_GUID: 7e470fa8ecc752d4c98155246a32b177
   m_SerializeEntries:
+  - m_GUID: 08aaf67c9947c204fa8fe0ba1cf52e83
+    m_Address: ModalPanel
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 369c360843e088a4ba97215497b8bf82
     m_Address: LoadingUI
     m_ReadOnly: 0
