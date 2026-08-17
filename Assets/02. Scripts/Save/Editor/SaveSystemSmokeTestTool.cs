@@ -36,6 +36,7 @@ public static class SaveSystemSmokeTestTool
             Assert(loadedFromBackup, "Backup: 백업 복구 여부가 표시되지 않았습니다.");
             Assert(ReadCurrency(recoveredSave) == 100, "Backup: 이전 메인의 재화가 복구되지 않았습니다.");
             Assert(!recoveredSave.TryGetSection("relic", out _), "Provider 누락: 존재하지 않는 Provider가 생성되었습니다.");
+            Assert(!recoveredSave.TryGetSection("stage_progress", out _), "Provider 누락: 기존 Upgrade 전용 Save에 Stage Section이 임의 생성됐습니다.");
             Assert(recoveredSave.TryGetSection("upgrade", out _), "Provider 누락: 기존 Provider 데이터가 사라졌습니다.");
             Assert(service.TrySave(recoveredSave, true), "Backup: 정상 백업을 보존한 메인 복구에 실패했습니다.");
             File.WriteAllText(service.SavePath, "{corrupted again", System.Text.Encoding.UTF8);
@@ -74,13 +75,24 @@ public static class SaveSystemSmokeTestTool
             Assert(emptySectionLoadedSave.TryGetSection("broken_provider", out emptySection) && string.IsNullOrEmpty(emptySection.json),
                 "Provider Empty JSON: 빈 Provider Section이 유실되거나 변경됐습니다.");
 
+            GameSaveData stageProviderSave = CreateSave(654); // Upgrade와 Stage Section을 함께 검증할 전체 저장
+            StageProgressState stageProgress = new StageProgressState { currentStageNumber = 2, allStagesCompleted = true }; // 저장할 Stage 영구 진행 원본
+            stageProviderSave.SetSection("stage_progress", JsonUtility.ToJson(stageProgress));
+            Assert(service.TrySave(stageProviderSave), "Stage Provider: Stage Section 저장에 실패했습니다.");
+            GameSaveData loadedStageProviderSave; // Stage Section과 함께 다시 읽을 전체 저장
+            Assert(service.TryLoad(out loadedStageProviderSave, out loadedFromBackup), "Stage Provider: Stage Section 로드에 실패했습니다.");
+            Assert(!loadedFromBackup && ReadCurrency(loadedStageProviderSave) == 654, "Stage Provider: 기존 Upgrade Section이 보존되지 않았습니다.");
+            StageProgressState loadedStageProgress = ReadStageProgress(loadedStageProviderSave); // 다시 읽은 Stage 영구 진행 원본
+            Assert(loadedStageProgress.currentStageNumber == 2 && loadedStageProgress.allStagesCompleted,
+                "Stage Provider: Stage 진행 원본이 동일하게 복원되지 않았습니다.");
+
             File.WriteAllText(service.TemporaryPath, "stale tmp", System.Text.Encoding.UTF8);
             Assert(service.TrySave(CreateSave(321)), "Temporary File: 남은 tmp를 덮어쓰는 저장에 실패했습니다.");
             Assert(!File.Exists(service.TemporaryPath), "Temporary File: 정상 저장 뒤 tmp 파일이 남았습니다.");
 
             Assert(service.DeleteAll(), "Reset: 저장 파일 삭제에 실패했습니다.");
             Assert(!service.HasSave(), "Reset: 메인 또는 백업 파일이 남았습니다.");
-            Debug.Log("[SaveSmokeTest] 통과: New Save, Save, Load, Reset, Backup, Backup Preservation, Provider Missing, Provider Corruption, Provider Empty JSON, Duplicate Section, Migration, Future Version, Temporary File");
+            Debug.Log("[SaveSmokeTest] 통과: New Save, Save, Load, Reset, Backup, Backup Preservation, Provider Missing, Provider Corruption, Provider Empty JSON, Stage Provider, Duplicate Section, Migration, Future Version, Temporary File");
         }
         finally
         {
@@ -104,6 +116,14 @@ public static class SaveSystemSmokeTestTool
         Assert(save.TryGetSection("upgrade", out SaveDataSection section), "재화 Provider 구역이 없습니다.");
         UpgradeState upgrade = JsonUtility.FromJson<UpgradeState>(section.json); // 역직렬화한 업그레이드 원본
         return upgrade.currency;
+    }
+
+    // 전체 저장에서 테스트 Stage 진행 원본을 읽습니다.
+    private static StageProgressState ReadStageProgress(GameSaveData save)
+    {
+        SaveDataSection section; // 역직렬화할 Stage Provider 저장 구역
+        Assert(save.TryGetSection("stage_progress", out section), "Stage Provider 구역이 없습니다.");
+        return JsonUtility.FromJson<StageProgressState>(section.json);
     }
 
     // 조건이 거짓이면 스모크 테스트를 즉시 실패시킵니다.
