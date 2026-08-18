@@ -136,14 +136,16 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
         if (mainNavigationController == null)
         {
             Transform mainLayer = GetLayer(UILayer.Main); // UIManager가 소유한 메인 UI 레이어
-            GameObject navigationObject = new GameObject("MainNavigationController", typeof(RectTransform)); // 런타임 메인 네비게이션 컨트롤러 Root
-            navigationObject.transform.SetParent(mainLayer, false);
-            RectTransform navigationRect = navigationObject.GetComponent<RectTransform>(); // Main 레이어 전체를 차지할 컨트롤러 영역
-            navigationRect.anchorMin = Vector2.zero;
-            navigationRect.anchorMax = Vector2.one;
-            navigationRect.offsetMin = Vector2.zero;
-            navigationRect.offsetMax = Vector2.zero;
-            mainNavigationController = navigationObject.AddComponent<MainNavigationController>();
+            GameObject navigationObject = await ResourceManager.Instance.CreateAsync<GameObject>(nameof(MainNavigationController), mainLayer); // 수정 가능한 메인 네비게이션 프리팹 인스턴스
+            if (navigationObject == null || !navigationObject.TryGetComponent(out mainNavigationController))
+            {
+                Debug.LogError("[UIManager] MainNavigationController 프리팹 생성에 실패했습니다.");
+
+                if (navigationObject != null)
+                    Destroy(navigationObject);
+
+                return;
+            }
         }
 
         await mainNavigationController.InitializeAsync(this);
