@@ -37,7 +37,7 @@ public class CoreScene : BaseScene
             }
         }
 
-        _ = UIManager.Instance.Init();
+        _ = UIManager.Instance.InitializeAsync();
         
         Debug.Log("Core 초기화 완료");
 
