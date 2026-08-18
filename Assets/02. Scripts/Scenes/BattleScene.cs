@@ -7,6 +7,6 @@ public class BattleScene : BaseScene
 
     private void Start()
     {
-        _ = UIManager.Instance.OpenUI<UpgradeMenuController>("UpgradeMenuController", UILayer.Main);
+        _ = UIManager.Instance.ShowMainNavigationAsync();
     }
 }

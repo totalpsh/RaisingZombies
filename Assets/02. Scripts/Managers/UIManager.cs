@@ -32,6 +32,8 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
 
     private LoadingUI _loadingUI;
     private StageFadeUI _stageFadeUI;
+    private MainNavigationController mainNavigationController; // Main 레이어의 최상위 탭 네비게이션 컨트롤러
+    private Task mainNavigationTask; // 중복 생성 없이 공유하는 메인 네비게이션 초기화 작업
     
     protected override void Awake()
     {
@@ -111,6 +113,40 @@ public class UIManager : Singleton<UIManager>, IAsyncInitializable
         await CreateCanvasAndEventSystem();
         CreateLayers();
         await CreateModalPanel();
+    }
+
+    // 기존 UI 생성 흐름 안에서 메인 네비게이션과 Upgrade 탭을 한 번만 준비합니다.
+    public Task ShowMainNavigationAsync()
+    {
+        if (mainNavigationTask == null)
+            mainNavigationTask = CreateMainNavigationAsync();
+
+        return mainNavigationTask;
+    }
+
+    // 메인 네비게이션을 만들고 기존 Upgrade UI를 탭 Root에 연결합니다.
+    private async Task CreateMainNavigationAsync()
+    {
+        if (uiRoot == null)
+            await CreateCanvasAndEventSystem();
+
+        if (!layers.ContainsKey(UILayer.Main))
+            CreateLayers();
+
+        if (mainNavigationController == null)
+        {
+            Transform mainLayer = GetLayer(UILayer.Main); // UIManager가 소유한 메인 UI 레이어
+            GameObject navigationObject = new GameObject("MainNavigationController", typeof(RectTransform)); // 런타임 메인 네비게이션 컨트롤러 Root
+            navigationObject.transform.SetParent(mainLayer, false);
+            RectTransform navigationRect = navigationObject.GetComponent<RectTransform>(); // Main 레이어 전체를 차지할 컨트롤러 영역
+            navigationRect.anchorMin = Vector2.zero;
+            navigationRect.anchorMax = Vector2.one;
+            navigationRect.offsetMin = Vector2.zero;
+            navigationRect.offsetMax = Vector2.zero;
+            mainNavigationController = navigationObject.AddComponent<MainNavigationController>();
+        }
+
+        await mainNavigationController.InitializeAsync(this);
     }
 
     protected override void OnDestroy()
