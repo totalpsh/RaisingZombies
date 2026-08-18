@@ -17,6 +17,7 @@ public enum MainUITab
 public sealed class MainNavigationController : MonoBehaviour
 {
     [Header("메인 화면 Root")]
+    [SerializeField] private TopUIController topUIController; // 탭 전환과 무관하게 유지할 공통 상단 UI
     [SerializeField] private GameObject contentRoot; // 모든 메인 탭 Root를 담는 영역
     [SerializeField] private GameObject infoRoot; // 정보 탭의 Placeholder Root
     [SerializeField] private GameObject upgradeRoot; // 기존 업그레이드 UI가 들어가는 Root
@@ -51,6 +52,7 @@ public sealed class MainNavigationController : MonoBehaviour
         }
 
         RegisterButtonListeners();
+        topUIController.Initialize(UpgradeManager.Instance);
 
         UpgradeMenuController upgradeMenu = await uiManager.OpenUI<UpgradeMenuController>(null, UILayer.Main); // 기존 Addressables 업그레이드 UI 인스턴스
         if (upgradeMenu == null)
@@ -92,7 +94,7 @@ public sealed class MainNavigationController : MonoBehaviour
     // 프리팹에 메인 Root 5개와 버튼 5개가 모두 연결되었는지 확인합니다.
     private bool HasRequiredReferences()
     {
-        if (contentRoot == null || infoRoot == null || upgradeRoot == null || battleRoot == null ||
+        if (topUIController == null || contentRoot == null || infoRoot == null || upgradeRoot == null || battleRoot == null ||
             challengeRoot == null || shopRoot == null || tabButtons == null || tabButtons.Length != 5)
         {
             return false;
