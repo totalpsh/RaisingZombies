@@ -59,15 +59,17 @@ public class UIManager : Singleton<UIManager>
     // 메인 네비게이션을 만들고 기존 Upgrade UI를 탭 Root에 연결합니다.
     private async Task CreateMainNavigationAsync()
     {
-        if (uiRoot == null)
-            await CreateCanvasAndEventSystem();
+        if (!await EnsureInitializedAsync())
+            return;
 
-        if (!layers.ContainsKey(UILayer.Main))
-            CreateLayers();
+        if (!_layers.TryGetValue(UILayer.Main, out Transform mainLayer))
+        {
+            Debug.LogError("[UIManager] Main 레이어를 찾을 수 없습니다.");
+            return;
+        }
 
         if (mainNavigationController == null)
         {
-            Transform mainLayer = GetLayer(UILayer.Main); // UIManager가 소유한 메인 UI 레이어
             GameObject navigationObject = await ResourceManager.Instance.CreateAsync<GameObject>(nameof(MainNavigationController), mainLayer); // 수정 가능한 메인 네비게이션 프리팹 인스턴스
             if (navigationObject == null || !navigationObject.TryGetComponent(out mainNavigationController))
             {
