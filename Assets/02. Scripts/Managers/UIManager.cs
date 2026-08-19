@@ -39,9 +39,50 @@ public class UIManager : Singleton<UIManager>
     private bool _isInitialized;
     private bool _isCleaning = false;
 
+    private MainNavigationController mainNavigationController; // Main 레이어의 최상위 탭 네비게이션 컨트롤러
+    private Task mainNavigationTask; // 중복 생성 없이 공유하는 메인 네비게이션 초기화 작업
+    
     protected override void Awake()
     {
         base.Awake();
+    }
+
+    // 기존 UI 생성 흐름 안에서 메인 네비게이션과 Upgrade 탭을 한 번만 준비합니다.
+    public Task ShowMainNavigationAsync()
+    {
+        if (mainNavigationTask == null)
+            mainNavigationTask = CreateMainNavigationAsync();
+
+        return mainNavigationTask;
+    }
+
+    // 메인 네비게이션을 만들고 기존 Upgrade UI를 탭 Root에 연결합니다.
+    private async Task CreateMainNavigationAsync()
+    {
+        if (!await EnsureInitializedAsync())
+            return;
+
+        if (!_layers.TryGetValue(UILayer.Main, out Transform mainLayer))
+        {
+            Debug.LogError("[UIManager] Main 레이어를 찾을 수 없습니다.");
+            return;
+        }
+
+        if (mainNavigationController == null)
+        {
+            GameObject navigationObject = await ResourceManager.Instance.CreateAsync<GameObject>(nameof(MainNavigationController), mainLayer); // 수정 가능한 메인 네비게이션 프리팹 인스턴스
+            if (navigationObject == null || !navigationObject.TryGetComponent(out mainNavigationController))
+            {
+                Debug.LogError("[UIManager] MainNavigationController 프리팹 생성에 실패했습니다.");
+
+                if (navigationObject != null)
+                    Destroy(navigationObject);
+
+                return;
+            }
+        }
+
+        await mainNavigationController.InitializeAsync(this);
     }
 
     protected override void OnDestroy()
