@@ -147,8 +147,7 @@ public class HumanSpawner : MonoBehaviour
                     continue;
                 }
 
-                if (!humanObject.TryGetComponent(
-                        out UnitController human))
+                if (!humanObject.TryGetComponent(out UnitController human))
                 {
                     Debug.LogError($"{runtime.Data.HumanKey}에 " + "UnitController가 엄서여");
 
@@ -164,14 +163,14 @@ public class HumanSpawner : MonoBehaviour
                     + spacing;
 
                 humanObject.transform.SetPositionAndRotation(position, _spawnOrigin.rotation);
-
+                
+                humanObject.SetActive(true);
+                
                 UnitStats stats = HumanStatsCalculator.Calculate(human.Data, _stageNumber, scalingData, _difficulty);
 
                 human.Initialize(human.Data, stats);
-                Debug.Log(human.Model.Stats.MaxHealth);
-                RegisterPopulationHuman(human, runtime);
 
-                humanObject.SetActive(true);
+                RegisterPopulationHuman(human, runtime);
             }
         }
         finally

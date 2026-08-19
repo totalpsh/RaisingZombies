@@ -14,7 +14,9 @@ public class StructureController : MonoBehaviour, ICombatTarget
     [SerializeField] private UnitTeam team;
     [SerializeField] private Transform spawnPoint;
     [SerializeField, Min(1f)] private float maxHealth = 100f;
+    [SerializeField] private Collider2D structureCollider;
 
+    public Collider2D TargetCollider => structureCollider;
     private float _runtimeMaxHealth;
     private float _currentHealth;
     private bool _isDestroyed;

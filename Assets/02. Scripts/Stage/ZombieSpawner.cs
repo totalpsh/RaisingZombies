@@ -94,10 +94,10 @@ public class ZombieSpawner : MonoBehaviour
         }
         
         zombieObj.transform.SetPositionAndRotation(spawnPoint.position, spawnPoint.rotation);
+        zombieObj.SetActive(true);
         InitializeZombie(zombieController);
         zombieController.Died += HandleZombieDied;
         _spawnedZombies.Add(zombieController);
-        zombieObj.SetActive(true);
         
         _isSpawning = false;
     }

@@ -12,6 +12,8 @@ public class StageManager : MonoBehaviour
     [SerializeField] private ZombieSpawner zombieSpawner;
     [SerializeField] private HumanSpawner humanSpawner;
     
+    [SerializeField, Min(0f)] private float retryDelay = 1.5f;
+    
     private int _currentStageIndex;
     private bool _isStageRunning;
     private bool _isTransitioning;
@@ -49,7 +51,6 @@ public class StageManager : MonoBehaviour
 
         zombieSpawner.SetSpawnOrigin(zombieCamp.SpawnPoint);
         humanSpawner.SetSpawnOrigin(humanFortress.SpawnPoint);
-        
 
         _isStageRunning = true;
         _isTransitioning = false;
@@ -87,7 +88,31 @@ public class StageManager : MonoBehaviour
 
         Debug.Log($"Stage " + $"{CurrentStageNumber} 패배");
 
-        // 재도전 방식은 이후 추가한다.
+        _ = RetryCurrentStageAsync();
+    }
+
+    private async Task RetryCurrentStageAsync()
+    {
+        if (retryDelay > 0f)
+        {
+            int delayMilliseconds = Mathf.RoundToInt(retryDelay * 1000f);
+            await Task.Delay(delayMilliseconds);
+        }
+
+        if (this == null)
+            return;
+
+        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+
+        if (fadeUI != null)
+            await fadeUI.FadeOutAsync();
+
+        ClearCurrentStage();
+
+        await StartStageAsync(_currentStageIndex);
+
+        if (fadeUI != null)
+            await fadeUI.FadeInAsync();
     }
 
     private async Task MoveToNextStageAsync()
@@ -99,11 +124,7 @@ public class StageManager : MonoBehaviour
         if (fadeUI != null)
             await fadeUI.FadeOutAsync();
 
-        ClearObjectiveSubscriptions();
-
-        zombieSpawner.ReleaseAllZombies();
-        humanSpawner.ReleaseAllHumans();
-        stageSpawner.Clear();
+        ClearCurrentStage();
 
         _currentStageIndex++;
 
@@ -179,6 +200,15 @@ public class StageManager : MonoBehaviour
         }
 
         return true;
+    }
+    
+    private void ClearCurrentStage()
+    {
+        ClearObjectiveSubscriptions();
+
+        zombieSpawner.ReleaseAllZombies();
+        humanSpawner.ReleaseAllHumans();
+        stageSpawner.Clear();
     }
 
     private void OnDestroy()

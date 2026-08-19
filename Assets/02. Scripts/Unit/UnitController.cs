@@ -1,19 +1,23 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
-    [SerializeField] private Animator _animator;
+    [SerializeField] private UnitAnimation animation;
     
     [SerializeField] private LayerMask unitLayer;
     [SerializeField, Min(0.01f)] private float targetSearchRange = 3f;
 
     [SerializeField]private UnitData _data;
     [SerializeField]private UnitModel _model;
+    [SerializeField] private Collider2D unitCollider;
+
     // private UnitController _currentTarget;
     
     private bool _isInitialized;
 
+    public Collider2D TargetCollider => unitCollider;
     private ICombatTarget _currentTarget;
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
@@ -53,10 +57,16 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         _data = data;
         _model = new UnitModel(stats);
-
-        // _currentTarget = null;
+        
+        _currentTarget = null;
         _isInitialized = true;
+        
+        if (unitCollider != null)
+            unitCollider.enabled = true;
+        
         enabled = true;
+        
+        ResetAnimation();
     }
     
     private void UpdateRegeneration(float deltaTime)
@@ -102,13 +112,9 @@ public class UnitController : MonoBehaviour, ICombatTarget
     
     private bool IsAhead(ICombatTarget target)
     {
-        float offset =
-            target.TargetTransform.position.x
-            - transform.position.x;
+        float offset = target.TargetTransform.position.x - transform.position.x;
 
-        return Team == UnitTeam.Zombie
-            ? offset > 0f
-            : offset < 0f;
+        return Team == UnitTeam.Zombie ? offset > 0f : offset < 0f;
     }
 
     private void TryAction()
@@ -132,11 +138,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void MoveForward()
     {
-        float direction =
-            Team == UnitTeam.Zombie ? 1f : -1f;
+        animation.PlayWalk();
+        
+        float direction = Team == UnitTeam.Zombie ? 1f : -1f;
 
-        float distance =
-            _model.Stats.MoveSpeed * Time.deltaTime;
+        float distance = _model.Stats.MoveSpeed * Time.deltaTime;
 
         transform.Translate(Vector3.right * (direction * distance));
     }
@@ -148,12 +154,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         if (!IsValidEnemy(_currentTarget))
             return;
-
-        _animator.SetTrigger("Attack");
         
         _currentTarget.TakeDamage(_model.Stats.AttackPower);
 
         _model.ResetAttackCooldown();
+        animation.PlayAttack();
     }
 
     public void TakeDamage(float damage)
@@ -164,7 +169,12 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _model.TakeDamage(damage);
 
         if (_model.IsDead)
+        {
             Die();
+            return;
+        }
+
+        animation.PlayHit();
     }
 
     private void Die()
@@ -172,9 +182,17 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _currentTarget = null;
         enabled = false;
 
+        if (unitCollider != null)
+            unitCollider.enabled = false;
+        
         Died?.Invoke(this);
         
-        PoolManager.Instance.Release(this.gameObject);
+        animation.PlayDie(ReleaseToPool);
+    }
+    
+    private void ReleaseToPool()
+    {
+        PoolManager.Instance.Release(gameObject);
     }
 
     private bool IsValidEnemy(ICombatTarget target)
@@ -189,7 +207,18 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private float GetHorizontalDistance(ICombatTarget target)
     {
-        return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
+        if (unitCollider == null || target.TargetCollider == null)
+        
+            return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
+        
+        ColliderDistance2D distance = unitCollider.Distance(target.TargetCollider);
+
+        return Mathf.Max(0f, distance.distance);
+    }
+
+    private void ResetAnimation()
+    {
+        animation.ResetState();
     }
 
 #if UNITY_EDITOR
