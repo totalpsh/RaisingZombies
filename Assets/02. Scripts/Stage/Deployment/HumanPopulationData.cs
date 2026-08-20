@@ -19,4 +19,27 @@ public class HumanPopulationData
     public float ReplenishInterval => replenishInterval;
     public Vector3 SpawnOffset => spawnOffset;
     public float SpawnSpacing => spawnSpacing;
+
+    public HumanPopulationData CreateScaled(int additionalCount)
+    {
+        int safeAdditionalCount = Mathf.Max(0, additionalCount);
+
+        int scaledTargetCount = targetCount + safeAdditionalCount;
+
+        // 시작 인원이 0인 규칙은 의도적으로 0을 유지한다.
+        int scaledInitialCount = initialCount > 0 ? initialCount + safeAdditionalCount : 0;
+
+        scaledInitialCount = Mathf.Min(scaledInitialCount, scaledTargetCount);
+
+        return new HumanPopulationData
+        {
+            humanKey = humanKey,
+            initialCount = scaledInitialCount,
+            targetCount = scaledTargetCount,
+            replenishCount = replenishCount,
+            replenishInterval = replenishInterval,
+            spawnOffset = spawnOffset,
+            spawnSpacing = spawnSpacing
+        };
+    }
 }

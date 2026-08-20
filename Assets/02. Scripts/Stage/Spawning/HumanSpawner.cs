@@ -34,7 +34,7 @@ public class HumanSpawner : MonoBehaviour
         _spawnOrigin = spawnOrigin;
     }
 
-    public void StartProduction(StageData stageData)
+    public void StartProduction(StageRuntimeData stageData)
     {
         StopProduction();
         ReleaseAllHumans();

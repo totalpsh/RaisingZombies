@@ -397,14 +397,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0cb89ca55766974ebf056bca74666c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
-  stages:
-  - {fileID: 11400000, guid: 5fdceafbd16aea14c88c180465ab4dcb, type: 2}
-  - {fileID: 11400000, guid: d61a19b436b97bb4f9f2f20b8fa61802, type: 2}
-  stageSpawner: {fileID: 1712586537}
+  stageCatalog: {fileID: 11400000, guid: 5362f533e2721844596d58dd6885ad47, type: 2}
   zombieCamp: {fileID: 8615642909568846135}
   humanFortress: {fileID: 6349473873355835590}
   zombieSpawner: {fileID: 8615642909568846136}
   humanSpawner: {fileID: 1141245562}
+  stages:
+  - {fileID: 11400000, guid: 5fdceafbd16aea14c88c180465ab4dcb, type: 2}
+  - {fileID: 11400000, guid: d61a19b436b97bb4f9f2f20b8fa61802, type: 2}
+  stageSpawner: {fileID: 1712586537}
+  retryDelay: 1.5
 --- !u!4 &1977440663
 Transform:
   m_ObjectHideFlags: 0
@@ -669,6 +671,7 @@ MonoBehaviour:
   team: 1
   spawnPoint: {fileID: 1141245561}
   maxHealth: 100
+  structureCollider: {fileID: 0}
 --- !u!212 &7786187726288138425
 SpriteRenderer:
   serializedVersion: 2
@@ -764,6 +767,7 @@ MonoBehaviour:
   team: 0
   spawnPoint: {fileID: 2015096598}
   maxHealth: 100
+  structureCollider: {fileID: 0}
 --- !u!114 &8615642909568846136
 MonoBehaviour:
   m_ObjectHideFlags: 0

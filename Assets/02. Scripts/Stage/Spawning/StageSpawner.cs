@@ -8,23 +8,20 @@ public class StageSpawner : MonoBehaviour
     private List<StructureController> _spawnedDefenses = new();
     public List<StructureController> SpawnedDefenses => _spawnedDefenses;
     
-    public IReadOnlyList<StructureController> Spawn(
-        StageData stageData)
+    public IReadOnlyList<StructureController> Spawn(StageRuntimeData stageData)
     {
         Clear();
 
         if (stageData == null)
         {
-            Debug.LogError(
-                "[StageSpawner] StageData가 null입니다.");
+            Debug.LogError("[StageSpawner] StageRuntimeData가 null입니다.");
 
             return _spawnedDefenses;
         }
 
         if (stageOrigin == null)
         {
-            Debug.LogError(
-                "[StageSpawner] StageOrigin이 없습니다.");
+            Debug.LogError("[StageSpawner] StageOrigin이 없습니다.");
 
             return _spawnedDefenses;
         }
@@ -32,12 +29,9 @@ public class StageSpawner : MonoBehaviour
         if (stageData.Defenses == null)
             return _spawnedDefenses;
 
-        foreach (StageDefenseData defenseData
-                 in stageData.Defenses)
-        {
+        foreach (StageDefenseData defenseData in stageData.Defenses)
             SpawnDefense(defenseData);
-        }
-
+        
         return _spawnedDefenses;
     }
 
