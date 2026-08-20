@@ -42,6 +42,22 @@ MonoBehaviour:
     m_Localized: Currency per second
     m_Metadata:
       m_Items: []
+  - m_Id: 5840384073682944
+    m_Localized: Battle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843542766276608
+    m_Localized: Upgrade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843791324925952
+    m_Localized: Challenge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843974351769600
+    m_Localized: Shop
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

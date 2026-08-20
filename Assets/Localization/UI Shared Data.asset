@@ -43,6 +43,22 @@ MonoBehaviour:
     m_Key: Currencypersecond
     m_Metadata:
       m_Items: []
+  - m_Id: 5840384073682944
+    m_Key: "Battle\t"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843542766276608
+    m_Key: Upgrade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843791324925952
+    m_Key: Challenge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5843974351769600
+    m_Key: Shop
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
