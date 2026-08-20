@@ -965,6 +965,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6965850699525108767}
+  - component: {fileID: 5661547604737735986}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (7)
   m_TagString: Untagged
@@ -988,11 +989,29 @@ RectTransform:
   - {fileID: 6467573216125039834}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 566.45325, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5661547604737735986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 385764744674405941}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 07000000
+  statNameText: {fileID: 4967418421071542810}
+  valueText: {fileID: 8087342619587782491}
+  drawEffectObject: {fileID: 9149828351365990559}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &432461136566849240
 GameObject:
   m_ObjectHideFlags: 0
@@ -2545,6 +2564,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5228814204618823150}
+  - component: {fileID: 6070198590381975901}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab
   m_TagString: Untagged
@@ -2568,11 +2588,29 @@ RectTransform:
   - {fileID: 3460758504683764008}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 37.76355, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6070198590381975901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1129966721474351481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 00000000
+  statNameText: {fileID: 4720390813545649066}
+  valueText: {fileID: 7126995209399929784}
+  drawEffectObject: {fileID: 5620672849411382208}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &1192305501639702910
 GameObject:
   m_ObjectHideFlags: 0
@@ -3972,10 +4010,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 606664941151812098}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 417.00635, y: -22.2355}
-  m_SizeDelta: {x: 133.20255, y: 44.471}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5758622183097694560
 CanvasRenderer:
@@ -4880,6 +4918,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7749588770014816065}
+  - component: {fileID: 9027282911893895394}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (2)
   m_TagString: Untagged
@@ -4903,11 +4942,29 @@ RectTransform:
   - {fileID: 9147435943686361353}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 188.81775, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &9027282911893895394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1863944870934997377}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 02000000
+  statNameText: {fileID: 1971442375608580430}
+  valueText: {fileID: 4290688687792372992}
+  drawEffectObject: {fileID: 371403776418890811}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &1880543745609346404
 GameObject:
   m_ObjectHideFlags: 0
@@ -5018,8 +5075,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 7, y: -41.656}
-  m_SizeDelta: {x: -372.37732, y: 83.311584}
+  m_AnchoredPosition: {x: 7, y: 36.171}
+  m_SizeDelta: {x: -372.3773, y: 72.342}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3811342391012115475
 CanvasRenderer:
@@ -5612,10 +5669,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 7739120191732354198}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 235.69}
-  m_SizeDelta: {x: 0, y: -471.38}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 1, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 235.34}
+  m_SizeDelta: {x: 0, y: 82.619995}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2143487107466697703
 CanvasRenderer:
@@ -6707,10 +6764,10 @@ RectTransform:
   - {fileID: 3391223455082747887}
   m_Father: {fileID: 1508712394227579661}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 109.42946, y: -58.07835}
-  m_SizeDelta: {x: 218.85892, y: 116.1567}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2487948867968072079
 CanvasRenderer:
@@ -7763,10 +7820,10 @@ RectTransform:
   - {fileID: 5449393575334815678}
   m_Father: {fileID: 7244672518947668555}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 556.6071, y: -215.28355}
+  m_SizeDelta: {x: 201.31485, y: 330.5671}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8966039866294553304
 CanvasRenderer:
@@ -8131,10 +8188,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 606664941151812098}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 66.60127, y: -22.2355}
-  m_SizeDelta: {x: 133.20255, y: 44.471}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4589429843321750082
 CanvasRenderer:
@@ -8465,10 +8522,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 606664941151812098}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 241.80382, y: -22.2355}
-  m_SizeDelta: {x: 133.20255, y: 44.471}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4334682582399242285
 CanvasRenderer:
@@ -8675,10 +8732,10 @@ RectTransform:
   - {fileID: 5040854822432005128}
   m_Father: {fileID: 1508712394227579661}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 338.2884, y: -58.07835}
-  m_SizeDelta: {x: 218.85892, y: 116.1567}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4642547219235425891
 CanvasRenderer:
@@ -9105,8 +9162,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 235.69}
-  m_SizeDelta: {x: 0, y: -471.38}
+  m_AnchoredPosition: {x: 0, y: 163.34}
+  m_SizeDelta: {x: 0, y: -326.69}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4978545311018733306
 CanvasRenderer:
@@ -9377,6 +9434,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 91738084505530448}
+  - component: {fileID: 935530077199054964}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (5)
   m_TagString: Untagged
@@ -9400,11 +9458,29 @@ RectTransform:
   - {fileID: 7665395497624037798}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 415.39905, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &935530077199054964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3411274589497104826}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 05000000
+  statNameText: {fileID: 8855188674054475424}
+  valueText: {fileID: 155496624654494247}
+  drawEffectObject: {fileID: 8994440319549927638}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &3433545249911185090
 GameObject:
   m_ObjectHideFlags: 0
@@ -10312,10 +10388,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 606664941151812098}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 592.2089, y: -22.2355}
-  m_SizeDelta: {x: 133.20255, y: 44.471}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1970202926253595980
 CanvasRenderer:
@@ -11349,6 +11425,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8176199776765214548}
+  - component: {fileID: 1143093183433524618}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (8)
   m_TagString: Untagged
@@ -11372,11 +11449,29 @@ RectTransform:
   - {fileID: 904711621048123934}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 641.98035, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1143093183433524618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4121637084024342299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 0800000009000000
+  statNameText: {fileID: 1315658733014931417}
+  valueText: {fileID: 4919427947213321261}
+  drawEffectObject: {fileID: 8782865298011434216}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &4165750251102842756
 GameObject:
   m_ObjectHideFlags: 0
@@ -11801,8 +11896,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -30.9656}
-  m_SizeDelta: {x: -62.7355, y: -174.5332}
+  m_AnchoredPosition: {x: 0, y: 14.716}
+  m_SizeDelta: {x: -62.7355, y: -29.4329}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5681404613452520144
 MonoBehaviour:
@@ -11961,10 +12056,10 @@ RectTransform:
   - {fileID: 1821948241698911874}
   m_Father: {fileID: 7244672518947668555}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 328.63226, y: -215.28355}
+  m_SizeDelta: {x: 201.31485, y: 330.5671}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2113207067655860519
 CanvasRenderer:
@@ -12670,8 +12765,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -37.000023}
-  m_SizeDelta: {x: -14.000001, y: -100}
+  m_AnchoredPosition: {x: -0.07037735, y: 1.6058998}
+  m_SizeDelta: {x: -7.6628, y: -10.958}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2403808912056176464
 CanvasRenderer:
@@ -13842,10 +13937,10 @@ RectTransform:
   - {fileID: 616890293326282119}
   m_Father: {fileID: 4871524098057282607}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 148.6961, y: -66.078354}
-  m_SizeDelta: {x: 297.3922, y: 116.1567}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &977221368444028525
 MonoBehaviour:
@@ -15369,6 +15464,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5645272574476990055}
+  - component: {fileID: 2322232316899282765}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (1)
   m_TagString: Untagged
@@ -15392,11 +15488,29 @@ RectTransform:
   - {fileID: 7154085181237145984}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 113.29065, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2322232316899282765
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5647714936872752906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 01000000
+  statNameText: {fileID: 1310937953882816076}
+  valueText: {fileID: 3948156145276863015}
+  drawEffectObject: {fileID: 555345352945891715}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &5673141042142213239
 GameObject:
   m_ObjectHideFlags: 0
@@ -15956,6 +16070,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4710032935889723550}
+  - component: {fileID: 3682799038675481949}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (6)
   m_TagString: Untagged
@@ -15979,11 +16094,29 @@ RectTransform:
   - {fileID: 3416125528185369581}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 490.92615, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &3682799038675481949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5890690043970753525}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 06000000
+  statNameText: {fileID: 1876054263677470278}
+  valueText: {fileID: 7636005104414232934}
+  drawEffectObject: {fileID: 7199920741834087441}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &5893530860898838648
 GameObject:
   m_ObjectHideFlags: 0
@@ -15999,7 +16132,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &8444868761744106107
 RectTransform:
   m_ObjectHideFlags: 0
@@ -17492,7 +17625,7 @@ RectTransform:
   m_Father: {fileID: 1374583151355470735}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -18076,9 +18209,9 @@ RectTransform:
   - {fileID: 3267177336839311573}
   m_Father: {fileID: 452987608138132099}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 115.26665, y: -84.832085}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 186.5333, y: 30.8479}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7567247413763644468
@@ -18349,8 +18482,15 @@ MonoBehaviour:
   drawStatusText: {fileID: 0}
   drawOneButton: {fileID: 3285682857000459547}
   drawOneButtonText: {fileID: 5721775248303180613}
+  drawOneCostText: {fileID: 0}
   drawTenButton: {fileID: 991870114666410256}
   drawTenButtonText: {fileID: 871418880833434656}
+  drawTenCostText: {fileID: 0}
+  gachaLevelText: {fileID: 5132739554188341603}
+  nextLevelProgressText: {fileID: 8093681320372424081}
+  gachaLevelSlider: {fileID: 3384643552938283011}
+  statCards:
+  - {fileID: 0}
   drawResultsRoot: {fileID: 0}
   drawResultPrefab: {fileID: 4573004520965646069, guid: 236174e3a0600be468f84c7b6110b833, type: 3}
   unlockNoticeText: {fileID: 0}
@@ -18366,6 +18506,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2055426990996502488}
+  - component: {fileID: 2587184404314192148}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (3)
   m_TagString: Untagged
@@ -18389,11 +18530,29 @@ RectTransform:
   - {fileID: 370408482183407043}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 264.34485, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &2587184404314192148
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6943501528034435256}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 03000000
+  statNameText: {fileID: 7545389147158327408}
+  valueText: {fileID: 5395207756898622760}
+  drawEffectObject: {fileID: 2238067030624204504}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &6995620133601497206
 GameObject:
   m_ObjectHideFlags: 0
@@ -18732,6 +18891,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8783969614397819226}
+  - component: {fileID: 6691499214309420228}
   m_Layer: 0
   m_Name: CardFrame_02_BasePrefab (4)
   m_TagString: Untagged
@@ -18755,11 +18915,29 @@ RectTransform:
   - {fileID: 379531367283118913}
   m_Father: {fileID: 7440511093049518919}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 339.87195, y: -62.4408}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 75.5271, y: 124.8816}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &6691499214309420228
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7139248273856429452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bc84e31781754a9aa49048405fedfab3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StatUpgradeCardView
+  statTypes: 04000000
+  statNameText: {fileID: 4358237167567242576}
+  valueText: {fileID: 2231733259076493114}
+  drawEffectObject: {fileID: 3648704310535564781}
+  effectScale: 1.08
+  effectDuration: 0.3
 --- !u!1 &7199920741834087441
 GameObject:
   m_ObjectHideFlags: 0
@@ -19141,9 +19319,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 452987608138132099}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 115.26665, y: -23}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 186.5333, y: 22.644}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &3367248556072909966
@@ -20108,10 +20286,10 @@ RectTransform:
   - {fileID: 7614635233875288597}
   m_Father: {fileID: 7244672518947668555}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100.657425, y: -215.28355}
+  m_SizeDelta: {x: 201.31485, y: 330.5671}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4715399508807266595
 CanvasRenderer:
@@ -20423,7 +20601,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &4975779686410846954
 RectTransform:
   m_ObjectHideFlags: 0
@@ -20980,10 +21158,10 @@ RectTransform:
   - {fileID: 8967104728012749344}
   m_Father: {fileID: 4871524098057282607}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 456.1411, y: -66.078354}
-  m_SizeDelta: {x: 447.71783, y: 116.1567}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7643660153326516246
 MonoBehaviour:
@@ -21314,9 +21492,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 452987608138132099}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 115.26665, y: -42.814667}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 186.5333, y: 29.4228}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &4485584244713110364

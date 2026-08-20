@@ -54,7 +54,12 @@ public sealed class MainNavigationController : MonoBehaviour
         RegisterButtonListeners();
         topUIController.Initialize(UpgradeManager.Instance);
 
-        UpgradeMenuController upgradeMenu = await uiManager.OpenUI<UpgradeMenuController>(null, UILayer.Main); // 기존 Addressables 업그레이드 UI 인스턴스
+        UpgradeMenuController upgradeMenu = upgradeRoot.GetComponentInChildren<UpgradeMenuController>(true); // 네비게이션 프리팹에 이미 포함된 업그레이드 UI
+        if (upgradeMenu == null)
+        {
+            upgradeMenu = await uiManager.OpenUI<UpgradeMenuController>(null, UILayer.Main); // 프리팹에 없을 때만 생성하는 기존 Addressables UI
+        }
+
         if (upgradeMenu == null)
         {
             Debug.LogError("[MainNavigationController] UpgradeMenuController를 만들지 못했습니다.", this);
