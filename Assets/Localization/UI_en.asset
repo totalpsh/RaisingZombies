@@ -58,6 +58,22 @@ MonoBehaviour:
     m_Localized: Shop
     m_Metadata:
       m_Items: []
+  - m_Id: 6198474132443136
+    m_Localized: All combat stats are determined by draws.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6202566758125568
+    m_Localized: Choise
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6204031887233024
+    m_Localized: Upgrade related to production
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6207647909957632
+    m_Localized: Upgrades related to currency.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
