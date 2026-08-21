@@ -18,8 +18,16 @@ public sealed class UpgradePanel : MonoBehaviour
     [SerializeField] private TMP_Text drawStatusText; // 재화 부족 또는 설정 오류 안내
     [SerializeField] private Button drawOneButton; // 1회 뽑기 버튼
     [SerializeField] private TMP_Text drawOneButtonText; // 1회 뽑기 비용 문구
+    [SerializeField] private TMP_Text drawOneCostText; // 1회 버튼의 재화 아이콘 옆 실제 비용
     [SerializeField] private Button drawTenButton; // 10회 뽑기 버튼
     [SerializeField] private TMP_Text drawTenButtonText; // 정확한 10회 총비용 문구
+    [SerializeField] private TMP_Text drawTenCostText; // 10회 버튼의 재화 아이콘 옆 실제 총비용
+
+    [Header("새 StatUpgrade UI")]
+    [SerializeField] private TMP_Text gachaLevelText; // 실제 현재 가챠 레벨을 표시한다.
+    [SerializeField] private TMP_Text nextLevelProgressText; // 다음 레벨까지의 실제 뽑기 진행도를 표시한다.
+    [SerializeField] private Slider gachaLevelSlider; // 현재 레벨의 실제 뽑기 진행도를 표시한다.
+    [SerializeField] private StatUpgradeCardView[] statCards; // 고정 카드와 실제 StatType을 연결한 View 목록
 
     [Header("최근 결과")]
     [SerializeField] private Transform drawResultsRoot; // 최근 결과 행이 생성될 부모
@@ -35,6 +43,7 @@ public sealed class UpgradePanel : MonoBehaviour
     private readonly List<UpgradeDrawResultView> drawResultViews = new(10);
     private readonly HashSet<int> announcedLevels = new();
     private readonly StringBuilder textBuilder = new(256);
+    private readonly HashSet<StatUpgradeCardView> affectedStatCards = new(); // 한 번의 10회 뽑기에서 중복 Effect를 막을 카드 집합
 
     private void Awake()
     {
@@ -105,10 +114,12 @@ public sealed class UpgradePanel : MonoBehaviour
         if (upgradeManager == null)
         {
             SetMissingManagerState();
+            RefreshStatCards();
             return;
         }
 
         RefreshGachaArea();
+        RefreshStatCards();
         RefreshResearchRows();
     }
 
@@ -145,6 +156,7 @@ public sealed class UpgradePanel : MonoBehaviour
     {
         ShowDrawResults(results);
         ShowUnlockNotices(results);
+        RefreshDrawnStatCards(results);
     }
 
     private void HandleDrawOneClicked()
@@ -174,7 +186,9 @@ public sealed class UpgradePanel : MonoBehaviour
 
         SetText(currencyText, $"현재 재화: {upgradeManager.Currency:N0}");
         SetText(drawOneButtonText, $"1회 뽑기 · {oneDrawCost:N0}");
+        SetText(drawOneCostText, $"{oneDrawCost:N0}");
         SetText(drawTenButtonText, $"10회 뽑기 · {tenDrawCost:N0}");
+        SetText(drawTenCostText, $"{tenDrawCost:N0}");
 
         if (levelDefinition == null)
         {
@@ -188,6 +202,8 @@ public sealed class UpgradePanel : MonoBehaviour
         {
             SetText(gachaProgressText, $"Lv.{level} · {upgradeManager.DrawsAtCurrentLevel} / {levelDefinition.drawsToNextLevel}");
         }
+
+        RefreshGachaProgress(level, levelDefinition, nextLevelDefinition);
 
         List<UpgradeStatType> unlockedStats = upgradeManager.GetUnlockedStats();
         SetText(unlockedStatsText, BuildUnlockedStatsText(unlockedStats, balanceSettings));
@@ -221,6 +237,73 @@ public sealed class UpgradePanel : MonoBehaviour
         else
         {
             SetText(drawStatusText, string.Empty);
+        }
+    }
+
+    // 실제 가챠 레벨과 다음 레벨 진행도를 새 Text와 Slider에 반영합니다.
+    private void RefreshGachaProgress(int level, GachaLevelDefinition levelDefinition, GachaLevelDefinition nextLevelDefinition)
+    {
+        SetText(gachaLevelText, $"Lv.{level}");
+        if (levelDefinition == null)
+        {
+            SetText(nextLevelProgressText, "Next - / -");
+            SetSliderProgress(0, 1);
+            return;
+        }
+
+        if (levelDefinition.drawsToNextLevel <= 0 || nextLevelDefinition == null)
+        {
+            SetText(nextLevelProgressText, "MAX");
+            SetSliderProgress(1, 1);
+            return;
+        }
+
+        int requiredDraws = Mathf.Max(1, levelDefinition.drawsToNextLevel); // 현재 레벨에서 다음 레벨까지 필요한 실제 횟수
+        int currentDraws = Mathf.Clamp(upgradeManager.DrawsAtCurrentLevel, 0, requiredDraws); // 저장 데이터의 현재 진행 횟수
+        SetText(nextLevelProgressText, $"Next {currentDraws} / {requiredDraws}");
+        SetSliderProgress(currentDraws, requiredDraws);
+    }
+
+    // 새 Slider에 실제 횟수 범위와 현재값을 직접 적용합니다.
+    private void SetSliderProgress(int current, int maximum)
+    {
+        if (gachaLevelSlider == null) return;
+        int safeMaximum = Mathf.Max(1, maximum); // 0으로 인한 잘못된 Slider 범위를 막는 최대값
+        gachaLevelSlider.wholeNumbers = true;
+        gachaLevelSlider.minValue = 0f;
+        gachaLevelSlider.maxValue = safeMaximum;
+        gachaLevelSlider.value = Mathf.Clamp(current, 0, safeMaximum);
+    }
+
+    // 저장 데이터가 변경될 때 기존 카드 인스턴스를 유지한 채 수치만 갱신합니다.
+    private void RefreshStatCards()
+    {
+        if (statCards == null) return;
+        foreach (StatUpgradeCardView card in statCards) // 새 프리팹에 직렬화된 고정 카드
+        {
+            if (card != null) card.Bind(upgradeManager);
+        }
+    }
+
+    // 뽑힌 스탯의 카드만 즉시 갱신하고 카드별 Effect를 한 번씩 실행합니다.
+    private void RefreshDrawnStatCards(IReadOnlyList<GachaDrawResult> results)
+    {
+        if (results == null || statCards == null) return;
+        affectedStatCards.Clear();
+        foreach (GachaDrawResult result in results) // 기존 가챠 로직이 반환한 실제 뽑기 결과
+        {
+            foreach (StatUpgradeCardView card in statCards) // 결과와 연결된 카드를 찾기 위한 고정 View 목록
+            {
+                if (card == null || !card.ContainsStat(result.StatType)) continue;
+                card.Refresh();
+                affectedStatCards.Add(card);
+                break;
+            }
+        }
+
+        foreach (StatUpgradeCardView card in affectedStatCards) // 중복 결과를 합친 실제 선택 카드
+        {
+            card.PlayDrawEffect();
         }
     }
 
@@ -415,6 +498,9 @@ public sealed class UpgradePanel : MonoBehaviour
     {
         SetText(currencyText, "현재 재화: -");
         SetText(gachaProgressText, "UpgradeManager 연결 필요");
+        SetText(gachaLevelText, "Lv.-");
+        SetText(nextLevelProgressText, "Next - / -");
+        SetSliderProgress(0, 1);
         SetText(unlockedStatsText, "해금 스탯: -");
         SetText(drawStatusText, "Inspector에서 씬의 UpgradeManager를 연결해 주세요.");
 

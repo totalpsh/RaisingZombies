@@ -502,17 +502,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d73cec215af26f488600b622105efb1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UpgradeMenuController
-  mainMenuRoot: {fileID: 0}
   categorySelectionRoot: {fileID: 2550311204946121307}
-  zombieUpgradeRoot: {fileID: 7336098112704675920}
+  statUpgradeRoot: {fileID: 7336098112704675920}
+  productionUpgradeRoot: {fileID: 0}
   currencyUpgradeRoot: {fileID: 2114581027337686438}
-  openUpgradeButton: {fileID: 0}
-  zombieUpgradeButton: {fileID: 350501185603940375}
+  statUpgradeButton: {fileID: 350501185603940375}
+  productionUpgradeButton: {fileID: 0}
   currencyUpgradeButton: {fileID: 5482146126364437814}
-  categoryBackButton: {fileID: 680145492433547100}
-  zombieBackButton: {fileID: 2306053331181960126}
+  statBackButton: {fileID: 2306053331181960126}
+  productionBackButton: {fileID: 0}
   currencyBackButton: {fileID: 6495287794443340200}
-  initialState: 1
 --- !u!1 &2114581027337686438
 GameObject:
   m_ObjectHideFlags: 0
@@ -2088,6 +2087,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: CurrencyUpgradePanel
       objectReference: {fileID: 0}
+    - target: {fileID: 8592080077337289682, guid: 37d7351e15cdf2b448a8c3f9c7eb5b04, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8723878949697841588, guid: 37d7351e15cdf2b448a8c3f9c7eb5b04, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -2369,6 +2372,10 @@ PrefabInstance:
     - target: {fileID: 2451910880860711215, guid: a898c28051ef0b847bb34c5335eaff53, type: 3}
       propertyPath: m_Name
       value: UpgradePanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 2451910880860711215, guid: a898c28051ef0b847bb34c5335eaff53, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3185442833334679386, guid: a898c28051ef0b847bb34c5335eaff53, type: 3}
       propertyPath: m_AnchorMax.y

@@ -59,6 +59,30 @@ MonoBehaviour:
     m_Key: Shop
     m_Metadata:
       m_Items: []
+  - m_Id: 5928123309772800
+    m_Key: New Entry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6198474132443136
+    m_Key: StatInfo1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6202566758125568
+    m_Key: Choise
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6203576561979392
+    m_Key: New Entry 1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6204031887233024
+    m_Key: ProductionUpgradeInfo1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6207647909957632
+    m_Key: CurrencyUpgradeInfo1
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
