@@ -290,6 +290,11 @@ public sealed class UpgradePanel : MonoBehaviour
     {
         if (results == null || statCards == null) return;
         affectedStatCards.Clear();
+        foreach (StatUpgradeCardView card in statCards) // 모든 카드의 이번 뽑기 개별 수치를 한 번씩 갱신할 고정 View 목록
+        {
+            if (card != null) card.ShowDrawResults(results);
+        }
+
         foreach (GachaDrawResult result in results) // 기존 가챠 로직이 반환한 실제 뽑기 결과
         {
             foreach (StatUpgradeCardView card in statCards) // 결과와 연결된 카드를 찾기 위한 고정 View 목록
