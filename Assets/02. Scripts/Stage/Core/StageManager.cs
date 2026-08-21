@@ -154,34 +154,34 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         if (this == null)
             return;
 
-        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+        // StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
 
-        if (fadeUI != null)
-            await fadeUI.FadeOutAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeOutAsync();
 
         ClearCurrentStage();
 
         await StartStageAsync(_currentStageNumber);
 
-        if (fadeUI != null)
-            await fadeUI.FadeInAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeInAsync();
     }
 
     private async Task MoveToNextStageAsync()
     {
         StopBattle();
 
-        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+        // StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
 
-        if (fadeUI != null)
-            await fadeUI.FadeOutAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeOutAsync();
 
         ClearCurrentStage();
 
         await StartStageAsync(_currentStageNumber);
 
-        if (fadeUI != null)
-            await fadeUI.FadeInAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeInAsync();
     }
 
     // Clear된 Stage 다음 진행 상태를 갱신하고 전환 전에 즉시 저장합니다.
