@@ -105,22 +105,7 @@ public class ZombieSpawner : MonoBehaviour
     // 좀비 초기화
     private void InitializeZombie(UnitController controller)
     {
-        UpgradeStatSnapshot healthSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Health);
-        UpgradeStatSnapshot attackSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Attack);
-        UpgradeStatSnapshot attackSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.AttackSpeed);
-        UpgradeStatSnapshot regenSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.Defense);
-        UpgradeStatSnapshot moveSpeedSnapshot = UpgradeManager.Instance.GetStatSnapshot(UpgradeStatType.MoveSpeed);
-        
-        UnitStats stats = new UnitStats
-        (
-            controller.Data,
-            healthSnapshot,
-            attackSnapshot,
-            attackSpeedSnapshot,
-            regenSnapshot,
-            moveSpeedSnapshot
-        );
-        
+        UnitStats stats = UnitStats.CreateZombie(controller.Data, UpgradeManager.Instance); // 전투력 UI와 공유하는 실제 최종 좀비 스탯
         controller.Initialize(controller.Data, stats);
     }
     

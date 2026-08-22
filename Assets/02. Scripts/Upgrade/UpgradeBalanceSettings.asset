@@ -40,7 +40,7 @@ MonoBehaviour:
   - statType: 3
     displayName: "\uAC10\uC5FC\uCCB4 \uAC00\uB2A5 \uC218"
     resultKind: 1
-    baseCoefficient: 1
+    baseCoefficient: 0.1
     researchBaseCost: 500
     researchCostGrowth: 1.15
     researchMaxMultiplierBonus: 1.5
@@ -48,7 +48,7 @@ MonoBehaviour:
   - statType: 4
     displayName: "\uC774\uB3D9\uC18D\uB3C4"
     resultKind: 0
-    baseCoefficient: 0.005
+    baseCoefficient: 0.002
     researchBaseCost: 500
     researchCostGrowth: 1.15
     researchMaxMultiplierBonus: 1.5
@@ -64,7 +64,7 @@ MonoBehaviour:
   - statType: 6
     displayName: "\uC880\uBE44 \uC0DD\uC0B0 \uC218"
     resultKind: 1
-    baseCoefficient: 1
+    baseCoefficient: 0.1
     researchBaseCost: 500
     researchCostGrowth: 1.15
     researchMaxMultiplierBonus: 1.5
