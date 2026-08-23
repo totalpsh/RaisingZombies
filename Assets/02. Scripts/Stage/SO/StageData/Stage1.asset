@@ -21,12 +21,20 @@ MonoBehaviour:
   defenses: []
   humanDeployment:
     populationData:
-    - humanKey: Human_Ranged
-      initialCount: 3
-      targetCount: 3
-      replenishCount: 1
-      replenishInterval: 5
+    - humanKey: Human_Melee
+      initialCount: 5
+      targetCount: 5
+      replenishCount: 0
+      replenishInterval: 3
       spawnOffset: {x: 0, y: 0, z: 0}
       spawnSpacing: 1
-    repeatRules: []
+    repeatRules:
+    - startDelay: 0
+      repeatInterval: 5
+      repeatCount: 2
+      formation:
+      - humanKey: Human_Ranged
+        count: 1
+        spawnOffset: {x: 0, y: 0, z: 0}
+        spawnSpacing: 0
     timedWaves: []
