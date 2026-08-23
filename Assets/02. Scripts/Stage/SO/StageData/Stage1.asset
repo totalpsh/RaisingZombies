@@ -21,7 +21,7 @@ MonoBehaviour:
   defenses: []
   humanDeployment:
     populationData:
-    - humanKey: Human
+    - humanKey: Human_Ranged
       initialCount: 3
       targetCount: 3
       replenishCount: 1

@@ -46,6 +46,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitAnimation
   skeletonAnimation: {fileID: 4702594805825063386}
+  idleAnimationName: Idle
+  walkAnimationName: Walk
+  attackAnimationName: Attack2
+  hitAnimationName: Hit
+  dieAnimationName: Die
+--- !u!1 &6421285205626297859
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2500000066871809056}
+  - component: {fileID: 728523691798927542}
+  m_Layer: 0
+  m_Name: MeleeAction
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2500000066871809056
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6421285205626297859}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 974294955510299920}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &728523691798927542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6421285205626297859}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc3c119eec51b5b42933c78617b32329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeAttackAction
 --- !u!1 &8825992096614875004
 GameObject:
   m_ObjectHideFlags: 0
@@ -56,10 +105,10 @@ GameObject:
   m_Component:
   - component: {fileID: 974294955510299920}
   - component: {fileID: 147074459943949779}
-  - component: {fileID: 756281383143438411}
   - component: {fileID: 7946149785694103159}
+  - component: {fileID: 8261953951638224331}
   m_Layer: 7
-  m_Name: Human
+  m_Name: Human_Melee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -79,6 +128,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8006363609087436127}
+  - {fileID: 2500000066871809056}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &147074459943949779
@@ -108,25 +158,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &756281383143438411
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8825992096614875004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7cf22ae7fdae252428276a62a9b6aecc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnitController
-  animation: {fileID: 3061552685371092474}
-  unitLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  targetSearchRange: 1
-  _data: {fileID: 11400000, guid: 3b07f7129dd006641924f2f22ef68367, type: 2}
-  unitCollider: {fileID: 7946149785694103159}
 --- !u!61 &7946149785694103159
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -173,6 +204,26 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
+--- !u!114 &8261953951638224331
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8825992096614875004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf22ae7fdae252428276a62a9b6aecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitController
+  unitAction: {fileID: 728523691798927542}
+  animation: {fileID: 3061552685371092474}
+  unitLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  targetSearchRange: 1
+  _data: {fileID: 11400000, guid: 3b07f7129dd006641924f2f22ef68367, type: 2}
+  unitCollider: {fileID: 7946149785694103159}
 --- !u!1001 &8026840721012617348
 PrefabInstance:
   m_ObjectHideFlags: 0

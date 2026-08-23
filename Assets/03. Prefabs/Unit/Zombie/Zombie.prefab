@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2369680469246418416}
   - component: {fileID: 1970045543283860698}
-  - component: {fileID: 7551525837908904649}
   - component: {fileID: 5459777805356014378}
+  - component: {fileID: 7009212651998346272}
   m_Layer: 6
   m_Name: Zombie
   m_TagString: Untagged
@@ -32,9 +32,8 @@ Transform:
   m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6100595811663117797}
-  - {fileID: 619292274631678641}
   - {fileID: 1531511045619967520}
+  - {fileID: 1143945350519958190}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &1970045543283860698
@@ -64,25 +63,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 4
---- !u!114 &7551525837908904649
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1620372965101480489}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7cf22ae7fdae252428276a62a9b6aecc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UnitController
-  animation: {fileID: 7063893091265402562}
-  unitLayer:
-    serializedVersion: 2
-    m_Bits: 128
-  targetSearchRange: 1
-  _data: {fileID: 11400000, guid: fc41fa7b01a04e44e81e0381907c140d, type: 2}
-  unitCollider: {fileID: 5459777805356014378}
 --- !u!61 &5459777805356014378
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -129,7 +109,27 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!1 &3120016037475039596
+--- !u!114 &7009212651998346272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620372965101480489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf22ae7fdae252428276a62a9b6aecc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitController
+  unitAction: {fileID: 4692294734169957994}
+  animation: {fileID: 7063893091265402562}
+  unitLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  targetSearchRange: 1
+  _data: {fileID: 11400000, guid: fc41fa7b01a04e44e81e0381907c140d, type: 2}
+  unitCollider: {fileID: 5459777805356014378}
+--- !u!1 &1942154731415359923
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -137,22 +137,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6100595811663117797}
-  - component: {fileID: 2608715957377614177}
+  - component: {fileID: 1143945350519958190}
+  - component: {fileID: 4692294734169957994}
   m_Layer: 0
-  m_Name: Model
+  m_Name: MeleeAction
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &6100595811663117797
+--- !u!4 &1143945350519958190
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3120016037475039596}
+  m_GameObject: {fileID: 1942154731415359923}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -161,28 +161,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2369680469246418416}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &2608715957377614177
-Animator:
-  serializedVersion: 7
+--- !u!114 &4692294734169957994
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3120016037475039596}
+  m_GameObject: {fileID: 1942154731415359923}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: ece9e6fc3b3759b4b8b75144b4361c1e, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cc3c119eec51b5b42933c78617b32329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeAttackAction
 --- !u!1 &7964795882201899147
 GameObject:
   m_ObjectHideFlags: 0
@@ -229,37 +219,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitAnimation
   skeletonAnimation: {fileID: 6752706172021504708}
---- !u!1 &8575779455891577200
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 619292274631678641}
-  m_Layer: 0
-  m_Name: Weapon?
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &619292274631678641
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8575779455891577200}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
-  m_LocalPosition: {x: 0.1, y: 0.6, z: 0}
-  m_LocalScale: {x: 1, y: 0.279585, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2369680469246418416}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
+  idleAnimationName: Idle
+  walkAnimationName: Walk
+  attackAnimationName: Attack2
+  hitAnimationName: Hit
+  dieAnimationName: Die
 --- !u!1001 &7877368644520786343
 PrefabInstance:
   m_ObjectHideFlags: 0

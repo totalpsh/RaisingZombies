@@ -10,32 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: Unit
+  m_Name: Projectile
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
-  m_GroupName: Unit
-  m_GUID: 666ce31e967f4e8438d53749c53ab487
+  m_GroupName: Projectile
+  m_GUID: 6eb69ed185f10204e882748c6398d23d
   m_SerializeEntries:
-  - m_GUID: 2ee1dcad2b649364fb68ed15c14f8520
-    m_Address: Human_Ranged
+  - m_GUID: 442154e94b3128c4dbe3551d2bd42a4d
+    m_Address: HumanProjectile
     m_ReadOnly: 0
-    m_SerializedLabels:
-    - Unit
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 8203a45bc337e6e47b86cb23af7452cf
-    m_Address: Zombie
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Unit
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 938bf96c2a5fb7046a00515e79b8deca
-    m_Address: Human_Melee
-    m_ReadOnly: 0
-    m_SerializedLabels:
-    - Unit
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 46f0a33da75605f49b78bca90df5e8de, type: 2}
   m_SchemaSet:
     m_Schemas:
-    - {fileID: 11400000, guid: e5291d0bf86f4984d99646ac9db166cc, type: 2}
-    - {fileID: 11400000, guid: 14fb22277c513d544a3a0e631fc99612, type: 2}
+    - {fileID: 11400000, guid: 67f747410dd10aa4ba12d30558dfa067, type: 2}
+    - {fileID: 11400000, guid: 61df364396fbff04c86a974bdaa90f96, type: 2}

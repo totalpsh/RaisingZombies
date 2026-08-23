@@ -4,6 +4,7 @@ using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
+    [SerializeField] private UnitAction unitAction;
     [SerializeField] private UnitAnimation animation;
     
     [SerializeField] private LayerMask unitLayer;
@@ -48,10 +49,15 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     public void Initialize(UnitData data, UnitStats stats)
     {
-        if (_data == null)
+        if (data == null)
         {
             Debug.LogError($"[{nameof(UnitController)}] UnitData가 null입니다.", this);
+            return;
+        }
 
+        if (unitAction == null)
+        {
+            Debug.Log("UnitAction 없음");
             return;
         }
 
@@ -65,7 +71,6 @@ public class UnitController : MonoBehaviour, ICombatTarget
             unitCollider.enabled = true;
         
         enabled = true;
-        
         ResetAnimation();
     }
     
@@ -81,7 +86,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
     
     private void FindTarget()
     {
-        if (IsValidEnemy(_currentTarget))
+        if (IsValidTarget(_currentTarget))
             return;
 
         _currentTarget = null;
@@ -94,10 +99,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
         {
             ICombatTarget candidate = result.GetComponentInParent<ICombatTarget>();
 
-            if (!IsValidEnemy(candidate))
+            if (!IsValidTarget(candidate))
                 continue;
 
-            if (!IsAhead(candidate))
+            if (unitAction.RequiresTargetAhead && !IsAhead(candidate))
                 continue;
 
             float distance = GetHorizontalDistance(candidate);
@@ -119,7 +124,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void TryAction()
     {
-        if (!IsValidEnemy(_currentTarget))
+        if (!IsValidTarget(_currentTarget))
         {
             MoveForward();
             return;
@@ -152,10 +157,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
         if (!_model.CanAttack)
             return;
 
-        if (!IsValidEnemy(_currentTarget))
+        if (!IsValidTarget(_currentTarget))
             return;
         
-        _currentTarget.TakeDamage(_model.Stats.AttackPower);
+        // _currentTarget.TakeDamage(_model.Stats.AttackPower);
+        unitAction.Execute(this, _currentTarget, _model.Stats.AttackPower);
 
         _model.ResetAttackCooldown();
         animation.PlayAttack();
@@ -195,14 +201,14 @@ public class UnitController : MonoBehaviour, ICombatTarget
         PoolManager.Instance.Release(gameObject);
     }
 
-    private bool IsValidEnemy(ICombatTarget target)
+    private bool IsValidTarget(ICombatTarget target)
     {
-        if (target == null)
+        if (target == null || unitAction == null)
             return false;
         
         MonoBehaviour targetObj = target as MonoBehaviour;
         
-        return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && target.Team != Team;
+        return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && unitAction.CanTarget(this, target);
     }
 
     private float GetHorizontalDistance(ICombatTarget target)

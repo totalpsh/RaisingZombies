@@ -92,6 +92,9 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         
         // StageData stageData = stages[stageNumber];
 
+        zombieCamp.gameObject.SetActive(true);
+        humanFortress.gameObject.SetActive(true);
+        
         zombieCamp.Initialize();
         humanFortress.Initialize();
 
