@@ -29,4 +29,16 @@ public class StageDifficultyData
         this.moveSpeedMultiplier = Mathf.Max(0.01f, moveSpeedMultiplier);
         this.attackSpeedMultiplier = Mathf.Max(0.01f, attackSpeedMultiplier);
     }
+    
+    public static StageDifficultyData Combine(StageDifficultyData progression, StageDifficultyData manual)
+    {
+        progression ??= new StageDifficultyData();
+        manual ??= new StageDifficultyData();
+
+        return new StageDifficultyData(
+            progression.HealthMultiplier * manual.HealthMultiplier,
+            progression.AttackMultiplier * manual.AttackMultiplier,
+            progression.MoveSpeedMultiplier * manual.MoveSpeedMultiplier,
+            progression.AttackSpeedMultiplier * manual.AttackSpeedMultiplier);
+    }
 }
