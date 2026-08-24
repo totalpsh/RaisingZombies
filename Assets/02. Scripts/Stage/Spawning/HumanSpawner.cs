@@ -19,6 +19,8 @@ public class HumanSpawner : MonoBehaviour
 
     private bool _isProducing;
     private int _productionSession;
+    
+    public IReadOnlyCollection<UnitController> SpawnedHumans => _spawnedHumans;
 
     private void Update()
     {
