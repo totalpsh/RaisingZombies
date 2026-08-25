@@ -235,6 +235,7 @@ public sealed class MainNavigationController : MonoBehaviour
         if (root != null)
         {
             root.SetActive(active);
+            
         }
     }
 }

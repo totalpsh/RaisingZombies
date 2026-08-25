@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 // 업그레이드 가챠와 계수 연구를 이벤트 기반으로 표시하는 패널입니다.
@@ -19,8 +20,8 @@ public sealed class UpgradePanel : MonoBehaviour
     [SerializeField] private Button drawOneButton; // 1회 뽑기 버튼
     [SerializeField] private TMP_Text drawOneButtonText; // 1회 뽑기 비용 문구
     [SerializeField] private TMP_Text drawOneCostText; // 1회 버튼의 재화 아이콘 옆 실제 비용
-    [SerializeField] private Button drawTenButton; // 10회 뽑기 버튼
-    [SerializeField] private TMP_Text drawTenButtonText; // 정확한 10회 총비용 문구
+    [SerializeField] private Button drawFiveButton; // 10회 뽑기 버튼
+    [SerializeField] private TMP_Text drawFiveButtonText; // 정확한 5회 총비용 문구
     [SerializeField] private TMP_Text drawTenCostText; // 10회 버튼의 재화 아이콘 옆 실제 총비용
 
     [Header("새 StatUpgrade UI")]
@@ -52,9 +53,9 @@ public sealed class UpgradePanel : MonoBehaviour
             drawOneButton.onClick.AddListener(HandleDrawOneClicked);
         }
 
-        if (drawTenButton != null)
+        if (drawFiveButton != null)
         {
-            drawTenButton.onClick.AddListener(HandleDrawTenClicked);
+            drawFiveButton.onClick.AddListener(HandleDrawFiveClicked);
         }
 
         upgradeManager = UpgradeManager.Instance;
@@ -80,9 +81,9 @@ public sealed class UpgradePanel : MonoBehaviour
             drawOneButton.onClick.RemoveListener(HandleDrawOneClicked);
         }
 
-        if (drawTenButton != null)
+        if (drawFiveButton != null)
         {
-            drawTenButton.onClick.RemoveListener(HandleDrawTenClicked);
+            drawFiveButton.onClick.RemoveListener(HandleDrawFiveClicked);
         }
     }
 
@@ -167,9 +168,9 @@ public sealed class UpgradePanel : MonoBehaviour
         }
     }
 
-    private void HandleDrawTenClicked()
+    private void HandleDrawFiveClicked()
     {
-        if (upgradeManager == null || !upgradeManager.TryDrawTen(out _))
+        if (upgradeManager == null || !upgradeManager.TryDrawFive(out _))
         {
             SetText(drawStatusText, "재화가 부족하거나 가챠 밸런스 설정을 확인해야 합니다.");
         }
@@ -182,13 +183,13 @@ public sealed class UpgradePanel : MonoBehaviour
         GachaLevelDefinition levelDefinition = balanceSettings == null ? null : balanceSettings.GetGachaLevel(level);
         GachaLevelDefinition nextLevelDefinition = balanceSettings == null ? null : balanceSettings.GetGachaLevel(level + 1);
         int oneDrawCost = upgradeManager.GetCurrentDrawCost();
-        int tenDrawCost = upgradeManager.GetDrawCostForCount(10);
+        int fiveDrawCost = upgradeManager.GetDrawCostForCount(5);
 
         SetText(currencyText, $"현재 재화: {upgradeManager.Currency:N0}");
         SetText(drawOneButtonText, $"1회 뽑기 · {oneDrawCost:N0}");
         SetText(drawOneCostText, $"{oneDrawCost:N0}");
-        SetText(drawTenButtonText, $"10회 뽑기 · {tenDrawCost:N0}");
-        SetText(drawTenCostText, $"{tenDrawCost:N0}");
+        SetText(drawFiveButtonText, $"5회 뽑기 · {fiveDrawCost:N0}");
+        SetText(drawTenCostText, $"{fiveDrawCost:N0}");
 
         if (levelDefinition == null)
         {
@@ -210,16 +211,16 @@ public sealed class UpgradePanel : MonoBehaviour
 
         bool balanceAvailable = balanceSettings != null && levelDefinition != null && unlockedStats.Count > 0;
         bool canDrawOne = balanceAvailable && upgradeManager.Currency >= oneDrawCost;
-        bool canDrawTen = balanceAvailable && upgradeManager.Currency >= tenDrawCost;
+        bool canDrawTen = balanceAvailable && upgradeManager.Currency >= fiveDrawCost;
 
         if (drawOneButton != null)
         {
             drawOneButton.interactable = canDrawOne;
         }
 
-        if (drawTenButton != null)
+        if (drawFiveButton != null)
         {
-            drawTenButton.interactable = canDrawTen;
+            drawFiveButton.interactable = canDrawTen;
         }
 
         if (!balanceAvailable)
@@ -232,7 +233,7 @@ public sealed class UpgradePanel : MonoBehaviour
         }
         else if (!canDrawTen)
         {
-            SetText(drawStatusText, $"10회 뽑기에는 총 {tenDrawCost:N0} 필요");
+            SetText(drawStatusText, $"10회 뽑기에는 총 {fiveDrawCost:N0} 필요");
         }
         else
         {
@@ -514,9 +515,9 @@ public sealed class UpgradePanel : MonoBehaviour
             drawOneButton.interactable = false;
         }
 
-        if (drawTenButton != null)
+        if (drawFiveButton != null)
         {
-            drawTenButton.interactable = false;
+            drawFiveButton.interactable = false;
         }
     }
 
