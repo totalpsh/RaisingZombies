@@ -83,6 +83,10 @@ MonoBehaviour:
     m_Key: CurrencyUpgradeInfo1
     m_Metadata:
       m_Items: []
+  - m_Id: 7910519504654336
+    m_Key: Rarity Rates
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
