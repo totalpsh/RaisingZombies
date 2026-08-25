@@ -257,7 +257,7 @@ MonoBehaviour:
   unitLayer:
     serializedVersion: 2
     m_Bits: 64
-  targetSearchRange: 1
+  targetSearchRange: 5
   _data: {fileID: 11400000, guid: 72ea607eb23881443a7b65585efae315, type: 2}
   unitCollider: {fileID: 7946149785694103159}
 --- !u!1001 &8006359385419225962
