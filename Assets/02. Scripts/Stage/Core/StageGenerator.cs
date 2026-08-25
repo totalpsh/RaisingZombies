@@ -37,11 +37,22 @@ public class StageGenerator
 
     private StageRuntimeData CreateFromManualStage(StageData stageData)
     {
+        int stageNumber = stageData.StageNumber;
+
+        StageProgressionData progression = _catalog.Progression;
+        StageDifficultyData progressionDifficulty = progression != null ? progression.CreateDifficulty(stageNumber) : new StageDifficultyData();
+        StageDifficultyData finalDifficulty = StageDifficultyData.Combine(progressionDifficulty, stageData.Difficulty);
+
+        int additionalPopulation = progression != null ? progression.GetAdditionalPopulation(stageNumber) : 0;
+
+        StageHumanDeploymentData deployment = 
+            stageData.HumanDeployment != null ? stageData.HumanDeployment.CreateScaled(additionalPopulation) : new StageHumanDeploymentData();
+
         return new StageRuntimeData(
-            stageData.StageNumber,
-            stageData.Difficulty,
+            stageNumber,
+            finalDifficulty,
             stageData.Defenses,
-            stageData.HumanDeployment);
+            deployment);
     }
 
     private StageRuntimeData CreateFromTemplate(int stageNumber)

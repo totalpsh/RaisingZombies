@@ -36,9 +36,14 @@ public class StructureController : MonoBehaviour, ICombatTarget
     {
         _runtimeMaxHealth = maxHealth * Mathf.Max(0.01f, healthMultiplier);
         _currentHealth = _runtimeMaxHealth;
+        
         _isDestroyed = false;
 
         gameObject.SetActive(true);
+        
+        if (structureCollider != null)
+            structureCollider.enabled = true;
+        
         enabled = true;
     }
  
@@ -59,9 +64,12 @@ public class StructureController : MonoBehaviour, ICombatTarget
             return;
 
         _isDestroyed = true;
-
-        Destroyed?.Invoke(this);
+        
+        if (structureCollider != null)
+            structureCollider.enabled = false;
 
         gameObject.SetActive(false);
+        
+        Destroyed?.Invoke(this);
     }
 }

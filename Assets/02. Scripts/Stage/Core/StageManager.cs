@@ -92,6 +92,9 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         
         // StageData stageData = stages[stageNumber];
 
+        zombieCamp.gameObject.SetActive(true);
+        humanFortress.gameObject.SetActive(true);
+        
         zombieCamp.Initialize();
         humanFortress.Initialize();
 
@@ -154,34 +157,34 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         if (this == null)
             return;
 
-        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+        // StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
 
-        if (fadeUI != null)
-            await fadeUI.FadeOutAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeOutAsync();
 
         ClearCurrentStage();
 
         await StartStageAsync(_currentStageNumber);
 
-        if (fadeUI != null)
-            await fadeUI.FadeInAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeInAsync();
     }
 
     private async Task MoveToNextStageAsync()
     {
         StopBattle();
 
-        StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
+        // StageFadeUI fadeUI = await UIManager.Instance.GetOrCreateStageFadeUIAsync();
 
-        if (fadeUI != null)
-            await fadeUI.FadeOutAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeOutAsync();
 
         ClearCurrentStage();
 
         await StartStageAsync(_currentStageNumber);
 
-        if (fadeUI != null)
-            await fadeUI.FadeInAsync();
+        // if (fadeUI != null)
+        //     await fadeUI.FadeInAsync();
     }
 
     // Clear된 Stage 다음 진행 상태를 갱신하고 전환 전에 즉시 저장합니다.
@@ -303,49 +306,49 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
     // }
 
     // 현재 진행 번호와 가장 잘 맞는 유효 Stage Definition 인덱스를 찾습니다.
-    private int ResolveStageIndex(int stageNumber)
-    {
-        int fallbackIndex = FindFirstValidStageIndex(); // 저장 번호보다 작은 Stage가 없을 때 사용할 첫 Stage 인덱스
-        int closestIndex = -1; // 저장 번호 이하에서 가장 가까운 Stage 인덱스
-        int closestNumber = int.MinValue; // 현재까지 찾은 가장 가까운 Stage 번호
-        if (stages == null) return fallbackIndex;
-
-        for (int index = 0; index < stages.Count; index++) // 저장 번호와 비교할 Stage Definition 인덱스
-        {
-            StageData stage = stages[index]; // 현재 검사할 Stage Definition
-            if (stage == null) continue;
-            if (stage.StageNumber == stageNumber) return index;
-            if (stage.StageNumber > stageNumber || stage.StageNumber <= closestNumber) continue;
-            closestIndex = index;
-            closestNumber = stage.StageNumber;
-        }
-
-        return closestIndex >= 0 ? closestIndex : fallbackIndex;
-    }
+    // private int ResolveStageIndex(int stageNumber)
+    // {
+    //     int fallbackIndex = FindFirstValidStageIndex(); // 저장 번호보다 작은 Stage가 없을 때 사용할 첫 Stage 인덱스
+    //     int closestIndex = -1; // 저장 번호 이하에서 가장 가까운 Stage 인덱스
+    //     int closestNumber = int.MinValue; // 현재까지 찾은 가장 가까운 Stage 번호
+    //     if (stages == null) return fallbackIndex;
+    //
+    //     for (int index = 0; index < stages.Count; index++) // 저장 번호와 비교할 Stage Definition 인덱스
+    //     {
+    //         StageData stage = stages[index]; // 현재 검사할 Stage Definition
+    //         if (stage == null) continue;
+    //         if (stage.StageNumber == stageNumber) return index;
+    //         if (stage.StageNumber > stageNumber || stage.StageNumber <= closestNumber) continue;
+    //         closestIndex = index;
+    //         closestNumber = stage.StageNumber;
+    //     }
+    //
+    //     return closestIndex >= 0 ? closestIndex : fallbackIndex;
+    // }
 
     // 현재 목록에서 첫 번째 유효 Stage Definition 인덱스를 찾습니다.
-    private int FindFirstValidStageIndex()
-    {
-        if (stages == null) return -1;
-        for (int index = 0; index < stages.Count; index++) // 첫 Stage를 찾기 위한 목록 인덱스
-        {
-            if (stages[index] != null) return index;
-        }
-
-        return -1;
-    }
-
-    // 지정한 Stage 뒤의 다음 유효 Stage Definition 인덱스를 찾습니다.
-    private int FindNextValidStageIndex(int stageIndex)
-    {
-        if (stages == null) return -1;
-        for (int index = stageIndex + 1; index < stages.Count; index++) // 다음 Stage를 찾기 위한 목록 인덱스
-        {
-            if (stages[index] != null) return index;
-        }
-
-        return -1;
-    }
+    // private int FindFirstValidStageIndex()
+    // {
+    //     if (stages == null) return -1;
+    //     for (int index = 0; index < stages.Count; index++) // 첫 Stage를 찾기 위한 목록 인덱스
+    //     {
+    //         if (stages[index] != null) return index;
+    //     }
+    //
+    //     return -1;
+    // }
+    //
+    // // 지정한 Stage 뒤의 다음 유효 Stage Definition 인덱스를 찾습니다.
+    // private int FindNextValidStageIndex(int stageIndex)
+    // {
+    //     if (stages == null) return -1;
+    //     for (int index = stageIndex + 1; index < stages.Count; index++) // 다음 Stage를 찾기 위한 목록 인덱스
+    //     {
+    //         if (stages[index] != null) return index;
+    //     }
+    //
+    //     return -1;
+    // }
 
     // 현재 인덱스의 Stage 번호를 안전하게 반환합니다.
     // private int GetCurrentStageNumber()

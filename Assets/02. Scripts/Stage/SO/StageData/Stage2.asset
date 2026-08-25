@@ -21,7 +21,7 @@ MonoBehaviour:
   defenses: []
   humanDeployment:
     populationData:
-    - humanKey: Human
+    - humanKey: Human_Melee
       initialCount: 5
       targetCount: 5
       replenishCount: 1

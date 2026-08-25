@@ -15,6 +15,8 @@ public class ZombieSpawner : MonoBehaviour
     private bool _isSpawning;
     private bool _isProducing;
 
+    public IReadOnlyCollection<UnitController> SpawnedZombies => _spawnedZombies;
+    
     public float SpawnTime => baseSpawnTime;
     public float SpawnProgress => Mathf.Clamp01(_elapsedTime / SpawnTime);
 
