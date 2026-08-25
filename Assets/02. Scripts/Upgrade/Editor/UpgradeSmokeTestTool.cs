@@ -81,7 +81,7 @@ public static class UpgradeSmokeTestTool
 
             int tenDrawCost = reloadedManager.GetDrawCostForCount(10);
             int currencyBeforeDraw = reloadedManager.Currency;
-            Assert(reloadedManager.TryDrawTen(out IReadOnlyList<GachaDrawResult> results), "10회 뽑기가 실패했습니다.");
+            Assert(reloadedManager.TryDrawFive(out IReadOnlyList<GachaDrawResult> results), "10회 뽑기가 실패했습니다.");
             Assert(results != null && results.Count == 10, "10회 뽑기 결과 개수가 10개가 아닙니다.");
             Assert(reloadedManager.Currency == currencyBeforeDraw - tenDrawCost,
                 "GetDrawCostForCount(10)과 실제 차감 비용이 다릅니다.");

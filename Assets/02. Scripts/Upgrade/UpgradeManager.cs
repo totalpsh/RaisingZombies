@@ -146,12 +146,12 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     }
 
     // 레벨 상승에 따른 비용까지 반영해 10회를 순서대로 뽑습니다.
-    public bool TryDrawTen(out IReadOnlyList<GachaDrawResult> results)
+    public bool TryDrawFive(out IReadOnlyList<GachaDrawResult> results)
     {
         results = null;
         if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetDrawCostForCount(10)) return false;
         List<GachaDrawResult> values = new(10); // 이번 10회 뽑기 결과
-        for (int index = 0; index < 10; index++) values.Add(ExecuteOneDraw()); // 뽑기 순번
+        for (int index = 0; index < 5; index++) values.Add(ExecuteOneDraw()); // 뽑기 순번
         SaveAndNotify(true);
         results = values;
         drawCompleted?.Invoke(values);
@@ -321,11 +321,49 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         _state.currency -= cost;
         List<UpgradeStatType> pool = GetUnlockedStats(); // 현재 해금된 뽑기 풀
         UpgradeStatType type = pool[UnityEngine.Random.Range(0, pool.Count)]; // 당첨 스탯
-        int amount = UnityEngine.Random.Range(1, 11); // 당첨 수치
+        GachaLevelDefinition levelDefinition = balanceSettings.GetGachaLevel(_state.gachaLevel); // 현재 레벨의 등급 확률표
+        int amount = RollGachaAmount(levelDefinition); // 등급 확률로 결정한 실제 당첨 수치
         UpgradeStatValue value = GetValue(type); // 당첨 스탯 저장값
         value.accumulatedValue += amount;
         bool increased = AdvanceGachaLevel(); // 레벨 상승 여부
         return new GachaDrawResult(type, amount, value.accumulatedValue, increased, _state.gachaLevel);
+    }
+
+    // 현재 레벨 확률표에서 등급을 뽑아 기존 1~10 결과 수치로 변환합니다.
+    private static int RollGachaAmount(GachaLevelDefinition levelDefinition)
+    {
+        GachaRarityRates rates = levelDefinition == null ? null : levelDefinition.rarityRates; // 실제 뽑기에 사용할 등급 확률표
+        if (rates == null || rates.Total <= 0f) return UnityEngine.Random.Range(1, 11);
+
+        float randomValue = UnityEngine.Random.value * rates.Total; // 전체 가중치 안에서 선택한 난수
+        float accumulated = 0f; // 현재 등급까지 누적한 가중치
+        accumulated += Mathf.Max(0f, rates.normal);
+        if (randomValue < accumulated) return GetAmountForRarity(GachaRarity.Normal);
+        accumulated += Mathf.Max(0f, rates.uncommon);
+        if (randomValue < accumulated) return GetAmountForRarity(GachaRarity.Uncommon);
+        accumulated += Mathf.Max(0f, rates.rare);
+        if (randomValue < accumulated) return GetAmountForRarity(GachaRarity.Rare);
+        accumulated += Mathf.Max(0f, rates.epic);
+        if (randomValue < accumulated) return GetAmountForRarity(GachaRarity.Epic);
+        accumulated += Mathf.Max(0f, rates.unique);
+        if (randomValue < accumulated) return GetAmountForRarity(GachaRarity.Unique);
+
+        return GetAmountForRarity(GachaRarity.Legendary);
+    }
+
+    // 등급을 기존 누적 강화 수치 규칙에 맞는 1~10 값으로 바꿉니다.
+    private static int GetAmountForRarity(GachaRarity rarity)
+    {
+        return rarity switch
+        {
+            GachaRarity.Normal => UnityEngine.Random.Range(1, 6),
+            GachaRarity.Uncommon => 6,
+            GachaRarity.Rare => 7,
+            GachaRarity.Epic => 8,
+            GachaRarity.Unique => 9,
+            GachaRarity.Legendary => 10,
+            _ => 1
+        };
     }
 
     // 현재 진행도를 올리고 조건을 만족하면 가챠 레벨을 상승시킵니다.
