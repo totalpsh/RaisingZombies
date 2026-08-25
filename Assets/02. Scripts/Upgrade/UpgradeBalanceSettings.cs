@@ -23,6 +23,46 @@ public enum UpgradeResultKind
     GlobalAmplifier
 }
 
+// 가챠 결과 수치에 대응하는 여섯 등급입니다.
+public enum GachaRarity
+{
+    Normal,
+    Uncommon,
+    Rare,
+    Epic,
+    Unique,
+    Legendary
+}
+
+// 한 가챠 레벨에서 사용하는 등급별 확률 가중치입니다.
+[Serializable]
+public sealed class GachaRarityRates
+{
+    [Min(0f)] public float normal = 90f; // 노말 확률 가중치
+    [Min(0f)] public float uncommon = 5f; // 언커먼 확률 가중치
+    [Min(0f)] public float rare = 5f; // 레어 확률 가중치
+    [Min(0f)] public float epic; // 에픽 확률 가중치
+    [Min(0f)] public float unique; // 유니크 확률 가중치
+    [Min(0f)] public float legendary; // 레전더리 확률 가중치
+
+    public float Total => normal + uncommon + rare + epic + unique + legendary;
+
+    // 지정한 등급의 확률 가중치를 반환합니다.
+    public float GetRate(GachaRarity rarity)
+    {
+        return rarity switch
+        {
+            GachaRarity.Normal => normal,
+            GachaRarity.Uncommon => uncommon,
+            GachaRarity.Rare => rare,
+            GachaRarity.Epic => epic,
+            GachaRarity.Unique => unique,
+            GachaRarity.Legendary => legendary,
+            _ => 0f
+        };
+    }
+}
+
 /// <summary>스탯 하나의 표시 방식과 연구 밸런스를 정의합니다.</summary>
 [Serializable]
 public sealed class UpgradeStatDefinition
@@ -45,6 +85,7 @@ public sealed class GachaLevelDefinition
     [Min(0)] public int drawCost;
     [Min(0)] public int drawsToNextLevel; // 0이면 최고 레벨
     public UpgradeStatType[] newlyUnlockedStats = Array.Empty<UpgradeStatType>();
+    public GachaRarityRates rarityRates = new(); // 이 레벨에서 실제 뽑기에 사용할 등급별 확률
 }
 
 /// <summary>업그레이드 시스템이 참조하는 모든 조절 가능한 밸런스입니다.</summary>
@@ -93,6 +134,15 @@ public sealed class UpgradeBalanceSettings : ScriptableObject
         }
 
         return null;
+    }
+
+    // 지정 레벨과 등급의 정규화된 실제 확률을 반환합니다.
+    public float GetRarityProbability(int level, GachaRarity rarity)
+    {
+        GachaLevelDefinition definition = GetGachaLevel(level); // 확률을 조회할 가챠 레벨 정의
+        GachaRarityRates rates = definition == null ? null : definition.rarityRates; // 해당 레벨의 등급 확률표
+        if (rates == null || rates.Total <= 0f) return 0f;
+        return Mathf.Max(0f, rates.GetRate(rarity)) / rates.Total;
     }
 
     // Inspector와 설정 도구에서 표시할 밸런스 오류를 수집합니다.
@@ -199,6 +249,15 @@ public sealed class UpgradeBalanceSettings : ScriptableObject
             if (!levels.Add(definition.level))
             {
                 errors.Add($"중복 가챠 레벨 정의: Lv.{definition.level}");
+            }
+
+            if (definition.rarityRates == null || definition.rarityRates.Total <= 0f)
+            {
+                errors.Add($"Lv.{definition.level}의 등급 확률 합계가 0입니다.");
+            }
+            else if (!Mathf.Approximately(definition.rarityRates.Total, 100f))
+            {
+                errors.Add($"Lv.{definition.level}의 등급 확률 합계가 100%가 아닙니다: {definition.rarityRates.Total:0.##}%");
             }
         }
     }

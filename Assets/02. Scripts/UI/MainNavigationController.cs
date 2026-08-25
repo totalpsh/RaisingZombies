@@ -27,8 +27,7 @@ public sealed class MainNavigationController : MonoBehaviour
 
     [Header("하단 네비게이션 버튼")]
     [SerializeField] private Button[] tabButtons; // Info부터 Shop까지 순서대로 연결된 버튼 목록
-    [SerializeField] private Color selectedButtonColor = new(0.28f, 0.55f, 0.9f, 1f); // 선택된 버튼의 배경색
-    [SerializeField] private Color normalButtonColor = new(0.2f, 0.2f, 0.24f, 1f); // 선택되지 않은 버튼의 배경색
+    [SerializeField] private GameObject[] selectedObjects; // 선택된 탭에서만 켜질 버튼별 Focus 오브젝트
 
     private MainUITab currentTab; // 현재 선택된 메인 UI 탭
     private bool isInitialized; // 중복 초기화 방지 상태
@@ -93,14 +92,15 @@ public sealed class MainNavigationController : MonoBehaviour
         SetActive(battleRoot, tab == MainUITab.Battle);
         SetActive(challengeRoot, tab == MainUITab.Challenge);
         SetActive(shopRoot, tab == MainUITab.Shop);
-        UpdateButtonStates();
+        UpdateSelectionObjects();
     }
 
     // 프리팹에 메인 Root 5개와 버튼 5개가 모두 연결되었는지 확인합니다.
     private bool HasRequiredReferences()
     {
         if (topUIController == null || contentRoot == null || infoRoot == null || upgradeRoot == null || battleRoot == null ||
-            challengeRoot == null || shopRoot == null || tabButtons == null || tabButtons.Length != 5)
+            challengeRoot == null || shopRoot == null || tabButtons == null || tabButtons.Length != 5 ||
+            selectedObjects == null || selectedObjects.Length != 5)
         {
             return false;
         }
@@ -108,6 +108,14 @@ public sealed class MainNavigationController : MonoBehaviour
         foreach (Button button in tabButtons)
         {
             if (button == null)
+            {
+                return false;
+            }
+        }
+
+        foreach (GameObject selectedObject in selectedObjects) // 프리팹에 연결된 탭별 Focus 오브젝트
+        {
+            if (selectedObject == null)
             {
                 return false;
             }
@@ -178,19 +186,13 @@ public sealed class MainNavigationController : MonoBehaviour
         ShowTab(MainUITab.Shop);
     }
 
-    // 현재 탭에 따라 선택 버튼만 구분되는 색상을 적용합니다.
-    private void UpdateButtonStates()
+    // 현재 탭의 Focus 오브젝트만 켜고 나머지 선택 표시는 끕니다.
+    private void UpdateSelectionObjects()
     {
-        for (int index = 0; index < tabButtons.Length; index++)
+        for (int index = 0; index < selectedObjects.Length; index++) // 선택 표시를 갱신할 탭 순번
         {
-            Image image = tabButtons[index].targetGraphic as Image; // 프리팹 버튼에 연결된 배경 이미지
-            if (image == null)
-            {
-                continue;
-            }
-
             bool selected = index == (int)currentTab; // 현재 버튼의 선택 여부
-            image.color = selected ? selectedButtonColor : normalButtonColor;
+            selectedObjects[index].SetActive(selected);
         }
     }
 
@@ -233,6 +235,7 @@ public sealed class MainNavigationController : MonoBehaviour
         if (root != null)
         {
             root.SetActive(active);
+            
         }
     }
 }

@@ -74,6 +74,10 @@ MonoBehaviour:
     m_Localized: Upgrades related to currency.
     m_Metadata:
       m_Items: []
+  - m_Id: 7910519504654336
+    m_Localized: Rarity Rates
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

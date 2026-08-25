@@ -48,10 +48,10 @@ public sealed class CurrencyUpgradeRowView : MonoBehaviour
         CurrencyUpgradeSnapshot snapshot = _manager.GetCurrencyUpgradeSnapshot(_type); // 표시할 계산 완료 강화 상태
         SetText(nameText, snapshot.DisplayName);
         SetText(descriptionText, snapshot.Description);
-        SetText(levelText, $"Lv.{snapshot.CurrentLevel} / {snapshot.MaxLevel}");
-        SetText(currentEffectText, $"현재 효과: {FormatEffect(snapshot.Type, snapshot.CurrentEffect)}");
-        SetText(nextEffectText, snapshot.IsMaxLevel ? "다음 효과: -" : $"다음 효과: {FormatEffect(snapshot.Type, snapshot.NextEffect)}");
-        SetText(costText, snapshot.IsMaxLevel ? "최대 레벨" : $"강화 · {snapshot.NextCost:N0}");
+        SetText(levelText, $"Lv.{snapshot.CurrentLevel}");
+        SetText(currentEffectText, $"{FormatEffect(snapshot.Type, snapshot.CurrentEffect)}");
+        SetText(nextEffectText, snapshot.IsMaxLevel ? "-" : $"{FormatEffect(snapshot.Type, snapshot.NextEffect)}");
+        SetText(costText, snapshot.NextCost.ToString());
         if (upgradeButton != null) upgradeButton.interactable = !snapshot.IsMaxLevel && _manager.Currency >= snapshot.NextCost;
         if (iconImage != null) iconImage.enabled = iconImage.sprite != null;
     }

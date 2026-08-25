@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
@@ -8,7 +9,14 @@ public sealed class StatUpgradeCardView : MonoBehaviour
 {
     [SerializeField] private UpgradeStatType[] statTypes = Array.Empty<UpgradeStatType>(); // 이 카드가 표시하고 반응할 실제 스탯 종류
     [SerializeField] private TMP_Text statNameText; // 밸런스 데이터의 실제 스탯 이름을 표시한다.
-    [SerializeField] private TMP_Text valueText; // 실제 전투에 적용되는 최종 보너스를 표시한다.
+    [SerializeField] private TMP_Text valueText; // 기존 카드에서 현재 수치 묶음을 계속 표시할 호환 텍스트
+    [SerializeField] private TMP_Text[] currentValueTexts = Array.Empty<TMP_Text>(); // statTypes 순서대로 현재 스탯을 각각 표시할 텍스트
+    [SerializeField] private TMP_Text[] drawnValueTexts = Array.Empty<TMP_Text>(); // statTypes 순서대로 이번 뽑기 획득량을 각각 표시할 텍스트
+    [SerializeField, Min(1)] private int rareDrawThreshold = 7; // 희귀 색상을 적용할 최소 단일 뽑기 수치
+    [SerializeField, Min(1)] private int jackpotDrawThreshold = 9; // 최고 색상을 적용할 최소 단일 뽑기 수치
+    [SerializeField] private Color normalDrawColor = Color.white; // 일반 뽑기 수치 텍스트 색상
+    [SerializeField] private Color rareDrawColor = new Color(0.35f, 0.8f, 1f); // 높은 뽑기 수치 텍스트 색상
+    [SerializeField] private Color jackpotDrawColor = new Color(1f, 0.75f, 0.15f); // 최고 뽑기 수치 텍스트 색상
     [SerializeField] private GameObject drawEffectObject; // 이번 뽑기에 선택된 카드를 강조하는 기존 오브젝트
     [SerializeField, Min(1f)] private float effectScale = 1.08f; // 뽑기 강조 시 사용할 최대 크기 배율
     [SerializeField, Min(0.05f)] private float effectDuration = 0.3f; // 강조 확대와 복귀에 사용할 전체 시간
@@ -40,7 +48,9 @@ public sealed class StatUpgradeCardView : MonoBehaviour
     // 이 카드가 표시할 실제 업그레이드 매니저를 연결합니다.
     public void Bind(UpgradeManager manager)
     {
+        bool managerChanged = upgradeManager != manager; // 다른 데이터 원본이 연결됐는지 여부
         upgradeManager = manager;
+        if (managerChanged) ResetDrawnValues();
         Refresh();
     }
 
@@ -67,25 +77,51 @@ public sealed class StatUpgradeCardView : MonoBehaviour
         }
 
         string displayName = string.Empty; // 카드에 표시할 실제 스탯 이름 묶음
-        string displayValue = string.Empty; // 카드에 표시할 실제 최종 보너스 묶음
+        string legacyDisplayValue = string.Empty; // 기존 호환 텍스트에 표시할 현재 스탯 묶음
         for (int index = 0; index < statTypes.Length; index++) // 이 카드가 함께 표시하는 스탯 순번
         {
             UpgradeStatType statType = statTypes[index]; // 현재 표시할 실제 스탯 종류
             UpgradeStatDefinition definition = balanceSettings.GetStat(statType); // 밸런스 에셋의 실제 스탯 정의
+            string currentValue = BuildValueText(statType, definition); // 개별 현재 스탯 텍스트에 표시할 값
             if (index > 0)
             {
                 displayName += " / ";
-                displayValue += " / ";
+                legacyDisplayValue += " / ";
             }
 
             displayName += definition == null || string.IsNullOrWhiteSpace(definition.displayName)
                 ? statType.ToString()
                 : definition.displayName;
-            displayValue += BuildValueText(statType, definition);
+            legacyDisplayValue += currentValue;
+            SetIndexedText(currentValueTexts, index, currentValue);
         }
 
         SetText(statNameText, displayName);
-        SetText(valueText, displayValue);
+        SetText(valueText, legacyDisplayValue);
+    }
+
+    // 이번 뽑기의 스탯별 획득량을 합산하고 가장 높은 단일 결과에 맞춰 색상을 적용합니다.
+    public void ShowDrawResults(IReadOnlyList<GachaDrawResult> results)
+    {
+        if (statTypes == null) return;
+        for (int statIndex = 0; statIndex < statTypes.Length; statIndex++) // 카드 안에서 갱신할 스탯 순번
+        {
+            UpgradeStatType statType = statTypes[statIndex]; // 이번에 결과를 모을 실제 스탯 종류
+            int totalDrawnValue = 0; // 1회 또는 10회 뽑기에서 같은 스탯으로 얻은 합계
+            int highestSingleValue = 0; // 색상 등급을 결정할 가장 높은 단일 뽑기 수치
+            if (results != null)
+            {
+                foreach (GachaDrawResult result in results) // 기존 가챠가 반환한 이번 뽑기 결과
+                {
+                    if (result.StatType != statType) continue;
+                    totalDrawnValue += result.Value;
+                    highestSingleValue = Mathf.Max(highestSingleValue, result.Value);
+                }
+            }
+
+            SetIndexedText(drawnValueTexts, statIndex, $"+{totalDrawnValue:N0}");
+            SetIndexedColor(drawnValueTexts, statIndex, GetDrawValueColor(highestSingleValue));
+        }
     }
 
     // 이번 뽑기에 선택된 카드만 기존 Focus와 짧은 크기 Effect로 강조합니다.
@@ -118,6 +154,40 @@ public sealed class StatUpgradeCardView : MonoBehaviour
         }
 
         return $"+{snapshot.FinalBonus * 100f:0.##}%";
+    }
+
+    // 새 데이터 원본을 연결했을 때 모든 이번 뽑기 텍스트를 기본값으로 초기화합니다.
+    private void ResetDrawnValues()
+    {
+        if (drawnValueTexts == null) return;
+        for (int index = 0; index < drawnValueTexts.Length; index++) // 초기화할 뽑기 결과 텍스트 순번
+        {
+            SetIndexedText(drawnValueTexts, index, "+0");
+            SetIndexedColor(drawnValueTexts, index, normalDrawColor);
+        }
+    }
+
+    // 단일 뽑기 최고 수치에 맞는 Inspector 설정 색상을 반환합니다.
+    private Color GetDrawValueColor(int value)
+    {
+        int safeRareThreshold = Mathf.Max(1, rareDrawThreshold); // 잘못된 Inspector 값을 보정한 희귀 기준
+        int safeJackpotThreshold = Mathf.Max(safeRareThreshold, jackpotDrawThreshold); // 희귀 기준보다 낮지 않게 보정한 최고 기준
+        if (value >= safeJackpotThreshold) return jackpotDrawColor;
+        return value >= safeRareThreshold ? rareDrawColor : normalDrawColor;
+    }
+
+    // 지정 순서에 연결된 개별 TMP 텍스트가 있을 때만 값을 적용합니다.
+    private static void SetIndexedText(TMP_Text[] targets, int index, string value)
+    {
+        if (targets == null || index < 0 || index >= targets.Length || targets[index] == null) return;
+        targets[index].text = value;
+    }
+
+    // 지정 순서에 연결된 개별 TMP 텍스트가 있을 때만 색상을 적용합니다.
+    private static void SetIndexedColor(TMP_Text[] targets, int index, Color color)
+    {
+        if (targets == null || index < 0 || index >= targets.Length || targets[index] == null) return;
+        targets[index].color = color;
     }
 
     // 실행 중인 Effect를 중단하고 카드의 원래 크기와 상태를 복구합니다.
@@ -157,6 +227,11 @@ public sealed class StatUpgradeCardView : MonoBehaviour
     {
         SetText(statNameText, "스탯 데이터 없음");
         SetText(valueText, "-");
+        if (currentValueTexts == null) return;
+        for (int index = 0; index < currentValueTexts.Length; index++) // 사용할 수 없는 상태를 표시할 현재 스탯 텍스트 순번
+        {
+            SetIndexedText(currentValueTexts, index, "-");
+        }
     }
 
     // 연결된 TMP 텍스트가 존재할 때만 값을 적용합니다.
