@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 101
   displayName: "\uC778\uAC04"
   team: 1
-  maxHealth: 10
+  maxHealth: 1000
   healthRegen: 0
   attackPower: 10
   attackInterval: 1

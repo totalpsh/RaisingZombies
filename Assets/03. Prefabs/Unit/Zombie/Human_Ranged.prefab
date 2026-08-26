@@ -139,7 +139,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 974294955510299920}
-  - component: {fileID: 147074459943949779}
   - component: {fileID: 7946149785694103159}
   - component: {fileID: 8261953951638224331}
   m_Layer: 7
@@ -167,33 +166,6 @@ Transform:
   - {fileID: 7919616608588250673}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!50 &147074459943949779
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8825992096614875004}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 4
 --- !u!61 &7946149785694103159
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -224,7 +196,7 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
@@ -260,6 +232,9 @@ MonoBehaviour:
   targetSearchRange: 5
   _data: {fileID: 11400000, guid: 72ea607eb23881443a7b65585efae315, type: 2}
   unitCollider: {fileID: 7946149785694103159}
+  targetReevaluationInterval: 0
+  attackerCountPenalty: 1
+  currentTargetBonus: 1.5
 --- !u!1001 &8006359385419225962
 PrefabInstance:
   m_ObjectHideFlags: 0

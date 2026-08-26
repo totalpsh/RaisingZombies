@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
@@ -14,6 +13,22 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField]private UnitModel _model;
     [SerializeField] private Collider2D unitCollider;
 
+    [Header("전투")]
+    [SerializeField, Min(0.05f)] private float targetReevaluationInterval;
+    [SerializeField, Min(0f)] private float attackerCountPenalty = 1f;
+    [SerializeField, Min(0f)] private float currentTargetBonus = 1.5f;
+    [SerializeField, Min(0f)] private float combatSpreadY = 0.7f;
+    [SerializeField, Min(0.01f)] private float verticalMoveSpeed = 1.5f;
+    [SerializeField, Min(0f)] private float verticalTolerance = 0.05f;
+    [SerializeField] private Vector2 combatYBounds = new(-1.5f, 1.5f);
+    [SerializeField, Min(0f)] private float combatApproachMargin = 0.5f;
+    [SerializeField, Min(0f)] private float combatSideOffset = 0.4f;
+    [SerializeField, Min(0.01f)] private float combatStartHorizontalDistance = 2f;
+
+    private float _targetReevaluationTimer;
+    private float _combatDestinationY;
+    private bool _hasCombatDestination;
+    
     // private UnitController _currentTarget;
     
     private bool _isInitialized;
@@ -63,8 +78,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         _data = data;
         _model = new UnitModel(stats);
+
+        ChangeTarget(null);
         
-        _currentTarget = null;
+        _targetReevaluationTimer = UnityEngine.Random.Range(0f, targetReevaluationInterval);
+        
         _isInitialized = true;
         
         if (unitCollider != null)
@@ -86,18 +104,24 @@ public class UnitController : MonoBehaviour, ICombatTarget
     
     private void FindTarget()
     {
-        if (IsValidTarget(_currentTarget))
+        _targetReevaluationTimer -= Time.deltaTime;
+        
+        bool currentTargetValid = IsValidTarget(_currentTarget);
+        
+        if (currentTargetValid && _targetReevaluationTimer > 0f)
             return;
 
-        _currentTarget = null;
+        _targetReevaluationTimer = targetReevaluationInterval;
+        
+        ICombatTarget bestTarget = currentTargetValid ? _currentTarget : null;
+        float bestScore = currentTargetValid ? CalculateTargetScore(_currentTarget) : float.MaxValue;
 
         Collider2D[] results = Physics2D.OverlapCircleAll(transform.position, targetSearchRange, unitLayer);
 
-        float nearestDistance = float.MaxValue;
-
         foreach (Collider2D result in results)
         {
-            ICombatTarget candidate = result.GetComponentInParent<ICombatTarget>();
+            ICombatTarget candidate =
+                result.GetComponentInParent<ICombatTarget>();
 
             if (!IsValidTarget(candidate))
                 continue;
@@ -105,14 +129,50 @@ public class UnitController : MonoBehaviour, ICombatTarget
             if (unitAction.RequiresTargetAhead && !IsAhead(candidate))
                 continue;
 
-            float distance = GetHorizontalDistance(candidate);
+            float score = CalculateTargetScore(candidate);
 
-            if (distance >= nearestDistance)
+            if (score >= bestScore)
                 continue;
 
-            _currentTarget = candidate;
-            nearestDistance = distance;
+            bestTarget = candidate;
+            bestScore = score;
         }
+        
+        ChangeTarget(bestTarget);
+    }
+    
+    private float CalculateTargetScore(ICombatTarget target)
+    {
+        float distance = GetHorizontalDistance(target);
+        int attackerCount = CombatTargetTracker.GetAttackerCount(target);
+        float score = distance + attackerCount * attackerCountPenalty;
+
+        if (target == _currentTarget)
+            score -= currentTargetBonus;
+
+        return score;
+    }
+    
+    private void ChangeTarget(ICombatTarget newTarget)
+    {
+        if (ReferenceEquals(_currentTarget, newTarget))
+            return;
+        
+        CombatTargetTracker.Unregister(_currentTarget);
+
+        _currentTarget = newTarget;
+
+        CombatTargetTracker.Register(_currentTarget);
+
+        if (_currentTarget == null)
+        {
+            _hasCombatDestination = false;
+            return;
+        }
+
+        float randomOffset = UnityEngine.Random.Range(-combatSpreadY, combatSpreadY);
+        _combatDestinationY = Mathf.Clamp(_currentTarget.TargetTransform.position.y + randomOffset, combatYBounds.x, combatYBounds.y);
+        _hasCombatDestination = true;
     }
     
     private bool IsAhead(ICombatTarget target)
@@ -130,15 +190,49 @@ public class UnitController : MonoBehaviour, ICombatTarget
             return;
         }
 
-        float distance = GetHorizontalDistance(_currentTarget);
+        float horizontalDistance = GetTargetHorizontalDistance(_currentTarget);
 
-        if (distance > _model.Stats.AttackRange)
+        if (horizontalDistance > combatStartHorizontalDistance)
         {
             MoveForward();
             return;
         }
 
-        TryAttack();
+        bool reachedCombatPosition = MoveTowardCombatPosition();
+
+        if (!reachedCombatPosition)
+            return;
+
+        float attackDistance = GetHorizontalDistance(_currentTarget);
+
+        if (attackDistance <= _model.Stats.AttackRange)
+        {
+            TryAttack();
+        }
+    }
+    
+    private bool MoveTowardCombatPosition()
+    {
+        if (!_hasCombatDestination)
+            return false;
+
+        float side = Team == UnitTeam.Zombie ? -1f : 1f;
+
+        Vector3 destination = _currentTarget.TargetTransform.position;
+        destination.x += side * combatSideOffset;
+        destination.y = _combatDestinationY;
+        destination.z = transform.position.z;
+
+        transform.position = Vector3.MoveTowards(transform.position, destination, _model.Stats.MoveSpeed * Time.deltaTime);
+
+        float remainingDistance = Vector2.Distance(transform.position, destination);
+        if (remainingDistance > verticalTolerance)
+        {
+            animation.PlayWalk();
+            return false;
+        }
+
+        return true;
     }
 
     private void MoveForward()
@@ -146,9 +240,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.PlayWalk();
         
         float direction = Team == UnitTeam.Zombie ? 1f : -1f;
-
         float distance = _model.Stats.MoveSpeed * Time.deltaTime;
-
         transform.Translate(Vector3.right * (direction * distance));
     }
 
@@ -185,7 +277,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void Die()
     {
-        _currentTarget = null;
+        ChangeTarget(null);
         enabled = false;
 
         if (unitCollider != null)
@@ -211,6 +303,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
         return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && unitAction.CanTarget(this, target);
     }
 
+    private float GetTargetHorizontalDistance(ICombatTarget target)
+    {
+        return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
+    }
+    
     private float GetHorizontalDistance(ICombatTarget target)
     {
         if (unitCollider == null || target.TargetCollider == null)
