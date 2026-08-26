@@ -141,6 +141,7 @@ GameObject:
   - component: {fileID: 974294955510299920}
   - component: {fileID: 7946149785694103159}
   - component: {fileID: 8261953951638224331}
+  - component: {fileID: -4324631424263990496}
   m_Layer: 7
   m_Name: Human_Ranged
   m_TagString: Untagged
@@ -235,6 +236,28 @@ MonoBehaviour:
   targetReevaluationInterval: 0
   attackerCountPenalty: 1
   currentTargetBonus: 1.5
+  combatSpreadY: 0.7
+  verticalMoveSpeed: 1.5
+  verticalTolerance: 0.05
+  combatYBounds: {x: -1.5, y: 1.5}
+  combatApproachMargin: 0.5
+  combatSideOffset: 0.4
+  combatStartHorizontalDistance: 2
+--- !u!114 &-4324631424263990496
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8825992096614875004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
+  slotCount: 5
+  radius: 0.6
+  angleStep: 35
 --- !u!1001 &8006359385419225962
 PrefabInstance:
   m_ObjectHideFlags: 0

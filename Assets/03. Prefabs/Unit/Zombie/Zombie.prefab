@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2369680469246418416}
   - component: {fileID: 5459777805356014378}
   - component: {fileID: 7009212651998346272}
+  - component: {fileID: 9214992315463159315}
   m_Layer: 6
   m_Name: Zombie
   m_TagString: Untagged
@@ -109,6 +110,23 @@ MonoBehaviour:
   verticalTolerance: 0.05
   combatYBounds: {x: -1.5, y: 1.5}
   combatApproachMargin: 0.5
+  combatSideOffset: 0.4
+  combatStartHorizontalDistance: 2
+--- !u!114 &9214992315463159315
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620372965101480489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
+  slotCount: 5
+  radius: 0.6
+  angleStep: 35
 --- !u!1 &1942154731415359923
 GameObject:
   m_ObjectHideFlags: 0

@@ -17,23 +17,18 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField, Min(0.05f)] private float targetReevaluationInterval;
     [SerializeField, Min(0f)] private float attackerCountPenalty = 1f;
     [SerializeField, Min(0f)] private float currentTargetBonus = 1.5f;
-    [SerializeField, Min(0f)] private float combatSpreadY = 0.7f;
-    [SerializeField, Min(0.01f)] private float verticalMoveSpeed = 1.5f;
-    [SerializeField, Min(0f)] private float verticalTolerance = 0.05f;
     [SerializeField] private Vector2 combatYBounds = new(-1.5f, 1.5f);
-    [SerializeField, Min(0f)] private float combatApproachMargin = 0.5f;
-    [SerializeField, Min(0f)] private float combatSideOffset = 0.4f;
-    [SerializeField, Min(0.01f)] private float combatStartHorizontalDistance = 2f;
-
+    [SerializeField, Min(0.01f)] private float slotTolerance = 0.05f;
+    [SerializeField, Min(0f)] private float slotLeeway = 0.25f;
+    
     private float _targetReevaluationTimer;
-    private float _combatDestinationY;
-    private bool _hasCombatDestination;
     
     // private UnitController _currentTarget;
     
     private bool _isInitialized;
 
     public Collider2D TargetCollider => unitCollider;
+    private CombatSlots _slots;
     private ICombatTarget _currentTarget;
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
@@ -153,26 +148,43 @@ public class UnitController : MonoBehaviour, ICombatTarget
         return score;
     }
     
-    private void ChangeTarget(ICombatTarget newTarget)
+    private void ChangeTarget(ICombatTarget target)
     {
-        if (ReferenceEquals(_currentTarget, newTarget))
+        if (ReferenceEquals(_currentTarget, target))
             return;
-        
+
+        ReleaseSlot();
         CombatTargetTracker.Unregister(_currentTarget);
 
-        _currentTarget = newTarget;
+        _currentTarget = target;
 
         CombatTargetTracker.Register(_currentTarget);
+    }
+    
+    private bool ReserveSlot(out Vector3 position)
+    {
+        position = transform.position;
 
         if (_currentTarget == null)
+            return false;
+
+        if (_slots == null)
         {
-            _hasCombatDestination = false;
-            return;
+            MonoBehaviour target = _currentTarget as MonoBehaviour;
+
+            if (target != null)
+                _slots = target.GetComponent<CombatSlots>();
         }
 
-        float randomOffset = UnityEngine.Random.Range(-combatSpreadY, combatSpreadY);
-        _combatDestinationY = Mathf.Clamp(_currentTarget.TargetTransform.position.y + randomOffset, combatYBounds.x, combatYBounds.y);
-        _hasCombatDestination = true;
+        return _slots != null && _slots.Reserve(this, out position);
+    }
+    
+    private void ReleaseSlot()
+    {
+        if (_slots != null)
+            _slots.Release(this);
+
+        _slots = null;
     }
     
     private bool IsAhead(ICombatTarget target)
@@ -190,49 +202,33 @@ public class UnitController : MonoBehaviour, ICombatTarget
             return;
         }
 
-        float horizontalDistance = GetTargetHorizontalDistance(_currentTarget);
+        float attackDistance = GetHorizontalDistance(_currentTarget);
 
-        if (horizontalDistance > combatStartHorizontalDistance)
+        if (unitAction.UseSlots)
+        {
+            if (!ReserveSlot(out Vector3 slot))
+                return;
+
+            float slotDistance = Vector2.Distance(transform.position, slot);
+
+            if (attackDistance <= _model.Stats.AttackRange &&
+                slotDistance <= slotLeeway)
+            {
+                TryAttack();
+                return;
+            }
+
+            MoveToSlot(slot);
+            return;
+        }
+
+        if (attackDistance > _model.Stats.AttackRange)
         {
             MoveForward();
             return;
         }
 
-        bool reachedCombatPosition = MoveTowardCombatPosition();
-
-        if (!reachedCombatPosition)
-            return;
-
-        float attackDistance = GetHorizontalDistance(_currentTarget);
-
-        if (attackDistance <= _model.Stats.AttackRange)
-        {
-            TryAttack();
-        }
-    }
-    
-    private bool MoveTowardCombatPosition()
-    {
-        if (!_hasCombatDestination)
-            return false;
-
-        float side = Team == UnitTeam.Zombie ? -1f : 1f;
-
-        Vector3 destination = _currentTarget.TargetTransform.position;
-        destination.x += side * combatSideOffset;
-        destination.y = _combatDestinationY;
-        destination.z = transform.position.z;
-
-        transform.position = Vector3.MoveTowards(transform.position, destination, _model.Stats.MoveSpeed * Time.deltaTime);
-
-        float remainingDistance = Vector2.Distance(transform.position, destination);
-        if (remainingDistance > verticalTolerance)
-        {
-            animation.PlayWalk();
-            return false;
-        }
-
-        return true;
+        TryAttack();
     }
 
     private void MoveForward()
@@ -259,6 +255,12 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.PlayAttack();
     }
 
+    private void MoveToSlot(Vector3 position)
+    {
+        animation.PlayWalk();
+        transform.position = Vector3.MoveTowards(transform.position, position, _model.Stats.MoveSpeed * Time.deltaTime);
+    }
+    
     public void TakeDamage(float damage)
     {
         if (!_isInitialized || _model.IsDead)
@@ -303,11 +305,6 @@ public class UnitController : MonoBehaviour, ICombatTarget
         return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && unitAction.CanTarget(this, target);
     }
 
-    private float GetTargetHorizontalDistance(ICombatTarget target)
-    {
-        return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
-    }
-    
     private float GetHorizontalDistance(ICombatTarget target)
     {
         if (unitCollider == null || target.TargetCollider == null)
@@ -324,20 +321,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.ResetState();
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    private void OnDisable()
     {
-        Gizmos.DrawWireSphere(
-            transform.position,
-            targetSearchRange);
-
-        if (_data == null)
-            return;
-
-        Gizmos.DrawWireSphere(
-            transform.position,
-            _data.AttackRange);
+        ReleaseSlot();
+        CombatTargetTracker.Unregister(_currentTarget);
+        _currentTarget = null;
     }
-#endif
-    
 }

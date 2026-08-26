@@ -897,6 +897,7 @@ GameObject:
   - component: {fileID: 4694215587351844144}
   - component: {fileID: 3680348294672660214}
   - component: {fileID: 6349473873355835590}
+  - component: {fileID: 6349473873355835591}
   m_Layer: 7
   m_Name: HumanFortress
   m_TagString: Untagged
@@ -1012,6 +1013,23 @@ MonoBehaviour:
   spawnPoint: {fileID: 1141245561}
   maxHealth: 100
   structureCollider: {fileID: 0}
+--- !u!114 &6349473873355835591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4274927072658981176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
+  slotCount: 5
+  radius: 0.7
+  angleStep: 35
+  shape: 1
+  yGap: 0.4
 --- !u!212 &7786187726288138425
 SpriteRenderer:
   serializedVersion: 2
@@ -1084,6 +1102,7 @@ GameObject:
   - component: {fileID: 3982713233936371126}
   - component: {fileID: 8615642909568846136}
   - component: {fileID: 8615642909568846135}
+  - component: {fileID: 8615642909568846137}
   m_Layer: 6
   m_Name: ZombieCamp
   m_TagString: Untagged
@@ -1123,6 +1142,23 @@ MonoBehaviour:
   zombieKey: Zombie
   spawnPoint: {fileID: 2015096598}
   baseSpawnTime: 10
+--- !u!114 &8615642909568846137
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8615642909568846134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
+  slotCount: 5
+  radius: 0.7
+  angleStep: 35
+  shape: 1
+  yGap: 0.4
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -2,6 +2,7 @@ using UnityEngine;
 
 public abstract class UnitAction : MonoBehaviour
 {
+    public virtual bool UseSlots => true;
     public virtual bool RequiresTargetAhead => true;
     
     public virtual bool CanTarget(UnitController owner, ICombatTarget target)
