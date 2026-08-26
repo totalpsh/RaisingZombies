@@ -110,75 +110,75 @@ MonoBehaviour:
     drawsToNextLevel: 50
     newlyUnlockedStats: 02000000
     rarityRates:
-      normal: 50
+      normal: 82
       uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      rare: 6
+      epic: 2
+      unique: 0
+      legendary: 0
   - level: 3
     drawCost: 100
     drawsToNextLevel: 80
     newlyUnlockedStats: 03000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 72
+      uncommon: 14
+      rare: 9
+      epic: 4
+      unique: 1
+      legendary: 0
   - level: 4
     drawCost: 150
     drawsToNextLevel: 300
     newlyUnlockedStats: 04000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 62
+      uncommon: 17
+      rare: 12
+      epic: 6
+      unique: 2.5
+      legendary: 0.5
   - level: 5
     drawCost: 300
     drawsToNextLevel: 500
     newlyUnlockedStats: 05000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 52
+      uncommon: 20
+      rare: 15
+      epic: 8
+      unique: 4
+      legendary: 1
   - level: 6
     drawCost: 500
     drawsToNextLevel: 1200
     newlyUnlockedStats: 06000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 42
+      uncommon: 22
+      rare: 18
+      epic: 11
+      unique: 5.5
+      legendary: 1.5
   - level: 7
     drawCost: 1000
     drawsToNextLevel: 3000
     newlyUnlockedStats: 07000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 32
+      uncommon: 24
+      rare: 21
+      epic: 14
+      unique: 7
+      legendary: 2
   - level: 8
     drawCost: 1500
     drawsToNextLevel: 0
     newlyUnlockedStats: 0800000009000000
     rarityRates:
-      normal: 50
-      uncommon: 10
-      rare: 10
-      epic: 10
-      unique: 10
-      legendary: 10
+      normal: 22
+      uncommon: 25
+      rare: 24
+      epic: 17
+      unique: 9
+      legendary: 3

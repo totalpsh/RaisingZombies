@@ -387,6 +387,18 @@ PrefabInstance:
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
       objectReference: {fileID: 0}
+    - target: {fileID: 3544094262020926355, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3544094262028464677, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3544094262224644282, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3765374842164354851, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: m_fontColor32.rgba
       value: 1725354967
@@ -406,6 +418,10 @@ PrefabInstance:
     - target: {fileID: 4214378265516386369, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 4410839394902249141, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5127853360549024475, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
@@ -427,6 +443,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.x
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6238812956684419236, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6243236805327226999, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
@@ -442,6 +462,10 @@ PrefabInstance:
     - target: {fileID: 7747211175392438117, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
       value: 1801810542
+      objectReference: {fileID: 0}
+    - target: {fileID: 7923918137196686220, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8034933977735843794, guid: 1b998cc3105794d039e21872307fd63a, type: 3}
       propertyPath: 'm_ActiveFontFeatures.Array.data[0]'
