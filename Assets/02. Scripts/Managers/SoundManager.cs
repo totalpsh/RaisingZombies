@@ -24,6 +24,8 @@ public class SoundManager : Singleton<SoundManager>
     private float _bgmVolume = 1f;
     private float _uiVolume = 1f;
     private float _sfxVolume = 1f;
+    private bool _bgmEnabled = true; // BGM 출력 활성 상태
+    private bool _sfxEnabled = true; // SFX와 UI 효과음 출력 활성 상태
 
     private Dictionary<string, float> _lastPlayTime = new();
     [SerializeField] private float sameSfxCool = 0.05f;
@@ -36,6 +38,9 @@ public class SoundManager : Singleton<SoundManager>
     [SerializeField, Range(0, 256)] private int bgmPriority = 160;
     [SerializeField, Range(0, 256)] private int sfxPriority = 64;
     [SerializeField, Range(0, 256)] private int uiPriority = 48;
+
+    public bool BgmEnabled => _bgmEnabled; // 현재 BGM 출력 활성 상태
+    public bool SfxEnabled => _sfxEnabled; // 현재 SFX와 UI 효과음 출력 활성 상태
     
     public void Init()
     {
@@ -43,6 +48,7 @@ public class SoundManager : Singleton<SoundManager>
         _initialized = true;
 
         CreateAudioSource();
+        if (GameSettingsManager.HasInstance) GameSettingsManager.Instance.ApplyToSoundManager(this);
         ApplyVolumes();
     }
 
@@ -104,13 +110,13 @@ public class SoundManager : Singleton<SoundManager>
 
     private void ApplyVolumes()
     {
-        if (_bgmSource != null) _bgmSource.volume = _bgmVolume;
-        if (_uiSource != null) _uiSource.volume = _uiVolume;
+        if (_bgmSource != null) _bgmSource.volume = _bgmEnabled ? _bgmVolume : 0f;
+        if (_uiSource != null) _uiSource.volume = _sfxEnabled ? _uiVolume : 0f;
 
         foreach (var source in _sfxSource)
         {
             if (source != null)
-                source.volume = _sfxVolume;
+                source.volume = _sfxEnabled ? _sfxVolume : 0f;
         }
     }
 
@@ -196,7 +202,7 @@ public class SoundManager : Singleton<SoundManager>
     {
         _bgmVolume = Mathf.Clamp01(volume);
         if (_bgmSource != null)
-            _bgmSource.volume = _bgmVolume;
+            _bgmSource.volume = _bgmEnabled ? _bgmVolume : 0f;
     }
 
     public void SetSFXVolume(float volume)
@@ -206,7 +212,7 @@ public class SoundManager : Singleton<SoundManager>
         foreach (var source in _sfxSource)
         {
             if (source != null)
-                source.volume = _sfxVolume;
+                source.volume = _sfxEnabled ? _sfxVolume : 0f;
         }
 
         // GameFeedbackManager.Instance?.SetSfxVolume(_sfxVolume);//////////////////////////////////////
@@ -215,7 +221,26 @@ public class SoundManager : Singleton<SoundManager>
     public void SetUIVolume(float volume)
     {
         _uiVolume = Mathf.Clamp01(volume);
-        if (_uiSource != null) _uiSource.volume = _uiVolume;
+        if (_uiSource != null) _uiSource.volume = _sfxEnabled ? _uiVolume : 0f;
+    }
+
+    // BGM 출력만 활성화하거나 음소거하고 기존 볼륨 값은 보존한다.
+    public void SetBGMEnabled(bool enabled)
+    {
+        _bgmEnabled = enabled;
+        if (_bgmSource != null) _bgmSource.volume = enabled ? _bgmVolume : 0f;
+    }
+
+    // 전투 SFX와 UI 효과음을 함께 활성화하거나 음소거한다.
+    public void SetSFXEnabled(bool enabled)
+    {
+        _sfxEnabled = enabled;
+        if (_uiSource != null) _uiSource.volume = enabled ? _uiVolume : 0f;
+
+        foreach (AudioSource source in _sfxSource) // 현재 생성된 모든 SFX 출력 Source
+        {
+            if (source != null) source.volume = enabled ? _sfxVolume : 0f;
+        }
     }
 
     private AudioSource GetAvailSfxSource()
