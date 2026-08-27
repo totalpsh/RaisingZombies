@@ -26,6 +26,9 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField, Min(0.01f)] private float slotTolerance = 0.05f;
     [SerializeField, Min(0f)] private float slotLeeway = 0.25f;
     
+    [Header("UI")]
+    [SerializeField] private UnitHealthBar healthBar;
+    
     private float _targetReevaluationTimer;
     
     // private UnitController _currentTarget;
@@ -80,6 +83,8 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _data = data;
         _model = new UnitModel(stats);
 
+        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
+        
         ChangeTarget(null);
         
         _targetReevaluationTimer = UnityEngine.Random.Range(0f, targetReevaluationInterval);
@@ -251,17 +256,19 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void TryAttack()
     {
-        if (!_model.CanAttack)
+        if (!_model.CanAttack || !IsValidTarget(_currentTarget))
             return;
 
-        if (!IsValidTarget(_currentTarget))
-            return;
-        
-        // _currentTarget.TakeDamage(_model.Stats.AttackPower);
-        unitAction.Execute(this, _currentTarget, _model.Stats.AttackPower);
+        ICombatTarget target = _currentTarget;
+        float power = _model.Stats.AttackPower;
+
+        animation.PlayAttack(() =>
+        {
+            if (IsValidTarget(target))
+                unitAction.Execute(this, target, power);
+        });
 
         _model.ResetAttackCooldown();
-        animation.PlayAttack();
     }
 
     private void MoveToSlot(Vector3 position)
@@ -275,7 +282,12 @@ public class UnitController : MonoBehaviour, ICombatTarget
         if (!_isInitialized || _model.IsDead)
             return;
 
+        float before = _model.CurrentHealth;
+
         _model.TakeDamage(damage);
+        Debug.Log($"{name}: {before} → {_model.CurrentHealth}, Damage: {damage}");
+        
+        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
 
         if (_model.IsDead)
         {
@@ -283,8 +295,8 @@ public class UnitController : MonoBehaviour, ICombatTarget
             return;
         }
 
-        animation.PlayHit();
         ApplyHitSlow();
+        animation.PlayHit();
     }
     
     public void ApplyHitSlow()

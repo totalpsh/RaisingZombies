@@ -17,7 +17,7 @@ MonoBehaviour:
   team: 0
   maxHealth: 2000
   healthRegen: 0
-  attackPower: 1
+  attackPower: 100
   attackInterval: 1
-  attackRange: 5
+  attackRange: 3
   moveSpeed: 1

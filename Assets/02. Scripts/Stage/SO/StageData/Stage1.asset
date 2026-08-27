@@ -18,7 +18,10 @@ MonoBehaviour:
     attackMultiplier: 1
     moveSpeedMultiplier: 1
     attackSpeedMultiplier: 1
-  defenses: []
+  defenses:
+  - prefab: {fileID: 5838779935848266881, guid: 309243127796ba3448d3a1614b6fa7bc, type: 3}
+    spawnOffset: {x: 0, y: 0, z: 0}
+    healthMultiplier: 1
   humanDeployment:
     populationData:
     - humanKey: Human_Melee
