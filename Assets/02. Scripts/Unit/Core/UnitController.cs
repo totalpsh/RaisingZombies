@@ -13,6 +13,11 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField]private UnitModel _model;
     [SerializeField] private Collider2D unitCollider;
 
+    [SerializeField] private bool useHit = true;
+    [SerializeField] private bool useHitSlow;
+    [SerializeField, Range(0.1f, 1f)] private float hitSpeedRate = 0.6f;
+    [SerializeField, Min(0f)] private float hitSlowTime = 0.15f;
+    
     [Header("전투")]
     [SerializeField, Min(0.05f)] private float targetReevaluationInterval;
     [SerializeField, Min(0f)] private float attackerCountPenalty = 1f;
@@ -32,6 +37,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
     private ICombatTarget _currentTarget;
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
+    private float _slowEndTime;
     
     // 프로퍼티
     public UnitData Data => _data;
@@ -196,6 +202,9 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void TryAction()
     {
+        if (animation.IsBusy)
+            return;
+
         if (!IsValidTarget(_currentTarget))
         {
             MoveForward();
@@ -236,7 +245,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.PlayWalk();
         
         float direction = Team == UnitTeam.Zombie ? 1f : -1f;
-        float distance = _model.Stats.MoveSpeed * Time.deltaTime;
+        float distance = GetMoveSpeed() * Time.deltaTime;
         transform.Translate(Vector3.right * (direction * distance));
     }
 
@@ -258,7 +267,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
     private void MoveToSlot(Vector3 position)
     {
         animation.PlayWalk();
-        transform.position = Vector3.MoveTowards(transform.position, position, _model.Stats.MoveSpeed * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(transform.position, position, GetMoveSpeed() * Time.deltaTime);
     }
     
     public void TakeDamage(float damage)
@@ -275,6 +284,18 @@ public class UnitController : MonoBehaviour, ICombatTarget
         }
 
         animation.PlayHit();
+        ApplyHitSlow();
+    }
+    
+    public void ApplyHitSlow()
+    {
+        if (useHitSlow)
+            _slowEndTime = Time.time + hitSlowTime;
+    }
+
+    private float GetMoveSpeed()
+    {
+        return Time.time < _slowEndTime ? _model.Stats.MoveSpeed * hitSpeedRate : _model.Stats.MoveSpeed;
     }
 
     private void Die()

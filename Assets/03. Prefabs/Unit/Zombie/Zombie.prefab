@@ -102,16 +102,16 @@ MonoBehaviour:
   targetSearchRange: 1
   _data: {fileID: 11400000, guid: fc41fa7b01a04e44e81e0381907c140d, type: 2}
   unitCollider: {fileID: 5459777805356014378}
+  useHit: 0
+  useHitSlow: 1
+  hitSpeedRate: 0.6
+  hitSlowTime: 0.15
   targetReevaluationInterval: 0.3
   attackerCountPenalty: 1
   currentTargetBonus: 1.5
-  combatSpreadY: 0.7
-  verticalMoveSpeed: 1.5
-  verticalTolerance: 0.05
   combatYBounds: {x: -1.5, y: 1.5}
-  combatApproachMargin: 0.5
-  combatSideOffset: 0.4
-  combatStartHorizontalDistance: 2
+  slotTolerance: 0.05
+  slotLeeway: 0.25
 --- !u!114 &9214992315463159315
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -127,6 +127,8 @@ MonoBehaviour:
   slotCount: 5
   radius: 0.6
   angleStep: 35
+  shape: 0
+  yGap: 0.4
 --- !u!1 &1942154731415359923
 GameObject:
   m_ObjectHideFlags: 0
@@ -222,6 +224,7 @@ MonoBehaviour:
   attackAnimationName: Attack2
   hitAnimationName: Hit
   dieAnimationName: Die
+  useHit: 0
 --- !u!1001 &7877368644520786343
 PrefabInstance:
   m_ObjectHideFlags: 0
