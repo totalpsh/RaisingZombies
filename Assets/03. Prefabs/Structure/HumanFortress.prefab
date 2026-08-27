@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4310542915860031896}
   - component: {fileID: 2516095049861903469}
   - component: {fileID: -1152935925538533390}
+  - component: {fileID: -5840357297387953957}
   - component: {fileID: 5826807372604757931}
   m_Layer: 7
   m_Name: HumanFortress
@@ -109,6 +110,24 @@ MonoBehaviour:
   team: 1
   spawnPoint: {fileID: 0}
   maxHealth: 100
+  structureCollider: {fileID: 0}
+--- !u!114 &-5840357297387953957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6385071472462553189}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
+  slotCount: 5
+  radius: 0.6
+  angleStep: 35
+  shape: 1
+  yGap: 0.4
 --- !u!61 &5826807372604757931
 BoxCollider2D:
   m_ObjectHideFlags: 0

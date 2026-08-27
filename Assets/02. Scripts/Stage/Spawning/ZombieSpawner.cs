@@ -8,7 +8,7 @@ public class ZombieSpawner : MonoBehaviour
 {
     [SerializeField] private string zombieKey;
     [SerializeField] private Transform spawnPoint;
-    [SerializeField, Min(0.1f)] private float baseSpawnTime = 30f;
+    [SerializeField, Min(0.1f)] private float baseSpawnTime = 2f;
 
     private List<UnitController> _spawnedZombies = new();
     private float _elapsedTime;

@@ -10,8 +10,7 @@ public class BattleCameraDragInput : MonoBehaviour, IPointerDownHandler, IDragHa
 
     private int _activePointerId = int.MinValue;
 
-    public void OnPointerDown(
-        PointerEventData eventData)
+    public void OnPointerDown(PointerEventData eventData)
     {
         if (_activePointerId != int.MinValue)
             return;
@@ -20,8 +19,7 @@ public class BattleCameraDragInput : MonoBehaviour, IPointerDownHandler, IDragHa
         DragStarted?.Invoke();
     }
 
-    public void OnDrag(
-        PointerEventData eventData)
+    public void OnDrag(PointerEventData eventData)
     {
         if (eventData.pointerId != _activePointerId)
             return;
@@ -29,8 +27,7 @@ public class BattleCameraDragInput : MonoBehaviour, IPointerDownHandler, IDragHa
         Dragged?.Invoke(eventData.delta.x);
     }
 
-    public void OnPointerUp(
-        PointerEventData eventData)
+    public void OnPointerUp(PointerEventData eventData)
     {
         if (eventData.pointerId != _activePointerId)
             return;

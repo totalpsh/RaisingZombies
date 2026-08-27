@@ -7,6 +7,8 @@ public class RangedAttackAction : UnitAction
     [SerializeField] private Transform firePoint;
     [SerializeField, Min(0.01f)] private float projectileSpeed = 8f;
     [SerializeField, Min(0.1f)] private float projectileLifetime = 5f;
+    
+    public override bool UseSlots => false;
 
     private int _session;
 

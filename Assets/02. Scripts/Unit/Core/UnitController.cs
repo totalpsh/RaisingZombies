@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
@@ -14,14 +13,34 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField]private UnitModel _model;
     [SerializeField] private Collider2D unitCollider;
 
+    [SerializeField] private bool useHit = true;
+    [SerializeField] private bool useHitSlow;
+    [SerializeField, Range(0.1f, 1f)] private float hitSpeedRate = 0.6f;
+    [SerializeField, Min(0f)] private float hitSlowTime = 0.15f;
+    
+    [Header("전투")]
+    [SerializeField, Min(0.05f)] private float targetReevaluationInterval;
+    [SerializeField, Min(0f)] private float attackerCountPenalty = 1f;
+    [SerializeField, Min(0f)] private float currentTargetBonus = 1.5f;
+    [SerializeField] private Vector2 combatYBounds = new(-1.5f, 1.5f);
+    [SerializeField, Min(0.01f)] private float slotTolerance = 0.05f;
+    [SerializeField, Min(0f)] private float slotLeeway = 0.25f;
+    
+    [Header("UI")]
+    [SerializeField] private UnitHealthBar healthBar;
+    
+    private float _targetReevaluationTimer;
+    
     // private UnitController _currentTarget;
     
     private bool _isInitialized;
 
     public Collider2D TargetCollider => unitCollider;
+    private CombatSlots _slots;
     private ICombatTarget _currentTarget;
     private Collider2D[] _targetBuffer;
     private ContactFilter2D _targetFilter;
+    private float _slowEndTime;
     
     // 프로퍼티
     public UnitData Data => _data;
@@ -63,8 +82,13 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         _data = data;
         _model = new UnitModel(stats);
+
+        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
         
-        _currentTarget = null;
+        ChangeTarget(null);
+        
+        _targetReevaluationTimer = UnityEngine.Random.Range(0f, targetReevaluationInterval);
+        
         _isInitialized = true;
         
         if (unitCollider != null)
@@ -86,18 +110,24 @@ public class UnitController : MonoBehaviour, ICombatTarget
     
     private void FindTarget()
     {
-        if (IsValidTarget(_currentTarget))
+        _targetReevaluationTimer -= Time.deltaTime;
+        
+        bool currentTargetValid = IsValidTarget(_currentTarget);
+        
+        if (currentTargetValid && _targetReevaluationTimer > 0f)
             return;
 
-        _currentTarget = null;
+        _targetReevaluationTimer = targetReevaluationInterval;
+        
+        ICombatTarget bestTarget = currentTargetValid ? _currentTarget : null;
+        float bestScore = currentTargetValid ? CalculateTargetScore(_currentTarget) : float.MaxValue;
 
         Collider2D[] results = Physics2D.OverlapCircleAll(transform.position, targetSearchRange, unitLayer);
 
-        float nearestDistance = float.MaxValue;
-
         foreach (Collider2D result in results)
         {
-            ICombatTarget candidate = result.GetComponentInParent<ICombatTarget>();
+            ICombatTarget candidate =
+                result.GetComponentInParent<ICombatTarget>();
 
             if (!IsValidTarget(candidate))
                 continue;
@@ -105,14 +135,67 @@ public class UnitController : MonoBehaviour, ICombatTarget
             if (unitAction.RequiresTargetAhead && !IsAhead(candidate))
                 continue;
 
-            float distance = GetHorizontalDistance(candidate);
+            float score = CalculateTargetScore(candidate);
 
-            if (distance >= nearestDistance)
+            if (score >= bestScore)
                 continue;
 
-            _currentTarget = candidate;
-            nearestDistance = distance;
+            bestTarget = candidate;
+            bestScore = score;
         }
+        
+        ChangeTarget(bestTarget);
+    }
+    
+    private float CalculateTargetScore(ICombatTarget target)
+    {
+        float distance = GetHorizontalDistance(target);
+        int attackerCount = CombatTargetTracker.GetAttackerCount(target);
+        float score = distance + attackerCount * attackerCountPenalty;
+
+        if (target == _currentTarget)
+            score -= currentTargetBonus;
+
+        return score;
+    }
+    
+    private void ChangeTarget(ICombatTarget target)
+    {
+        if (ReferenceEquals(_currentTarget, target))
+            return;
+
+        ReleaseSlot();
+        CombatTargetTracker.Unregister(_currentTarget);
+
+        _currentTarget = target;
+
+        CombatTargetTracker.Register(_currentTarget);
+    }
+    
+    private bool ReserveSlot(out Vector3 position)
+    {
+        position = transform.position;
+
+        if (_currentTarget == null)
+            return false;
+
+        if (_slots == null)
+        {
+            MonoBehaviour target = _currentTarget as MonoBehaviour;
+
+            if (target != null)
+                _slots = target.GetComponent<CombatSlots>();
+        }
+
+        return _slots != null && _slots.Reserve(this, out position);
+    }
+    
+    private void ReleaseSlot()
+    {
+        if (_slots != null)
+            _slots.Release(this);
+
+        _slots = null;
     }
     
     private bool IsAhead(ICombatTarget target)
@@ -124,15 +207,36 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void TryAction()
     {
+        if (animation.IsBusy)
+            return;
+
         if (!IsValidTarget(_currentTarget))
         {
             MoveForward();
             return;
         }
 
-        float distance = GetHorizontalDistance(_currentTarget);
+        float attackDistance = GetHorizontalDistance(_currentTarget);
 
-        if (distance > _model.Stats.AttackRange)
+        if (unitAction.UseSlots)
+        {
+            if (!ReserveSlot(out Vector3 slot))
+                return;
+
+            float slotDistance = Vector2.Distance(transform.position, slot);
+
+            if (attackDistance <= _model.Stats.AttackRange &&
+                slotDistance <= slotLeeway)
+            {
+                TryAttack();
+                return;
+            }
+
+            MoveToSlot(slot);
+            return;
+        }
+
+        if (attackDistance > _model.Stats.AttackRange)
         {
             MoveForward();
             return;
@@ -146,33 +250,44 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.PlayWalk();
         
         float direction = Team == UnitTeam.Zombie ? 1f : -1f;
-
-        float distance = _model.Stats.MoveSpeed * Time.deltaTime;
-
+        float distance = GetMoveSpeed() * Time.deltaTime;
         transform.Translate(Vector3.right * (direction * distance));
     }
 
     private void TryAttack()
     {
-        if (!_model.CanAttack)
+        if (!_model.CanAttack || !IsValidTarget(_currentTarget))
             return;
 
-        if (!IsValidTarget(_currentTarget))
-            return;
-        
-        // _currentTarget.TakeDamage(_model.Stats.AttackPower);
-        unitAction.Execute(this, _currentTarget, _model.Stats.AttackPower);
+        ICombatTarget target = _currentTarget;
+        float power = _model.Stats.AttackPower;
+
+        animation.PlayAttack(() =>
+        {
+            if (IsValidTarget(target))
+                unitAction.Execute(this, target, power);
+        });
 
         _model.ResetAttackCooldown();
-        animation.PlayAttack();
     }
 
+    private void MoveToSlot(Vector3 position)
+    {
+        animation.PlayWalk();
+        transform.position = Vector3.MoveTowards(transform.position, position, GetMoveSpeed() * Time.deltaTime);
+    }
+    
     public void TakeDamage(float damage)
     {
         if (!_isInitialized || _model.IsDead)
             return;
 
+        float before = _model.CurrentHealth;
+
         _model.TakeDamage(damage);
+        Debug.Log($"{name}: {before} → {_model.CurrentHealth}, Damage: {damage}");
+        
+        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
 
         if (_model.IsDead)
         {
@@ -180,12 +295,24 @@ public class UnitController : MonoBehaviour, ICombatTarget
             return;
         }
 
+        ApplyHitSlow();
         animation.PlayHit();
+    }
+    
+    public void ApplyHitSlow()
+    {
+        if (useHitSlow)
+            _slowEndTime = Time.time + hitSlowTime;
+    }
+
+    private float GetMoveSpeed()
+    {
+        return Time.time < _slowEndTime ? _model.Stats.MoveSpeed * hitSpeedRate : _model.Stats.MoveSpeed;
     }
 
     private void Die()
     {
-        _currentTarget = null;
+        ChangeTarget(null);
         enabled = false;
 
         if (unitCollider != null)
@@ -227,20 +354,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
         animation.ResetState();
     }
 
-#if UNITY_EDITOR
-    private void OnDrawGizmosSelected()
+    private void OnDisable()
     {
-        Gizmos.DrawWireSphere(
-            transform.position,
-            targetSearchRange);
-
-        if (_data == null)
-            return;
-
-        Gizmos.DrawWireSphere(
-            transform.position,
-            _data.AttackRange);
+        ReleaseSlot();
+        CombatTargetTracker.Unregister(_currentTarget);
+        _currentTarget = null;
     }
-#endif
-    
 }
