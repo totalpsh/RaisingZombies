@@ -16,7 +16,6 @@ public class StageHumanDeploymentData
     public StageHumanDeploymentData CreateScaled(int additionalPopulation)
     {
         StageHumanDeploymentData result = new StageHumanDeploymentData();
-
         result.populationData = new List<HumanPopulationData>();
 
         if (populationData != null)
@@ -29,12 +28,29 @@ public class StageHumanDeploymentData
                 result.populationData.Add(population.CreateScaled(additionalPopulation));
             }
         }
-
-        // 아직 런타임에서 수정하지 않으므로 목록만 복사
+        
         result.repeatRules = repeatRules != null ? new List<HumanRepeatRuleData>(repeatRules) : new List<HumanRepeatRuleData>();
-
         result.timedWaves = timedWaves != null ? new List<HumanTimedWaveData>(timedWaves) : new List<HumanTimedWaveData>();
 
         return result;
+    }
+    
+    public void Merge(StageHumanDeploymentData other)
+    {
+        if (other == null)
+            return;
+
+        populationData ??= new List<HumanPopulationData>();
+        repeatRules ??= new List<HumanRepeatRuleData>();
+        timedWaves ??= new List<HumanTimedWaveData>();
+
+        if (other.populationData != null)
+            populationData.AddRange(other.populationData);
+
+        if (other.repeatRules != null)
+            repeatRules.AddRange(other.repeatRules);
+
+        if (other.timedWaves != null)
+            timedWaves.AddRange(other.timedWaves);
     }
 }
