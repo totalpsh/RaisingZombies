@@ -222,9 +222,9 @@ public class HumanSpawner : MonoBehaviour
                 Vector3 spacing = Vector3.right * (runtime.Data.SpawnSpacing * i);
                 Vector3 position = _spawnOrigin.position + runtime.Data.SpawnOffset + spacing;
                 humanObject.transform.SetPositionAndRotation(position, _spawnOrigin.rotation);
-                humanObject.SetActive(true);
                 UnitStats stats = HumanStatsCalculator.Calculate(human.Data, _stageNumber, scalingData, _difficulty);
                 human.Initialize(human.Data, stats);
+                humanObject.SetActive(true);
                 
                 RegisterPopulationHuman(human, runtime);
             }

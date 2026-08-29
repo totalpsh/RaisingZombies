@@ -24,7 +24,7 @@ MonoBehaviour:
     healthMultiplier: 1
   humanDeployment:
     populationData:
-    - humanKey: Human_Melee
+    - humanKey: Human_Heavy
       initialCount: 5
       targetCount: 5
       replenishCount: 0

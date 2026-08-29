@@ -27,6 +27,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Unit
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8475bd3b884e12a4eb7f68738bb3ab68
+    m_Address: Human_Heavy
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - Unit
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 938bf96c2a5fb7046a00515e79b8deca
     m_Address: Human_Melee
     m_ReadOnly: 0
