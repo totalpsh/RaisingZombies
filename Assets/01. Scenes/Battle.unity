@@ -1141,7 +1141,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ZombieSpawner
   zombieKey: Zombie
   spawnPoint: {fileID: 2015096598}
-  baseSpawnTime: 10
+  baseSpawnTime: 1
 --- !u!114 &8615642909568846137
 MonoBehaviour:
   m_ObjectHideFlags: 0

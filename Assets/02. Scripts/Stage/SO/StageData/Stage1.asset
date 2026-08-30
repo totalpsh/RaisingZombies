@@ -31,13 +31,5 @@ MonoBehaviour:
       replenishInterval: 3
       spawnOffset: {x: 0, y: 0, z: 0}
       spawnSpacing: 1
-    repeatRules:
-    - startDelay: 0
-      repeatInterval: 5
-      repeatCount: 2
-      formation:
-      - humanKey: Human_Ranged
-        count: 1
-        spawnOffset: {x: 0, y: 0, z: 0}
-        spawnSpacing: 0
+    repeatRules: []
     timedWaves: []

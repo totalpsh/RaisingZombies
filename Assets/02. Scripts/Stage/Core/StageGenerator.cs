@@ -73,12 +73,14 @@ public class StageGenerator
         StageDifficultyData difficulty = CreateDifficulty(stageNumber);
         StageHumanDeploymentData deployment = CreateHumanDeployment(selectedTemplate, stageNumber);
         
-        ApplyRules(stageNumber, deployment);
+        List<StageDefenseData> defenses = selectedTemplate.Defenses != null ? new List<StageDefenseData>(selectedTemplate.Defenses) : new List<StageDefenseData>();
+        
+        ApplyRules(stageNumber, deployment, defenses);
 
         return new StageRuntimeData(
             stageNumber,
             difficulty,
-            selectedTemplate.Defenses,
+            defenses,
             deployment);
     }
 
@@ -140,15 +142,20 @@ public class StageGenerator
         return template.HumanDeployment.CreateScaled(additionalPopulation);
     }
     
-    private void ApplyRules(int stage, StageHumanDeploymentData human)
+    private void ApplyRules(int stage, StageHumanDeploymentData deployment, List<StageDefenseData> defenses)
     {
-        if (human == null || _catalog.Rules == null)
+        if (_catalog.Rules == null)
             return;
 
         foreach (StageRuleData rule in _catalog.Rules)
         {
-            if (rule != null && rule.Matches(stage))
-                human.Merge(rule.Human);
+            if (rule == null || !rule.Matches(stage))
+                continue;
+
+            deployment?.Merge(rule.Human);
+
+            if (rule.Defenses != null)
+                defenses.AddRange(rule.Defenses);
         }
     }
 }

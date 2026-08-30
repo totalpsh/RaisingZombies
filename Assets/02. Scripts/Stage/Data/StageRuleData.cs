@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum StageRuleType
@@ -16,8 +17,10 @@ public class StageRuleData
     [SerializeField, Min(1)] private int endStage = 1;
     [SerializeField, Min(1)] private int interval = 5;
     [SerializeField] private StageHumanDeploymentData human;
+    [SerializeField] private List<StageDefenseData> defenses = new();
 
     public StageHumanDeploymentData Human => human;
+    public List<StageDefenseData> Defenses => defenses;
 
     public bool Matches(int stage)
     {
