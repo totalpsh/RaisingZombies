@@ -1,12 +1,14 @@
-using System.Collections.Generic;
+using System.Collections;
 using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-// 현재 등급 확률과 가챠 레벨별 상세 페이지를 표시합니다.
+// 현재 등급 확률과 하나의 재사용 가능한 레벨별 확률 패널을 표시합니다.
 public sealed class GachaProbabilityView : MonoBehaviour
 {
+    private const int RarityCount = 6; // 확률 UI에서 사용하는 전체 등급 수
+
     [SerializeField] private UpgradeManager upgradeManager; // 실제 가챠 상태와 밸런스를 제공하는 매니저
 
     [Header("현재 레벨 등급 확률")]
@@ -22,17 +24,24 @@ public sealed class GachaProbabilityView : MonoBehaviour
     [SerializeField] private GameObject probabilityPopupRoot; // 켜고 끌 상세 확률 팝업 루트
     [SerializeField] private Button closeButton; // 상세 확률 팝업을 닫는 버튼
 
-    [Header("레벨별 페이지")]
-    [SerializeField] private GameObject[] levelPages; // 가챠 레벨 순서대로 배치한 페이지 루트
-    [SerializeField] private TMP_Text[] pageDetailTexts; // 각 페이지의 기본 확률 안내 텍스트
-    [SerializeField] private Button previousPageButton; // 이전 레벨 페이지 버튼
-    [SerializeField] private Button nextPageButton; // 다음 레벨 페이지 버튼
-    [SerializeField] private TMP_Text pageIndicatorText; // 현재 페이지 번호 텍스트
+    [Header("단일 확률 패널")]
+    [SerializeField] private GameObject probabilityPanelRoot; // 모든 레벨이 함께 사용하는 확률 패널 루트
+    [SerializeField] private Image[] popupFillImages = new Image[RarityCount]; // Normal부터 Legendary 순서의 확률 Fill 이미지
+    [SerializeField] private TMP_Text[] popupPercentTexts = new TMP_Text[RarityCount]; // Normal부터 Legendary 순서의 확률 텍스트
+    [SerializeField] private Button previousPageButton; // 이전 가챠 레벨 조회 버튼
+    [SerializeField] private Button nextPageButton; // 다음 가챠 레벨 조회 버튼
+    [SerializeField] private TMP_Text pageIndicatorText; // 현재 조회 중인 가챠 레벨 텍스트
+    [SerializeField] private TMP_Text newlyUnlockedStatsText; // 조회 레벨에서 새로 해금되는 스탯 텍스트
+    [SerializeField] private TMP_Text drawCostText; // 조회 레벨의 1회 뽑기 비용 텍스트
+    [SerializeField] private TMP_Text drawsToNextLevelText; // 조회 레벨의 다음 레벨 필요 뽑기 수 텍스트
+    [SerializeField, Min(0f)] private float probabilityAnimationDuration = 0.35f; // 확률 변경 애니메이션 시간
 
-    private readonly StringBuilder _builder = new(512); // 페이지 문자열 재사용 버퍼
-    private readonly List<UpgradeStatType> _unlockedStats = new(10); // 레벨별 누적 해금 스탯 목록
-    private readonly HashSet<UpgradeStatType> _unlockedStatSet = new(); // 해금 스탯 중복 방지 집합
-    private int _currentPageIndex; // 현재 표시 중인 페이지 배열 순번
+    private readonly float[] _displayedProbabilities = new float[RarityCount]; // 현재 UI에 실제로 표시 중인 정규화 확률
+    private readonly float[] _animationStartProbabilities = new float[RarityCount]; // 현재 애니메이션의 시작 확률
+    private readonly float[] _animationTargetProbabilities = new float[RarityCount]; // 현재 애니메이션의 목표 확률
+    private readonly StringBuilder _statNameBuilder = new(128); // 해금 스탯 이름 문자열 재사용 버퍼
+    private int _displayedProbabilityIndex; // 확률표에서 현재 조회 중인 밸런스 배열 순번
+    private Coroutine _probabilityAnimation; // 실행 중인 확률 변경 애니메이션
 
     // 버튼과 상태 변경 이벤트를 연결하고 현재 확률을 표시합니다.
     private void OnEnable()
@@ -47,7 +56,7 @@ public sealed class GachaProbabilityView : MonoBehaviour
         RefreshAllContent();
     }
 
-    // 비활성화될 때 버튼과 상태 변경 이벤트를 해제합니다.
+    // 비활성화될 때 버튼, 상태 이벤트, 확률 애니메이션을 해제합니다.
     private void OnDisable()
     {
         RemoveButtonListener(probabilityButton, OpenProbabilityPopup);
@@ -55,6 +64,7 @@ public sealed class GachaProbabilityView : MonoBehaviour
         RemoveButtonListener(previousPageButton, ShowPreviousPage);
         RemoveButtonListener(nextPageButton, ShowNextPage);
         UnsubscribeManager();
+        StopProbabilityAnimation();
     }
 
     // 런타임 또는 테스트에서 사용할 매니저를 교체합니다.
@@ -79,40 +89,41 @@ public sealed class GachaProbabilityView : MonoBehaviour
         SetRateText(legendaryRateText, balance, level, GachaRarity.Legendary);
     }
 
-    // 팝업을 열고 현재 가챠 레벨에 해당하는 페이지를 먼저 표시합니다.
+    // 팝업을 열고 실제 플레이어 가챠 레벨의 확률을 즉시 표시합니다.
     public void OpenProbabilityPopup()
     {
         if (probabilityPopupRoot == null) return;
         ResolveManager();
         SubscribeManager();
-        RefreshPageDetails();
         probabilityPopupRoot.SetActive(true);
+        if (probabilityPanelRoot != null) probabilityPanelRoot.SetActive(true);
         ShowCurrentLevelPage();
     }
 
-    // 상세 확률 팝업을 닫습니다.
+    // 상세 확률 팝업을 닫고 실행 중인 표시 애니메이션을 중단합니다.
     public void CloseProbabilityPopup()
     {
+        StopProbabilityAnimation();
         if (probabilityPopupRoot != null) probabilityPopupRoot.SetActive(false);
     }
 
-    // 현재 페이지의 바로 이전 레벨 페이지를 표시합니다.
+    // 현재 조회 레벨의 바로 이전 밸런스 확률을 표시합니다.
     public void ShowPreviousPage()
     {
-        ShowPage(_currentPageIndex - 1);
+        ShowProbabilityLevel(_displayedProbabilityIndex - 1, true);
     }
 
-    // 현재 페이지의 바로 다음 레벨 페이지를 표시합니다.
+    // 현재 조회 레벨의 바로 다음 밸런스 확률을 표시합니다.
     public void ShowNextPage()
     {
-        ShowPage(_currentPageIndex + 1);
+        ShowProbabilityLevel(_displayedProbabilityIndex + 1, true);
     }
 
-    // 저장된 현재 가챠 레벨과 같은 페이지를 표시합니다.
+    // 저장된 실제 가챠 레벨과 같은 확률을 애니메이션 없이 표시합니다.
     public void ShowCurrentLevelPage()
     {
-        int currentLevel = upgradeManager == null ? 1 : upgradeManager.GachaLevel; // 처음 열 페이지의 실제 가챠 레벨
-        ShowPage(FindPageIndex(currentLevel));
+        int currentLevel = upgradeManager == null ? 1 : upgradeManager.GachaLevel; // 처음 열 때 기준이 되는 실제 가챠 레벨
+        ShowProbabilityLevel(FindPageIndex(currentLevel), false);
     }
 
     // 씬의 싱글턴 매니저가 이미 준비됐다면 자동으로 참조합니다.
@@ -135,85 +146,193 @@ public sealed class GachaProbabilityView : MonoBehaviour
         if (upgradeManager != null) upgradeManager.stateChanged -= HandleStateChanged;
     }
 
-    // 상태가 변경되면 현재 확률과 페이지 내용을 갱신합니다.
+    // 실제 상태가 변경되면 메인 확률과 열려 있는 조회 패널을 갱신합니다.
     private void HandleStateChanged()
     {
         RefreshAllContent();
     }
 
-    // 현재 확률과 모든 페이지의 기본 내용을 함께 갱신합니다.
+    // 현재 확률과 열려 있는 단일 확률 패널을 갱신합니다.
     private void RefreshAllContent()
     {
         RefreshCurrentRates();
-        RefreshPageDetails();
+        if (probabilityPopupRoot != null && probabilityPopupRoot.activeSelf)
+        {
+            ShowProbabilityLevel(_displayedProbabilityIndex, false);
+        }
     }
 
-    // 각 페이지에 해당 레벨 하나의 해금 스탯과 등급 확률을 작성합니다.
-    private void RefreshPageDetails()
+    // 밸런스 배열 순번에 해당하는 레벨 확률을 단일 패널에 표시합니다.
+    private void ShowProbabilityLevel(int levelIndex, bool animate)
     {
-        if (pageDetailTexts == null || pageDetailTexts.Length == 0) return;
-
-        _unlockedStats.Clear();
-        _unlockedStatSet.Clear();
-
-        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 페이지에 사용할 실제 밸런스
-        if (balance == null || balance.GachaLevels == null || balance.GachaLevels.Count == 0)
+        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 조회에만 사용하는 실제 가챠 밸런스
+        int levelCount = GetLevelCount(balance); // 이동 가능한 실제 가챠 레벨 수
+        if (levelCount == 0)
         {
-            SetAllPageTexts("가챠 밸런스가 연결되지 않았습니다.");
+            _displayedProbabilityIndex = 0;
+            SetAllProbabilitiesImmediate(0f);
+            UpdatePageInformation(null);
+            UpdatePageNavigation(0, 0);
             return;
         }
 
-        for (int index = 0; index < pageDetailTexts.Length; index++) // 내용을 갱신할 페이지 순번
+        _displayedProbabilityIndex = Mathf.Clamp(levelIndex, 0, levelCount - 1);
+        GachaLevelDefinition definition = balance.GachaLevels[_displayedProbabilityIndex]; // 현재 조회할 가챠 레벨 정의
+        int level = definition == null ? _displayedProbabilityIndex + 1 : definition.level; // UI와 확률 조회에 사용할 실제 레벨 값
+
+        for (int rarityIndex = 0; rarityIndex < RarityCount; rarityIndex++) // 여섯 등급의 목표 확률을 같은 순서로 준비
         {
-            TMP_Text pageText = pageDetailTexts[index]; // 현재 페이지의 기본 안내 텍스트
-            if (index >= balance.GachaLevels.Count)
-            {
-                if (pageText != null) pageText.text = "가챠 레벨 정보가 없습니다.";
-                continue;
-            }
+            _animationTargetProbabilities[rarityIndex] = balance.GetRarityProbability(level, (GachaRarity)rarityIndex);
+        }
 
-            GachaLevelDefinition levelDefinition = balance.GachaLevels[index]; // 현재 작성 중인 레벨 정의
-            if (levelDefinition == null)
-            {
-                if (pageText != null) pageText.text = "가챠 레벨 정보가 없습니다.";
-                continue;
-            }
+        UpdatePageInformation(definition);
+        UpdatePageNavigation(levelCount, level);
 
-            AddNewlyUnlockedStats(levelDefinition);
-            if (pageText == null) continue;
-            _builder.Clear();
-            AppendLevelDetails(balance, levelDefinition);
-            pageText.text = _builder.ToString();
+        if (animate)
+        {
+            StartProbabilityAnimation();
+        }
+        else
+        {
+            StopProbabilityAnimation();
+            ApplyTargetProbabilitiesImmediate();
         }
     }
 
-    // 지정한 순번의 페이지만 켜고 페이지 버튼 상태를 갱신합니다.
-    private void ShowPage(int pageIndex)
+    // 현재 표시값을 시작점으로 삼아 여섯 등급 확률 애니메이션을 동시에 시작합니다.
+    private void StartProbabilityAnimation()
     {
-        int pageCount = levelPages == null ? 0 : levelPages.Length; // Inspector에 연결된 전체 페이지 수
-        if (pageCount == 0)
+        StopProbabilityAnimation();
+        for (int rarityIndex = 0; rarityIndex < RarityCount; rarityIndex++) // 연속 입력 시 현재 화면 값을 새 시작값으로 보존
         {
-            _currentPageIndex = 0;
-            UpdatePageNavigation(0);
+            _animationStartProbabilities[rarityIndex] = _displayedProbabilities[rarityIndex];
+        }
+
+        if (probabilityAnimationDuration <= 0f || !isActiveAndEnabled)
+        {
+            ApplyTargetProbabilitiesImmediate();
             return;
         }
 
-        _currentPageIndex = Mathf.Clamp(pageIndex, 0, pageCount - 1);
-        for (int index = 0; index < pageCount; index++) // 페이지 활성 상태를 바꿀 배열 순번
-        {
-            if (levelPages[index] != null) levelPages[index].SetActive(index == _currentPageIndex);
-        }
-
-        UpdatePageNavigation(pageCount);
+        _probabilityAnimation = StartCoroutine(AnimateProbabilities());
     }
 
-    // 실제 가챠 레벨과 일치하는 페이지 배열 순번을 찾습니다.
+    // OutCubic 보간으로 모든 확률 텍스트와 Fill을 같은 진행률로 변경합니다.
+    private IEnumerator AnimateProbabilities()
+    {
+        float elapsed = 0f; // 현재 애니메이션에서 흐른 실제 시간
+        while (elapsed < probabilityAnimationDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float progress = Mathf.Clamp01(elapsed / probabilityAnimationDuration); // 0부터 1까지의 선형 진행률
+            float inverse = 1f - progress; // OutCubic 계산에 사용하는 남은 진행률
+            float easedProgress = 1f - inverse * inverse * inverse; // 끝에서 부드럽게 감속하는 OutCubic 진행률
+
+            for (int rarityIndex = 0; rarityIndex < RarityCount; rarityIndex++) // 여섯 등급을 한 프레임에 함께 갱신
+            {
+                float probability = Mathf.Lerp(
+                    _animationStartProbabilities[rarityIndex],
+                    _animationTargetProbabilities[rarityIndex],
+                    easedProgress); // 텍스트와 Fill이 함께 사용할 현재 표시 확률
+                SetDisplayedProbability(rarityIndex, probability);
+            }
+
+            yield return null;
+        }
+
+        ApplyTargetProbabilitiesImmediate();
+    }
+
+    // 준비된 목표 확률을 애니메이션 없이 정확한 최종값으로 적용합니다.
+    private void ApplyTargetProbabilitiesImmediate()
+    {
+        for (int rarityIndex = 0; rarityIndex < RarityCount; rarityIndex++) // 모든 등급의 마지막 값을 정확하게 적용
+        {
+            SetDisplayedProbability(rarityIndex, _animationTargetProbabilities[rarityIndex]);
+        }
+
+        _probabilityAnimation = null;
+    }
+
+    // 여섯 등급 확률을 모두 같은 값으로 즉시 표시합니다.
+    private void SetAllProbabilitiesImmediate(float probability)
+    {
+        StopProbabilityAnimation();
+        for (int rarityIndex = 0; rarityIndex < RarityCount; rarityIndex++) // 연결된 모든 확률 행을 즉시 갱신
+        {
+            _animationTargetProbabilities[rarityIndex] = probability;
+            SetDisplayedProbability(rarityIndex, probability);
+        }
+    }
+
+    // 한 등급의 표시 확률, 정수 퍼센트 텍스트, Fill 양을 같은 값으로 갱신합니다.
+    private void SetDisplayedProbability(int rarityIndex, float probability)
+    {
+        float normalizedProbability = Mathf.Clamp01(probability); // UI에 안전하게 적용할 0부터 1 사이 확률
+        _displayedProbabilities[rarityIndex] = normalizedProbability;
+
+        Image fillImage = GetArrayItem(popupFillImages, rarityIndex); // 현재 등급의 확률 Fill 이미지
+        TMP_Text percentText = GetArrayItem(popupPercentTexts, rarityIndex); // 현재 등급의 독립 확률 텍스트
+        if (fillImage != null) fillImage.fillAmount = normalizedProbability;
+        if (percentText != null) percentText.SetText("{0:0}%", normalizedProbability * 100f);
+    }
+
+    // 진행 중인 확률 표시 애니메이션만 중단하고 현재 화면 값은 유지합니다.
+    private void StopProbabilityAnimation()
+    {
+        if (_probabilityAnimation == null) return;
+        StopCoroutine(_probabilityAnimation);
+        _probabilityAnimation = null;
+    }
+
+    // 현재 조회 레벨의 비용, 승급 조건, 신규 해금 스탯을 갱신합니다.
+    private void UpdatePageInformation(GachaLevelDefinition definition)
+    {
+        if (definition == null)
+        {
+            SetText(newlyUnlockedStatsText, ": 정보 없음");
+            SetText(drawCostText, ": -");
+            SetText(drawsToNextLevelText, ": -");
+            return;
+        }
+
+        SetText(drawCostText, $": {definition.drawCost:N0}");
+        SetText(drawsToNextLevelText, definition.drawsToNextLevel <= 0 ? ": MAX" : $": {definition.drawsToNextLevel:N0}");
+        SetText(newlyUnlockedStatsText, BuildUnlockedStatNames(definition));
+    }
+
+    // 현재 조회 레벨에서 새로 해금되는 스탯 이름을 밸런스 표시명으로 만듭니다.
+    private string BuildUnlockedStatNames(GachaLevelDefinition definition)
+    {
+        _statNameBuilder.Clear();
+        _statNameBuilder.Append(": ");
+        if (definition.newlyUnlockedStats == null || definition.newlyUnlockedStats.Length == 0)
+        {
+            _statNameBuilder.Append("없음");
+            return _statNameBuilder.ToString();
+        }
+
+        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 한국어 표시명을 조회할 밸런스
+        for (int index = 0; index < definition.newlyUnlockedStats.Length; index++) // 신규 해금 스탯 이름을 쉼표로 연결
+        {
+            if (index > 0) _statNameBuilder.Append(", ");
+            UpgradeStatType statType = definition.newlyUnlockedStats[index]; // 현재 이름을 표시할 신규 해금 스탯
+            UpgradeStatDefinition statDefinition = balance == null ? null : balance.GetStat(statType); // 해당 스탯의 표시 설정
+            _statNameBuilder.Append(statDefinition == null || string.IsNullOrWhiteSpace(statDefinition.displayName)
+                ? statType.ToString()
+                : statDefinition.displayName);
+        }
+
+        return _statNameBuilder.ToString();
+    }
+
+    // 실제 가챠 레벨과 일치하는 밸런스 배열 순번을 찾습니다.
     private int FindPageIndex(int level)
     {
-        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 레벨과 페이지 순서를 연결할 밸런스
+        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 실제 레벨을 찾을 밸런스
         if (balance != null && balance.GachaLevels != null)
         {
-            for (int index = 0; index < balance.GachaLevels.Count; index++) // 현재 레벨을 찾을 밸런스 배열 순번
+            for (int index = 0; index < balance.GachaLevels.Count; index++) // 실제 플레이어 레벨과 같은 정의를 탐색
             {
                 GachaLevelDefinition definition = balance.GachaLevels[index]; // 비교할 가챠 레벨 정의
                 if (definition != null && definition.level == level) return index;
@@ -223,81 +342,36 @@ public sealed class GachaProbabilityView : MonoBehaviour
         return Mathf.Max(0, level - 1);
     }
 
-    // 페이지 번호와 좌우 이동 버튼의 활성 상태를 갱신합니다.
-    private void UpdatePageNavigation(int pageCount)
+    // 페이지 레벨 표시와 좌우 조회 버튼의 경계 상태를 갱신합니다.
+    private void UpdatePageNavigation(int levelCount, int level)
     {
-        if (previousPageButton != null) previousPageButton.interactable = pageCount > 0 && _currentPageIndex > 0;
-        if (nextPageButton != null) nextPageButton.interactable = pageCount > 0 && _currentPageIndex < pageCount - 1;
-        if (pageIndicatorText == null) return;
-
-        int level = GetPageLevel(_currentPageIndex); // 페이지 표시기에 보여줄 실제 가챠 레벨
-        pageIndicatorText.text = pageCount == 0
-            ? "페이지 없음"
-            : $"Lv.{level} · {_currentPageIndex + 1} / {pageCount}";
+        if (previousPageButton != null) previousPageButton.interactable = levelCount > 0 && _displayedProbabilityIndex > 0;
+        if (nextPageButton != null) nextPageButton.interactable = levelCount > 0 && _displayedProbabilityIndex < levelCount - 1;
+        SetText(pageIndicatorText, levelCount == 0 ? "가챠 레벨 정보 없음" : $"Gacha Level {level}");
     }
 
-    // 페이지 배열 순번에 해당하는 실제 가챠 레벨을 반환합니다.
-    private int GetPageLevel(int pageIndex)
+    // 밸런스에 실제로 정의된 이동 가능한 가챠 레벨 수를 반환합니다.
+    private static int GetLevelCount(UpgradeBalanceSettings balance)
     {
-        UpgradeBalanceSettings balance = upgradeManager == null ? null : upgradeManager.BalanceSettings; // 페이지 레벨을 조회할 밸런스
-        if (balance != null && balance.GachaLevels != null && pageIndex >= 0 && pageIndex < balance.GachaLevels.Count)
-        {
-            GachaLevelDefinition definition = balance.GachaLevels[pageIndex]; // 페이지와 연결된 가챠 레벨 정의
-            if (definition != null) return definition.level;
-        }
-
-        return pageIndex + 1;
+        return balance == null || balance.GachaLevels == null ? 0 : balance.GachaLevels.Count;
     }
 
-    // 연결된 모든 페이지 텍스트에 같은 안내 문구를 설정합니다.
-    private void SetAllPageTexts(string message)
+    // 배열 범위를 확인한 뒤 해당 Image를 반환합니다.
+    private static Image GetArrayItem(Image[] items, int index)
     {
-        for (int index = 0; index < pageDetailTexts.Length; index++) // 안내 문구를 설정할 페이지 텍스트 순번
-        {
-            if (pageDetailTexts[index] != null) pageDetailTexts[index].text = message;
-        }
+        return items != null && index >= 0 && index < items.Length ? items[index] : null;
     }
 
-    // 현재 레벨에서 새로 해금되는 스탯을 누적 목록에 추가합니다.
-    private void AddNewlyUnlockedStats(GachaLevelDefinition levelDefinition)
+    // 배열 범위를 확인한 뒤 해당 TMP 텍스트를 반환합니다.
+    private static TMP_Text GetArrayItem(TMP_Text[] items, int index)
     {
-        if (levelDefinition.newlyUnlockedStats == null) return;
-        foreach (UpgradeStatType statType in levelDefinition.newlyUnlockedStats) // 이번 레벨의 신규 해금 스탯
-        {
-            if (_unlockedStatSet.Add(statType)) _unlockedStats.Add(statType);
-        }
+        return items != null && index >= 0 && index < items.Length ? items[index] : null;
     }
 
-    // 한 레벨의 등장 스탯 확률과 여섯 등급 확률을 작성합니다.
-    private void AppendLevelDetails(UpgradeBalanceSettings balance, GachaLevelDefinition levelDefinition)
+    // TMP 참조가 있을 때만 텍스트를 설정합니다.
+    private static void SetText(TMP_Text target, string value)
     {
-        _builder.Append("Lv.").Append(levelDefinition.level).AppendLine();
-        _builder.AppendLine("등장 스탯");
-        float statProbability = _unlockedStats.Count == 0 ? 0f : 100f / _unlockedStats.Count; // 해금 스탯 균등 선택 확률
-        for (int index = 0; index < _unlockedStats.Count; index++) // 표시할 누적 해금 스탯 순번
-        {
-            UpgradeStatType statType = _unlockedStats[index]; // 표시할 스탯 종류
-            UpgradeStatDefinition statDefinition = balance.GetStat(statType); // 한국어 표시명을 가진 스탯 정의
-            string displayName = statDefinition == null || string.IsNullOrWhiteSpace(statDefinition.displayName)
-                ? statType.ToString()
-                : statDefinition.displayName; // 최종 스탯 표시명
-            _builder.Append(displayName).Append(' ').Append(FormatPercent(statProbability)).AppendLine();
-        }
-
-        _builder.AppendLine("등급 확률");
-        AppendRarityRate(balance, levelDefinition.level, "노말", GachaRarity.Normal);
-        AppendRarityRate(balance, levelDefinition.level, "언커먼", GachaRarity.Uncommon);
-        AppendRarityRate(balance, levelDefinition.level, "레어", GachaRarity.Rare);
-        AppendRarityRate(balance, levelDefinition.level, "에픽", GachaRarity.Epic);
-        AppendRarityRate(balance, levelDefinition.level, "유니크", GachaRarity.Unique);
-        AppendRarityRate(balance, levelDefinition.level, "레전더리", GachaRarity.Legendary);
-    }
-
-    // 팝업에 한 등급의 실제 정규화 확률을 추가합니다.
-    private void AppendRarityRate(UpgradeBalanceSettings balance, int level, string displayName, GachaRarity rarity)
-    {
-        float percentage = balance.GetRarityProbability(level, rarity) * 100f; // 팝업에 표시할 실제 퍼센트
-        _builder.Append(displayName).Append(' ').Append(FormatPercent(percentage)).AppendLine();
+        if (target != null) target.text = value;
     }
 
     // 현재 화면의 등급별 TMP 텍스트에 실제 정규화 확률을 설정합니다.
