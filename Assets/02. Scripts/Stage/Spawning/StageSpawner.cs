@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class StageSpawner : MonoBehaviour
 {
+    [SerializeField] private BattleArea battleArea;
     [SerializeField] private Transform stageOrigin;
     private List<StructureController> _spawnedDefenses = new();
     public List<StructureController> SpawnedDefenses => _spawnedDefenses;
@@ -53,14 +54,9 @@ public class StageSpawner : MonoBehaviour
             stageOrigin.position
             + defenseData.SpawnOffset;
 
-        StructureController defense =
-            Instantiate(
-                defenseData.Prefab,
-                position,
-                stageOrigin.rotation);
+        StructureController defense = Instantiate(defenseData.Prefab, position, stageOrigin.rotation);
 
-        defense.Initialize(
-            defenseData.HealthMultiplier);
+        defense.Initialize(battleArea, defenseData.HealthMultiplier);
 
         _spawnedDefenses.Add(defense);
     }

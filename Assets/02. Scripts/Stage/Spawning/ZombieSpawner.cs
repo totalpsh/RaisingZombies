@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class ZombieSpawner : MonoBehaviour
 {
+    [SerializeField] private BattleArea battleArea;
     [SerializeField] private string zombieKey;
     [SerializeField] private Transform spawnPoint;
     [SerializeField, Min(0.1f)] private float baseSpawnTime = 2f;
@@ -108,7 +109,7 @@ public class ZombieSpawner : MonoBehaviour
     private void InitializeZombie(UnitController controller)
     {
         UnitStats stats = UnitStats.CreateZombie(controller.Data, UpgradeManager.Instance); // 전투력 UI와 공유하는 실제 최종 좀비 스탯
-        controller.Initialize(controller.Data, stats);
+        controller.Initialize(controller.Data, stats, battleArea);
     }
     
     public void SetSpawnOrigin(Transform spawnOrigin)

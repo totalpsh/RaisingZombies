@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class HumanSpawner : MonoBehaviour
 {
+    [SerializeField] private BattleArea battleArea;
     [SerializeField] private HumanScalingData scalingData;
     [SerializeField] private List<RepeatRuntime> repeatRuntimes = new();
     [SerializeField] private List<TimedWaveRuntime> timedWaveRuntimes = new();
@@ -223,8 +224,8 @@ public class HumanSpawner : MonoBehaviour
                 Vector3 position = _spawnOrigin.position + runtime.Data.SpawnOffset + spacing;
                 humanObject.transform.SetPositionAndRotation(position, _spawnOrigin.rotation);
                 UnitStats stats = HumanStatsCalculator.Calculate(human.Data, _stageNumber, scalingData, _difficulty);
-                human.Initialize(human.Data, stats);
                 humanObject.SetActive(true);
+                human.Initialize(human.Data, stats, battleArea);
                 
                 RegisterPopulationHuman(human, runtime);
             }
@@ -274,10 +275,10 @@ public class HumanSpawner : MonoBehaviour
                     Vector3 position = _spawnOrigin.position + entry.SpawnOffset + spacing;
                     humanObject.transform.SetPositionAndRotation(position, _spawnOrigin.rotation);
                     UnitStats stats = HumanStatsCalculator.Calculate(human.Data, _stageNumber, scalingData, _difficulty);
-                    human.Initialize(human.Data, stats);
+                    humanObject.SetActive(true);
+                    human.Initialize(human.Data, stats, battleArea);
                     RegisterRepeatHuman(human);
 
-                    humanObject.SetActive(true);
                 }
             }
 
@@ -331,10 +332,10 @@ public class HumanSpawner : MonoBehaviour
                 Vector3 position = _spawnOrigin.position + entry.SpawnOffset + spacing;
                 humanObject.transform.SetPositionAndRotation(position, _spawnOrigin.rotation);
                 UnitStats stats = HumanStatsCalculator.Calculate(human.Data, _stageNumber, scalingData, _difficulty);
-                human.Initialize(human.Data, stats);
+                humanObject.SetActive(true);
+                human.Initialize(human.Data, stats, battleArea);
                 RegisterSpawnedHuman(human);
 
-                humanObject.SetActive(true);
             }
         }
     }

@@ -1,17 +1,17 @@
 using System;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
     [SerializeField] private UnitAction unitAction;
     [SerializeField] private UnitAnimation animation;
-    
-    [SerializeField] private LayerMask unitLayer;
-    [SerializeField, Min(0.01f)] private float targetSearchRange = 3f;
-
-    [SerializeField]private UnitData _data;
-    [SerializeField]private UnitModel _model;
+    [SerializeField] private UnitTargeting targeting;
+    [SerializeField] private UnitMovement movement;
     [SerializeField] private Collider2D unitCollider;
+    [SerializeField] private UnitData data;
+    [SerializeField] private UnitModel model;
 
     [SerializeField] private bool useHit = true;
     [SerializeField] private bool useHitSlow;
@@ -19,34 +19,31 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField, Min(0f)] private float hitSlowTime = 0.15f;
     
     [Header("전투")]
-    [SerializeField, Min(0.05f)] private float targetReevaluationInterval;
-    [SerializeField, Min(0f)] private float attackerCountPenalty = 1f;
-    [SerializeField, Min(0f)] private float currentTargetBonus = 1.5f;
     [SerializeField] private Vector2 combatYBounds = new(-1.5f, 1.5f);
     [SerializeField, Min(0.01f)] private float slotTolerance = 0.05f;
     [SerializeField, Min(0f)] private float slotLeeway = 0.25f;
+    [SerializeField, Min(0f)] private float forwardStopDistance = 0.15f;
+    [SerializeField] private float targetSearchWidth = 3f;
+    [SerializeField] private float targetSearchHeight = 6f;
     
     [Header("UI")]
     [SerializeField] private UnitHealthBar healthBar;
     
-    private float _targetReevaluationTimer;
-    
     // private UnitController _currentTarget;
     
     private bool _isInitialized;
-
-    public Collider2D TargetCollider => unitCollider;
+    
     private CombatSlots _slots;
     private ICombatTarget _currentTarget;
-    private Collider2D[] _targetBuffer;
-    private ContactFilter2D _targetFilter;
     private float _slowEndTime;
+    private BattleArea _battleArea;
     
     // 프로퍼티
-    public UnitData Data => _data;
-    public UnitModel Model => _model;
-    public UnitTeam Team => _data.Team;
-    public bool IsDead => !_isInitialized || _model.IsDead;
+    public UnitData Data => data;
+    public UnitModel Model => model;
+    public UnitTeam Team => data.Team;
+    public Collider2D TargetCollider => unitCollider;
+    public bool IsDead => !_isInitialized || model.IsDead;
 
     public Transform TargetTransform => transform;
 
@@ -54,19 +51,20 @@ public class UnitController : MonoBehaviour, ICombatTarget
     
     private void Update()
     {
-        if (!_isInitialized || _model.IsDead)
+        if (!_isInitialized || model.IsDead)
             return;
         
         float deltaTime = Time.deltaTime;
         
-        _model.TickAttackCooldown(deltaTime);
+        model.TickAttackCooldown(deltaTime);
         UpdateRegeneration(deltaTime);
         
-        FindTarget();
+        ChangeTarget(targeting.FindTarget());
+        
         TryAction();
     }
 
-    public void Initialize(UnitData data, UnitStats stats)
+    public void Initialize(UnitData data, UnitStats stats, BattleArea battleArea)
     {
         if (data == null)
         {
@@ -76,18 +74,35 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         if (unitAction == null)
         {
-            Debug.Log("UnitAction 없음");
+            Debug.Log("UnitAction 없음", this);
             return;
         }
 
-        _data = data;
-        _model = new UnitModel(stats);
+        if (targeting == null)
+        {
+            Debug.LogError("UnitTargeting 없음", this);
+            return;
+        }
+        
+        if (battleArea == null)
+        {
+            Debug.LogError($"[{nameof(UnitController)}] BattleArea가 없습니다.", this);
+            return;
+        }
 
-        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
+        this.data = data;
+        model = new UnitModel(stats);
+        _battleArea = battleArea;
+
+        _currentTarget = null;
+        _slots = null;
+        _slowEndTime = 0f;
         
-        ChangeTarget(null);
+        healthBar.SetHealth(model.CurrentHealth, model.Stats.MaxHealth);
         
-        _targetReevaluationTimer = UnityEngine.Random.Range(0f, targetReevaluationInterval);
+        movement.Initialize(this, animation, battleArea);
+        targeting.Initialize(this, battleArea);
+        battleArea.Register(this);
         
         _isInitialized = true;
         
@@ -95,47 +110,36 @@ public class UnitController : MonoBehaviour, ICombatTarget
             unitCollider.enabled = true;
         
         enabled = true;
+        
         ResetAnimation();
     }
     
     private void UpdateRegeneration(float deltaTime)
     {
-        float healthRegen = _model.Stats.HealthRegen;
+        float healthRegen = model.Stats.HealthRegen;
 
         if (healthRegen <= 0f)
             return;
 
-        _model.Heal(healthRegen * deltaTime);
+        model.Heal(healthRegen * deltaTime);
     }
     
-    private void FindTarget()
+    private ICombatTarget FindBestTargetGlobal()
     {
-        _targetReevaluationTimer -= Time.deltaTime;
-        
-        bool currentTargetValid = IsValidTarget(_currentTarget);
-        
-        if (currentTargetValid && _targetReevaluationTimer > 0f)
-            return;
+        ICombatTarget[] targets =
+            FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
+                .OfType<ICombatTarget>()
+                .ToArray();
 
-        _targetReevaluationTimer = targetReevaluationInterval;
-        
-        ICombatTarget bestTarget = currentTargetValid ? _currentTarget : null;
-        float bestScore = currentTargetValid ? CalculateTargetScore(_currentTarget) : float.MaxValue;
+        ICombatTarget bestTarget = null;
+        float bestScore = float.MaxValue;
 
-        Collider2D[] results = Physics2D.OverlapCircleAll(transform.position, targetSearchRange, unitLayer);
-
-        foreach (Collider2D result in results)
+        foreach (ICombatTarget candidate in targets)
         {
-            ICombatTarget candidate =
-                result.GetComponentInParent<ICombatTarget>();
-
             if (!IsValidTarget(candidate))
                 continue;
 
-            if (unitAction.RequiresTargetAhead && !IsAhead(candidate))
-                continue;
-
-            float score = CalculateTargetScore(candidate);
+            float score = GetHorizontalDistance(candidate);
 
             if (score >= bestScore)
                 continue;
@@ -143,26 +147,24 @@ public class UnitController : MonoBehaviour, ICombatTarget
             bestTarget = candidate;
             bestScore = score;
         }
-        
-        ChangeTarget(bestTarget);
-    }
-    
-    private float CalculateTargetScore(ICombatTarget target)
-    {
-        float distance = GetHorizontalDistance(target);
-        int attackerCount = CombatTargetTracker.GetAttackerCount(target);
-        float score = distance + attackerCount * attackerCountPenalty;
 
-        if (target == _currentTarget)
-            score -= currentTargetBonus;
-
-        return score;
+        return bestTarget;
     }
     
     private void ChangeTarget(ICombatTarget target)
     {
         if (ReferenceEquals(_currentTarget, target))
             return;
+        
+        string previousName =
+            (_currentTarget as MonoBehaviour)?.name ?? "None";
+
+        string newName =
+            (target as MonoBehaviour)?.name ?? "None";
+
+        Debug.Log(
+            $"[{name}] Target : {previousName} -> {newName} " +
+            $"Position: {transform.position}");
 
         ReleaseSlot();
         CombatTargetTracker.Unregister(_currentTarget);
@@ -198,13 +200,6 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _slots = null;
     }
     
-    private bool IsAhead(ICombatTarget target)
-    {
-        float offset = target.TargetTransform.position.x - transform.position.x;
-
-        return Team == UnitTeam.Zombie ? offset > 0f : offset < 0f;
-    }
-
     private void TryAction()
     {
         if (animation.IsBusy)
@@ -212,55 +207,57 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         if (!IsValidTarget(_currentTarget))
         {
-            MoveForward();
+            movement.MoveForward(GetMoveSpeed());
             return;
         }
-
-        float attackDistance = GetHorizontalDistance(_currentTarget);
 
         if (unitAction.UseSlots)
         {
-            if (!ReserveSlot(out Vector3 slot))
-                return;
-
-            float slotDistance = Vector2.Distance(transform.position, slot);
-
-            if (attackDistance <= _model.Stats.AttackRange &&
-                slotDistance <= slotLeeway)
-            {
-                TryAttack();
-                return;
-            }
-
-            MoveToSlot(slot);
+            HandleSlotCombat();
             return;
         }
 
-        if (attackDistance > _model.Stats.AttackRange)
-        {
-            MoveForward();
-            return;
-        }
-
-        TryAttack();
+        HandleDirectCombat();
     }
-
-    private void MoveForward()
+    
+    private void HandleSlotCombat()
     {
-        animation.PlayWalk();
-        
-        float direction = Team == UnitTeam.Zombie ? 1f : -1f;
-        float distance = GetMoveSpeed() * Time.deltaTime;
-        transform.Translate(Vector3.right * (direction * distance));
+        if (!ReserveSlot(out Vector3 slotPosition))
+            return;
+
+        float slotDistance = Vector2.Distance(transform.position, slotPosition);
+        float attackDistance = GetHorizontalDistance(_currentTarget);
+
+        if (slotDistance <= slotLeeway && attackDistance <= model.Stats.AttackRange)
+        {
+            TryAttack();
+            return;
+        }
+
+        movement.MoveTo(slotPosition, GetMoveSpeed());
     }
+    
+    private void HandleDirectCombat()
+    {
+        float attackDistance = GetHorizontalDistance(_currentTarget);
+
+        if (attackDistance <= model.Stats.AttackRange)
+        {
+            TryAttack();
+            return;
+        }
+
+        movement.MoveTo(_currentTarget.TargetTransform.position, GetMoveSpeed());
+    }
+
 
     private void TryAttack()
     {
-        if (!_model.CanAttack || !IsValidTarget(_currentTarget))
+        if (!model.CanAttack || !IsValidTarget(_currentTarget))
             return;
 
         ICombatTarget target = _currentTarget;
-        float power = _model.Stats.AttackPower;
+        float power = model.Stats.AttackPower;
 
         animation.PlayAttack(() =>
         {
@@ -268,28 +265,22 @@ public class UnitController : MonoBehaviour, ICombatTarget
                 unitAction.Execute(this, target, power);
         });
 
-        _model.ResetAttackCooldown();
-    }
-
-    private void MoveToSlot(Vector3 position)
-    {
-        animation.PlayWalk();
-        transform.position = Vector3.MoveTowards(transform.position, position, GetMoveSpeed() * Time.deltaTime);
+        model.ResetAttackCooldown();
     }
     
     public void TakeDamage(float damage)
     {
-        if (!_isInitialized || _model.IsDead)
+        if (!_isInitialized || model.IsDead)
             return;
 
-        float before = _model.CurrentHealth;
+        float before = model.CurrentHealth;
 
-        _model.TakeDamage(damage);
-        Debug.Log($"{name}: {before} → {_model.CurrentHealth}, Damage: {damage}");
+        model.TakeDamage(damage);
+        Debug.Log($"{name}: {before} → {model.CurrentHealth}, Damage: {damage}");
         
-        healthBar.SetHealth(_model.CurrentHealth, _model.Stats.MaxHealth);
+        healthBar.SetHealth(model.CurrentHealth, model.Stats.MaxHealth);
 
-        if (_model.IsDead)
+        if (model.IsDead)
         {
             Die();
             return;
@@ -307,12 +298,19 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private float GetMoveSpeed()
     {
-        return Time.time < _slowEndTime ? _model.Stats.MoveSpeed * hitSpeedRate : _model.Stats.MoveSpeed;
+        return Time.time < _slowEndTime ? model.Stats.MoveSpeed * hitSpeedRate : model.Stats.MoveSpeed;
     }
 
     private void Die()
     {
+        if (!_isInitialized)
+            return;
+        
+        _isInitialized = false;
+        
         ChangeTarget(null);
+        _battleArea?.Unregister(this);
+        
         enabled = false;
 
         if (unitCollider != null)
@@ -357,7 +355,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
     private void OnDisable()
     {
         ReleaseSlot();
+        _battleArea?.Unregister(this);
         CombatTargetTracker.Unregister(_currentTarget);
         _currentTarget = null;
+        _battleArea = null;
+        _isInitialized = false;
     }
 }

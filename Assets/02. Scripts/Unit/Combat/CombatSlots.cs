@@ -17,6 +17,7 @@ public class CombatSlots : MonoBehaviour
     
     private UnitController[] _owners;
     private readonly Dictionary<UnitController, int> _slotByUnit = new();
+    private readonly Dictionary<UnitController, Vector3> _reservedPositions = new();
     
     private void Awake()
     {
@@ -32,9 +33,9 @@ public class CombatSlots : MonoBehaviour
 
         Clean();
 
-        if (_slotByUnit.TryGetValue(unit, out int currentSlot))
+        if (_slotByUnit.TryGetValue(unit, out _))
         {
-            position = GetPosition(unit.Team, currentSlot);
+            position = _reservedPositions[unit];
             return true;
         }
 
@@ -43,9 +44,13 @@ public class CombatSlots : MonoBehaviour
         if (slot < 0)
             return false;
 
+        Vector3 reservedPosition = GetPosition(unit.Team, slot);
+        
         _owners[slot] = unit;
         _slotByUnit[unit] = slot;
-        position = GetPosition(unit.Team, slot);
+        _reservedPositions[unit] = reservedPosition;
+        
+        position = reservedPosition;
 
         return true;
     }
@@ -54,10 +59,9 @@ public class CombatSlots : MonoBehaviour
     {
         position = transform.position;
 
-        if (unit == null || !_slotByUnit.TryGetValue(unit, out int slot))
+        if (unit == null || !_reservedPositions.TryGetValue(unit, out position))
             return false;
 
-        position = GetPosition(unit.Team, slot);
         return true;
     }
 
@@ -65,6 +69,8 @@ public class CombatSlots : MonoBehaviour
     {
         if (unit == null || !_slotByUnit.Remove(unit, out int slot))
             return;
+
+        _reservedPositions.Remove(unit);
 
         if (slot >= 0 && slot < _owners.Length && _owners[slot] == unit)
             _owners[slot] = null;
@@ -129,7 +135,10 @@ public class CombatSlots : MonoBehaviour
                 continue;
 
             if (owner != null)
+            {
                 _slotByUnit.Remove(owner);
+                _reservedPositions.Remove(owner);
+            }
 
             _owners[i] = null;
         }
@@ -141,6 +150,7 @@ public class CombatSlots : MonoBehaviour
             System.Array.Clear(_owners, 0, _owners.Length);
 
         _slotByUnit.Clear();
+        _reservedPositions.Clear();
     }
 
 #if UNITY_EDITOR
