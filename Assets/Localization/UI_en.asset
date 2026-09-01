@@ -78,6 +78,22 @@ MonoBehaviour:
     m_Localized: Rarity Rates
     m_Metadata:
       m_Items: []
+  - m_Id: 10113445769793536
+    m_Localized: Stat Unlock
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10342570073804800
+    m_Localized: Gacha Cost per Level
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10343228357234688
+    m_Localized: Add Stat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10344765829697536
+    m_Localized: Pulls to Next Level
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

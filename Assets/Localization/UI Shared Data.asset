@@ -87,6 +87,22 @@ MonoBehaviour:
     m_Key: Rarity Rates
     m_Metadata:
       m_Items: []
+  - m_Id: 10113445769793536
+    m_Key: StatUnlock
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10342570073804800
+    m_Key: Gacha Cost per Level
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10343228357234688
+    m_Key: AddStat
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10344765829697536
+    m_Key: PullsToNextLevel
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
