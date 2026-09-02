@@ -94,6 +94,26 @@ MonoBehaviour:
     m_Localized: Pulls to Next Level
     m_Metadata:
       m_Items: []
+  - m_Id: 10836548313436160
+    m_Localized: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10837526437711872
+    m_Localized: BGM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10837809075081216
+    m_Localized: SFX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10838018119192576
+    m_Localized: Haptic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10838971564183552
+    m_Localized: English
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

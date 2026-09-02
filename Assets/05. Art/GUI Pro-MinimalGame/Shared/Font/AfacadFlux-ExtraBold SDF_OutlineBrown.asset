@@ -10,10 +10,8 @@ Texture2D:
   m_ImageContentsHash:
     serializedVersion: 2
     Hash: 00000000000000000000000000000000
-  m_ForcedFallbackFormat: 4
-  m_DownscaleFallback: 0
   m_IsAlphaChannelOptional: 0
-  serializedVersion: 2
+  serializedVersion: 4
   m_Width: 512
   m_Height: 512
   m_CompleteImageSize: 262144
@@ -22,7 +20,8 @@ Texture2D:
   m_MipCount: 1
   m_IsReadable: 0
   m_IsPreProcessed: 0
-  m_IgnoreMasterTextureLimit: 0
+  m_IgnoreMipmapLimit: 0
+  m_MipmapLimitGroupName: 
   m_StreamingMipmaps: 0
   m_StreamingMipmapsPriority: 0
   m_VTOnly: 0
@@ -56,6 +55,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: AfacadFlux-ExtraBold Atlas Material
   m_Shader: {fileID: 4800000, guid: 68e6db2ebdc24f95958faec2be5558d6, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - UNDERLAY_ON
   m_InvalidKeywords: []
@@ -65,6 +66,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -151,8 +153,9 @@ Material:
     - _ReflectFaceColor: {r: 0, g: 0, b: 0, a: 1}
     - _ReflectOutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
-    - _UnderlayColor: {r: 0.29803923, g: 0.1882353, b: 0.14117648, a: 1}
+    - _UnderlayColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -165,14 +168,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71c1514a6bd24e1e882cebbe1904ce04, type: 3}
   m_Name: AfacadFlux-ExtraBold SDF_OutlineBrown
   m_EditorClassIdentifier: 
-  hashCode: 695999773
-  material: {fileID: -5486458994212982300}
-  materialHashCode: -1063376739
   m_Version: 1.1.0
-  m_SourceFontFileGUID: 8e744d3dd9c1b4ed3abee790f5a3b9c0
-  m_SourceFontFile_EditorRef: {fileID: 12800000, guid: 8e744d3dd9c1b4ed3abee790f5a3b9c0, type: 3}
-  m_SourceFontFile: {fileID: 0}
-  m_AtlasPopulationMode: 0
   m_FaceInfo:
     m_FaceIndex: 0
     m_FamilyName: Afacad Flux
@@ -195,6 +191,31 @@ MonoBehaviour:
     m_StrikethroughOffset: 4.8
     m_StrikethroughThickness: 1.6875
     m_TabWidth: 6
+  m_Material: {fileID: -5486458994212982300}
+  m_SourceFontFileGUID: 8e744d3dd9c1b4ed3abee790f5a3b9c0
+  m_CreationSettings:
+    sourceFontFileName: 
+    sourceFontFileGUID: 8e744d3dd9c1b4ed3abee790f5a3b9c0
+    faceIndex: 0
+    pointSizeSamplingMode: 0
+    pointSize: 27
+    padding: 9
+    paddingMode: 0
+    packingMode: 0
+    atlasWidth: 512
+    atlasHeight: 512
+    characterSetSelectionMode: 1
+    characterSequence: 32 - 126, 160 - 255, 8192 - 8303, 8364, 8482, 9633
+    referencedFontAssetGUID: 757e391f843b7418ca92bd6d8c808381
+    referencedTextAssetGUID: 
+    fontStyle: 0
+    fontStyleModifier: 0
+    renderMode: 32806
+    includeFontFeatures: 0
+  m_SourceFontFile: {fileID: 0}
+  m_SourceFontFilePath: 
+  m_AtlasPopulationMode: 0
+  InternalDynamicOS: 0
   m_GlyphTable:
   - m_Index: 3
     m_Metrics:
@@ -4457,7 +4478,12 @@ MonoBehaviour:
   - {fileID: -6049922625021846448}
   m_AtlasTextureIndex: 0
   m_IsMultiAtlasTexturesEnabled: 0
+  m_GetFontFeatures: 1
   m_ClearDynamicDataOnBuild: 0
+  m_AtlasWidth: 512
+  m_AtlasHeight: 512
+  m_AtlasPadding: 9
+  m_AtlasRenderMode: 32806
   m_UsedGlyphRects:
   - m_X: 0
     m_Y: 0
@@ -6056,57 +6082,14 @@ MonoBehaviour:
     m_Y: 494
     m_Width: 23
     m_Height: 17
-  m_fontInfo:
-    Name: 
-    PointSize: 0
-    Scale: 0
-    CharacterCount: 0
-    LineHeight: 0
-    Baseline: 0
-    Ascender: 0
-    CapHeight: 0
-    Descender: 0
-    CenterLine: 0
-    SuperscriptOffset: 0
-    SubscriptOffset: 0
-    SubSize: 0
-    Underline: 0
-    UnderlineThickness: 0
-    strikethrough: 0
-    strikethroughThickness: 0
-    TabWidth: 0
-    Padding: 0
-    AtlasWidth: 0
-    AtlasHeight: 0
-  atlas: {fileID: 0}
-  m_AtlasWidth: 512
-  m_AtlasHeight: 512
-  m_AtlasPadding: 9
-  m_AtlasRenderMode: 32806
-  m_glyphInfoList: []
-  m_KerningTable:
-    kerningPairs: []
   m_FontFeatureTable:
+    m_MultipleSubstitutionRecords: []
+    m_LigatureSubstitutionRecords: []
     m_GlyphPairAdjustmentRecords: []
-  fallbackFontAssets: []
+    m_MarkToBaseAdjustmentRecords: []
+    m_MarkToMarkAdjustmentRecords: []
+  m_ShouldReimportFontFeatures: 0
   m_FallbackFontAssetTable: []
-  m_CreationSettings:
-    sourceFontFileName: 
-    sourceFontFileGUID: 8e744d3dd9c1b4ed3abee790f5a3b9c0
-    pointSizeSamplingMode: 0
-    pointSize: 27
-    padding: 9
-    packingMode: 0
-    atlasWidth: 512
-    atlasHeight: 512
-    characterSetSelectionMode: 1
-    characterSequence: 32 - 126, 160 - 255, 8192 - 8303, 8364, 8482, 9633
-    referencedFontAssetGUID: 757e391f843b7418ca92bd6d8c808381
-    referencedTextAssetGUID: 
-    fontStyle: 0
-    fontStyleModifier: 0
-    renderMode: 32806
-    includeFontFeatures: 0
   m_FontWeightTable:
   - regularTypeface: {fileID: 0}
     italicTypeface: {fileID: 0}
@@ -6135,3 +6118,30 @@ MonoBehaviour:
   boldSpacing: 7
   italicStyle: 35
   tabSize: 10
+  m_fontInfo:
+    Name: 
+    PointSize: 0
+    Scale: 0
+    CharacterCount: 0
+    LineHeight: 0
+    Baseline: 0
+    Ascender: 0
+    CapHeight: 0
+    Descender: 0
+    CenterLine: 0
+    SuperscriptOffset: 0
+    SubscriptOffset: 0
+    SubSize: 0
+    Underline: 0
+    UnderlineThickness: 0
+    strikethrough: 0
+    strikethroughThickness: 0
+    TabWidth: 0
+    Padding: 0
+    AtlasWidth: 0
+    AtlasHeight: 0
+  m_glyphInfoList: []
+  m_KerningTable:
+    kerningPairs: []
+  fallbackFontAssets: []
+  atlas: {fileID: 0}

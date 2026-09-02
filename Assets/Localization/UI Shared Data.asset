@@ -103,6 +103,26 @@ MonoBehaviour:
     m_Key: PullsToNextLevel
     m_Metadata:
       m_Items: []
+  - m_Id: 10836548313436160
+    m_Key: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10837526437711872
+    m_Key: BGM
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10837809075081216
+    m_Key: SFX
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10838018119192576
+    m_Key: Haptic
+    m_Metadata:
+      m_Items: []
+  - m_Id: 10838971564183552
+    m_Key: Local Language
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
