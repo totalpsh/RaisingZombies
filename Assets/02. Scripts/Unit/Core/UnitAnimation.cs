@@ -5,34 +5,46 @@ using UnityEngine;
 
 public class UnitAnimation : MonoBehaviour
 {
-    [SerializeField] private SkeletonAnimation skeletonAnimation;
+    [SerializeField]
+    private SkeletonAnimation skeletonAnimation;
 
     [Header("Animation Names")]
-    [SerializeField] private string idleAnimationName = "Idle";
-    [SerializeField] private string walkAnimationName = "Walk";
-    [SerializeField] private string attackAnimationName = "Attack2";
-    [SerializeField] private string hitAnimationName = "Hit";
-    [SerializeField] private string dieAnimationName = "Die";
-    
-    [SerializeField] private bool useHit = true;
-    [SerializeField, Range(0f, 1f)] private float attackHitRate = 0.55f;
-    
+    [SerializeField]
+    private string idleAnimationName = "Idle";
+
+    [SerializeField]
+    private string walkAnimationName = "Walk";
+
+    [SerializeField]
+    private string attackAnimationName = "Attack2";
+
+    [SerializeField]
+    private string hitAnimationName = "Hit";
+
+    [SerializeField]
+    private string dieAnimationName = "Die";
+
+    [SerializeField]
+    private bool useHit = true;
+
+    [SerializeField, Range(0f, 0.99f)]
+    private float attackHitRate = 0.55f;
+
     private TrackEntry _attackTrack;
     private Action _onAttackHit;
-    private bool _attackHitDone;
-    
-    private TrackEntry _deathTrack;
-    private bool _isActionPlaying;
     private bool _isDead;
 
-    public bool IsBusy => _isDead || IsOneShotPlaying();
-    
+    public bool IsBusy =>
+        _isDead ||
+        IsOneShotPlaying();
+
     private void Update()
     {
-        if (_attackTrack == null || _attackHitDone)
+        if (_attackTrack == null)
             return;
 
-        TrackEntry current = skeletonAnimation.AnimationState.GetCurrent(0);
+        TrackEntry current =
+            skeletonAnimation.AnimationState.GetCurrent(0);
 
         if (current != _attackTrack)
         {
@@ -40,18 +52,19 @@ public class UnitAnimation : MonoBehaviour
             return;
         }
 
-        float hitTime = _attackTrack.AnimationEnd * attackHitRate;
+        float hitTime =
+            _attackTrack.AnimationEnd *
+            attackHitRate;
 
         if (_attackTrack.TrackTime < hitTime)
             return;
 
-        _attackHitDone = true;
-
         Action onHit = _onAttackHit;
-        _onAttackHit = null;
+
+        CancelAttack();
         onHit?.Invoke();
     }
-    
+
     public void PlayIdle()
     {
         if (_isDead || IsOneShotPlaying())
@@ -68,53 +81,77 @@ public class UnitAnimation : MonoBehaviour
         PlayLoop(walkAnimationName);
     }
 
-    public void PlayAttack(Action onHit)
+    public bool PlayAttack(Action onHit)
     {
+        if (_isDead || IsOneShotPlaying())
+            return false;
+
         if (skeletonAnimation == null)
         {
             onHit?.Invoke();
+            return true;
+        }
+
+        _onAttackHit = onHit;
+
+        _attackTrack =
+            skeletonAnimation.AnimationState.SetAnimation(
+                0,
+                attackAnimationName,
+                false);
+
+        skeletonAnimation.AnimationState.AddAnimation(
+            0,
+            idleAnimationName,
+            true,
+            0f);
+
+        return true;
+    }
+
+    public void PlayHit()
+    {
+        if (skeletonAnimation == null ||
+            _isDead ||
+            !useHit ||
+            IsOneShotPlaying())
+        {
             return;
         }
 
-        if (_isDead || IsOneShotPlaying())
-            return;
+        skeletonAnimation.AnimationState.SetAnimation(
+            0,
+            hitAnimationName,
+            false);
 
-        _attackHitDone = false;
-        _onAttackHit = onHit;
-
-        _attackTrack = skeletonAnimation.AnimationState.SetAnimation(0, attackAnimationName, false);
-        skeletonAnimation.AnimationState.AddAnimation(0, idleAnimationName, true, 0f);
-    }
-    
-    public void PlayHit()
-    {
-        if (skeletonAnimation == null || _isDead || !useHit)
-            return;
-
-        // 공격이나 다른 단발 동작 중에는 피격 모션을 생략
-        if (IsOneShotPlaying())
-            return;
-
-        skeletonAnimation.AnimationState.SetAnimation(0, hitAnimationName, false);
-        skeletonAnimation.AnimationState.AddAnimation(0, idleAnimationName, true, 0f);
+        skeletonAnimation.AnimationState.AddAnimation(
+            0,
+            idleAnimationName,
+            true,
+            0f);
     }
 
     public void PlayDie(Action onComplete)
     {
+        if (_isDead)
+            return;
+
+        CancelAttack();
+        _isDead = true;
+
         if (skeletonAnimation == null)
         {
             onComplete?.Invoke();
             return;
         }
-        
-        CancelAttack();
-
-        _isDead = true;
-        _isActionPlaying = false;
 
         skeletonAnimation.AnimationState.ClearTracks();
 
-        TrackEntry dieTrack = skeletonAnimation.AnimationState.SetAnimation(0, dieAnimationName, false);
+        TrackEntry dieTrack =
+            skeletonAnimation.AnimationState.SetAnimation(
+                0,
+                dieAnimationName,
+                false);
 
         dieTrack.Complete += HandleComplete;
 
@@ -124,27 +161,24 @@ public class UnitAnimation : MonoBehaviour
             onComplete?.Invoke();
         }
     }
-    
-    private void CancelAttack()
-    {
-        _attackTrack = null;
-        _onAttackHit = null;
-        _attackHitDone = false;
-    }
 
     public void ResetState()
     {
+        CancelAttack();
+        _isDead = false;
+
         if (skeletonAnimation == null)
             return;
-        
-        CancelAttack();
-
-        _isDead = false;
 
         skeletonAnimation.Initialize(false);
         skeletonAnimation.AnimationState.ClearTracks();
         skeletonAnimation.Skeleton.SetToSetupPose();
-        skeletonAnimation.AnimationState.SetAnimation(0, idleAnimationName, true);
+
+        skeletonAnimation.AnimationState.SetAnimation(
+            0,
+            idleAnimationName,
+            true);
+
         skeletonAnimation.Update(0f);
     }
 
@@ -153,14 +187,18 @@ public class UnitAnimation : MonoBehaviour
         if (skeletonAnimation == null)
             return;
 
-        TrackEntry current = skeletonAnimation.AnimationState.GetCurrent(0);
+        TrackEntry current =
+            skeletonAnimation.AnimationState.GetCurrent(0);
 
         if (current?.Animation?.Name == animationName)
             return;
 
-        skeletonAnimation.AnimationState.SetAnimation(0, animationName, true);
+        skeletonAnimation.AnimationState.SetAnimation(
+            0,
+            animationName,
+            true);
     }
-    
+
     private bool IsOneShotPlaying()
     {
         if (skeletonAnimation == null)
@@ -169,9 +207,21 @@ public class UnitAnimation : MonoBehaviour
         TrackEntry current =
             skeletonAnimation.AnimationState.GetCurrent(0);
 
-        if (current == null || current.Animation == null)
+        if (current?.Animation == null)
             return false;
 
-        return !current.Loop && current.TrackTime < current.AnimationEnd;
+        return !current.Loop &&
+               current.TrackTime < current.AnimationEnd;
+    }
+
+    private void CancelAttack()
+    {
+        _attackTrack = null;
+        _onAttackHit = null;
+    }
+
+    private void OnDisable()
+    {
+        CancelAttack();
     }
 }

@@ -45,19 +45,22 @@ public class UnitCombat : MonoBehaviour
         ICombatTarget attackTarget = target;
         float attackPower = _model.Stats.AttackPower;
 
-        _model.ResetAttackCooldown();
-
         if (_animation == null)
         {
+            _model.ResetAttackCooldown();
             ExecuteAttack(attackTarget, attackPower);
             return true;
         }
 
-        _animation.PlayAttack(
+        bool started = _animation.PlayAttack(
             () => ExecuteAttack(
                 attackTarget,
                 attackPower));
 
+        if (!started)
+            return false;
+
+        _model.ResetAttackCooldown();
         return true;
     }
 
