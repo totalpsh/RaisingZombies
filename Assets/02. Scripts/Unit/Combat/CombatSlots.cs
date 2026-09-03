@@ -8,112 +8,177 @@ public class CombatSlots : MonoBehaviour
         Arc,
         Front
     }
-    
-    [SerializeField, Range(1, 9)] private int slotCount = 5;
-    [SerializeField, Min(0.1f)] private float radius = 0.6f;
-    [SerializeField, Range(5f, 80f)] private float angleStep = 35f;
-    [SerializeField] private SlotShape shape;
-    [SerializeField, Min(0.1f)] private float yGap = 0.4f;
-    
+
+    [SerializeField, Range(1, 9)]
+    private int slotCount = 5;
+
+    [SerializeField, Min(0.1f)]
+    private float radius = 0.6f;
+
+    [SerializeField, Range(5f, 80f)]
+    private float angleStep = 35f;
+
+    [SerializeField]
+    private SlotShape shape;
+
+    [SerializeField, Min(0.1f)]
+    private float yGap = 0.4f;
+
     private UnitController[] _owners;
-    private readonly Dictionary<UnitController, int> _slotByUnit = new();
-    private readonly Dictionary<UnitController, Vector3> _reservedPositions = new();
-    
+
+    private readonly Dictionary<UnitController, int> _slotByUnit =
+        new();
+
     private void Awake()
     {
         _owners = new UnitController[Mathf.Max(1, slotCount)];
     }
 
-    public bool Reserve(UnitController unit, out Vector3 position)
+    public bool HasAvailableSlot(UnitController unit)
+    {
+        if (unit == null || !isActiveAndEnabled)
+            return false;
+
+        CleanInvalidReservations();
+
+        if (_slotByUnit.ContainsKey(unit))
+            return true;
+
+        for (int i = 0; i < _owners.Length; i++)
+        {
+            if (_owners[i] == null)
+                return true;
+        }
+
+        return false;
+    }
+
+    public bool TryReserve(
+        UnitController unit,
+        out int slotIndex)
+    {
+        slotIndex = -1;
+
+        if (unit == null || !isActiveAndEnabled)
+            return false;
+
+        CleanInvalidReservations();
+
+        if (_slotByUnit.TryGetValue(unit, out slotIndex))
+            return true;
+
+        slotIndex = FindClosestAvailableSlot(unit);
+
+        if (slotIndex < 0)
+            return false;
+
+        _owners[slotIndex] = unit;
+        _slotByUnit.Add(unit, slotIndex);
+
+        return true;
+    }
+
+    public bool TryGetPosition(
+        UnitController unit,
+        out Vector3 position)
     {
         position = transform.position;
 
         if (unit == null)
             return false;
 
-        Clean();
+        CleanInvalidReservations();
 
-        if (_slotByUnit.TryGetValue(unit, out _))
-        {
-            position = _reservedPositions[unit];
-            return true;
-        }
-
-        int slot = FindClosestSlot(unit);
-
-        if (slot < 0)
+        if (!_slotByUnit.TryGetValue(unit, out int slotIndex))
             return false;
 
-        Vector3 reservedPosition = GetPosition(unit.Team, slot);
-        
-        _owners[slot] = unit;
-        _slotByUnit[unit] = slot;
-        _reservedPositions[unit] = reservedPosition;
-        
-        position = reservedPosition;
-
-        return true;
-    }
-
-    public bool TryGetPosition(UnitController unit, out Vector3 position)
-    {
-        position = transform.position;
-
-        if (unit == null || !_reservedPositions.TryGetValue(unit, out position))
-            return false;
-
+        position = CalculatePosition(unit.Team, slotIndex);
         return true;
     }
 
     public void Release(UnitController unit)
     {
-        if (unit == null || !_slotByUnit.Remove(unit, out int slot))
+        if (unit == null)
             return;
 
-        _reservedPositions.Remove(unit);
+        if (!_slotByUnit.Remove(unit, out int slotIndex))
+            return;
 
-        if (slot >= 0 && slot < _owners.Length && _owners[slot] == unit)
-            _owners[slot] = null;
+        if (slotIndex < 0 || slotIndex >= _owners.Length)
+            return;
+
+        if (_owners[slotIndex] == unit)
+            _owners[slotIndex] = null;
     }
 
-    private int FindClosestSlot(UnitController unit)
+    private int FindClosestAvailableSlot(UnitController unit)
     {
-        int result = -1;
-        float nearest = float.MaxValue;
+        int closestSlot = -1;
+        float closestDistance = float.MaxValue;
 
         for (int i = 0; i < _owners.Length; i++)
         {
             if (_owners[i] != null)
                 continue;
 
-            float distance = (GetPosition(unit.Team, i) - unit.transform.position).sqrMagnitude;
+            Vector3 position = CalculatePosition(unit.Team, i);
+            float distance =
+                (position - unit.transform.position).sqrMagnitude;
 
-            if (distance >= nearest)
+            if (distance >= closestDistance)
                 continue;
 
-            result = i;
-            nearest = distance;
+            closestSlot = i;
+            closestDistance = distance;
         }
 
-        return result;
+        return closestSlot;
     }
 
-    private Vector3 GetPosition(UnitTeam team, int index)
+    private Vector3 CalculatePosition(
+        UnitTeam attackerTeam,
+        int slotIndex)
     {
-        float side = team == UnitTeam.Zombie ? -1f : 1f;
-        int signedIndex = GetSignedIndex(index);
+        int signedIndex = GetSignedIndex(slotIndex);
 
         if (shape == SlotShape.Front)
-        {
-            Vector3 offset = new Vector3(side * radius, signedIndex * yGap, 0f);
-            return transform.position + offset;
-        }
+            return CalculateFrontPosition(attackerTeam, signedIndex);
 
-        float baseAngle = team == UnitTeam.Zombie ? 180f : 0f;
-        float angle = (baseAngle + signedIndex * angleStep) * Mathf.Deg2Rad;
-        Vector3 arcOffset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * radius;
+        return CalculateArcPosition(attackerTeam, signedIndex);
+    }
 
-        return transform.position + arcOffset;
+    private Vector3 CalculateFrontPosition(
+        UnitTeam attackerTeam,
+        int signedIndex)
+    {
+        float side =
+            attackerTeam == UnitTeam.Zombie ? -1f : 1f;
+
+        Vector3 offset = new(
+            side * radius,
+            signedIndex * yGap,
+            0f);
+
+        return transform.position + offset;
+    }
+
+    private Vector3 CalculateArcPosition(
+        UnitTeam attackerTeam,
+        int signedIndex)
+    {
+        float baseAngle =
+            attackerTeam == UnitTeam.Zombie ? 180f : 0f;
+
+        float angle =
+            (baseAngle + signedIndex * angleStep) *
+            Mathf.Deg2Rad;
+
+        Vector3 offset = new(
+            Mathf.Cos(angle) * radius,
+            Mathf.Sin(angle) * radius,
+            0f);
+
+        return transform.position + offset;
     }
 
     private static int GetSignedIndex(int index)
@@ -122,10 +187,13 @@ public class CombatSlots : MonoBehaviour
             return 0;
 
         int value = (index + 1) / 2;
-        return index % 2 == 1 ? value : -value;
+
+        return index % 2 == 1
+            ? value
+            : -value;
     }
 
-    private void Clean()
+    private void CleanInvalidReservations()
     {
         for (int i = 0; i < _owners.Length; i++)
         {
@@ -134,11 +202,8 @@ public class CombatSlots : MonoBehaviour
             if (owner != null && !owner.IsDead)
                 continue;
 
-            if (owner != null)
-            {
+            if (!ReferenceEquals(owner, null))
                 _slotByUnit.Remove(owner);
-                _reservedPositions.Remove(owner);
-            }
 
             _owners[i] = null;
         }
@@ -150,7 +215,6 @@ public class CombatSlots : MonoBehaviour
             System.Array.Clear(_owners, 0, _owners.Length);
 
         _slotByUnit.Clear();
-        _reservedPositions.Clear();
     }
 
 #if UNITY_EDITOR
@@ -161,10 +225,14 @@ public class CombatSlots : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(GetPosition(UnitTeam.Zombie, i), 0.08f);
+            Gizmos.DrawWireSphere(
+                CalculatePosition(UnitTeam.Zombie, i),
+                0.08f);
 
             Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(GetPosition(UnitTeam.Human, i), 0.08f);
+            Gizmos.DrawWireSphere(
+                CalculatePosition(UnitTeam.Human, i),
+                0.08f);
         }
     }
 #endif

@@ -1,40 +1,27 @@
 using System;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
     [SerializeField] private UnitAction unitAction;
-    [SerializeField] private UnitAnimation animation;
+    [FormerlySerializedAs("animation")] [SerializeField] private UnitAnimation anim;
     [SerializeField] private UnitTargeting targeting;
     [SerializeField] private UnitMovement movement;
+    [SerializeField] private UnitCombat combat;
     [SerializeField] private Collider2D unitCollider;
     [SerializeField] private UnitData data;
-    [SerializeField] private UnitModel model;
 
-    [SerializeField] private bool useHit = true;
     [SerializeField] private bool useHitSlow;
     [SerializeField, Range(0.1f, 1f)] private float hitSpeedRate = 0.6f;
     [SerializeField, Min(0f)] private float hitSlowTime = 0.15f;
     
-    [Header("전투")]
-    [SerializeField] private Vector2 combatYBounds = new(-1.5f, 1.5f);
-    [SerializeField, Min(0.01f)] private float slotTolerance = 0.05f;
-    [SerializeField, Min(0f)] private float slotLeeway = 0.25f;
-    [SerializeField, Min(0f)] private float forwardStopDistance = 0.15f;
-    [SerializeField] private float targetSearchWidth = 3f;
-    [SerializeField] private float targetSearchHeight = 6f;
-    
     [Header("UI")]
     [SerializeField] private UnitHealthBar healthBar;
     
-    // private UnitController _currentTarget;
-    
     private bool _isInitialized;
-    
-    private CombatSlots _slots;
-    private ICombatTarget _currentTarget;
+    private UnitModel model;
+    private CombatTargetAssignment _assignment;
     private float _slowEndTime;
     private BattleArea _battleArea;
     
@@ -58,60 +45,101 @@ public class UnitController : MonoBehaviour, ICombatTarget
         
         model.TickAttackCooldown(deltaTime);
         UpdateRegeneration(deltaTime);
-        
-        ChangeTarget(targeting.FindTarget());
-        
-        TryAction();
+
+        if (anim.IsBusy)
+        {
+            if (_assignment.IsAssigned &&
+                !IsValidTarget(_assignment.Target))
+            {
+                ClearAssignment();
+            }
+
+            return;
+        }
+
+        CombatTargetingStatus targetingStatus =
+            targeting.FindAssignment(out CombatTargetAssignment assignment);
+
+        if (targetingStatus == CombatTargetingStatus.Assigned)
+            ChangeAssignment(assignment);
+        else
+            ClearAssignment();
+
+        UpdateAction(targetingStatus);
     }
 
     public void Initialize(UnitData data, UnitStats stats, BattleArea battleArea)
     {
-        if (data == null)
-        {
-            Debug.LogError($"[{nameof(UnitController)}] UnitData가 null입니다.", this);
-            return;
-        }
+        ClearAssignment();
+        _battleArea?.UnregisterUnit(this);
+        _isInitialized = false;
 
-        if (unitAction == null)
-        {
-            Debug.Log("UnitAction 없음", this);
+        if (!ValidateInitialization(data, stats, battleArea))
             return;
-        }
-
-        if (targeting == null)
-        {
-            Debug.LogError("UnitTargeting 없음", this);
-            return;
-        }
-        
-        if (battleArea == null)
-        {
-            Debug.LogError($"[{nameof(UnitController)}] BattleArea가 없습니다.", this);
-            return;
-        }
 
         this.data = data;
         model = new UnitModel(stats);
         _battleArea = battleArea;
 
-        _currentTarget = null;
-        _slots = null;
+        _assignment = default;
         _slowEndTime = 0f;
-        
-        healthBar.SetHealth(model.CurrentHealth, model.Stats.MaxHealth);
-        
-        movement.Initialize(this, animation, battleArea);
+
+        combat.Initialize(this, unitAction, model, anim);
+        movement.Initialize(this, anim, battleArea);
         targeting.Initialize(this, battleArea);
-        battleArea.Register(this);
-        
+
+        healthBar.SetHealth(
+            model.CurrentHealth,
+            model.Stats.MaxHealth);
+
+        battleArea.RegisterUnit(this);
+
         _isInitialized = true;
-        
-        if (unitCollider != null)
-            unitCollider.enabled = true;
-        
+        unitCollider.enabled = true;
         enabled = true;
-        
-        ResetAnimation();
+
+        anim.ResetState();
+    }
+
+    private bool ValidateInitialization(
+        UnitData unitData,
+        UnitStats stats,
+        BattleArea battleArea)
+    {
+        if (unitData == null)
+        {
+            Debug.LogError("UnitData가 없습니다.", this);
+            return false;
+        }
+
+        if (stats == null)
+        {
+            Debug.LogError("UnitStats가 없습니다.", this);
+            return false;
+        }
+
+        if (battleArea == null)
+        {
+            Debug.LogError("BattleArea가 없습니다.", this);
+            return false;
+        }
+
+        if (unitAction == null ||
+            anim == null ||
+            targeting == null ||
+            movement == null ||
+            combat == null ||
+            unitCollider == null ||
+            healthBar == null)
+        {
+            Debug.LogError(
+                "UnitController 구성 요소가 누락되었습니다.",
+                this);
+
+            return false;
+        }
+
+        return true;
     }
     
     private void UpdateRegeneration(float deltaTime)
@@ -124,148 +152,67 @@ public class UnitController : MonoBehaviour, ICombatTarget
         model.Heal(healthRegen * deltaTime);
     }
     
-    private ICombatTarget FindBestTargetGlobal()
+    private void ChangeAssignment(CombatTargetAssignment assignment)
     {
-        ICombatTarget[] targets =
-            FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
-                .OfType<ICombatTarget>()
-                .ToArray();
-
-        ICombatTarget bestTarget = null;
-        float bestScore = float.MaxValue;
-
-        foreach (ICombatTarget candidate in targets)
+        if (ReferenceEquals(_assignment.Target, assignment.Target) &&
+            _assignment.Slots == assignment.Slots &&
+            _assignment.SlotIndex == assignment.SlotIndex)
         {
-            if (!IsValidTarget(candidate))
-                continue;
-
-            float score = GetHorizontalDistance(candidate);
-
-            if (score >= bestScore)
-                continue;
-
-            bestTarget = candidate;
-            bestScore = score;
+            return;
         }
 
-        return bestTarget;
+        ClearAssignment();
+
+        _assignment = assignment;
     }
-    
-    private void ChangeTarget(ICombatTarget target)
+
+    private void ClearAssignment()
     {
-        if (ReferenceEquals(_currentTarget, target))
-            return;
-        
-        string previousName =
-            (_currentTarget as MonoBehaviour)?.name ?? "None";
+        if (_assignment.Slots != null)
+            _assignment.Slots.Release(this);
 
-        string newName =
-            (target as MonoBehaviour)?.name ?? "None";
-
-        Debug.Log(
-            $"[{name}] Target : {previousName} -> {newName} " +
-            $"Position: {transform.position}");
-
-        ReleaseSlot();
-        CombatTargetTracker.Unregister(_currentTarget);
-
-        _currentTarget = target;
-
-        CombatTargetTracker.Register(_currentTarget);
+        _assignment = default;
     }
-    
-    private bool ReserveSlot(out Vector3 position)
+
+    private void UpdateAction(CombatTargetingStatus targetingStatus)
     {
-        position = transform.position;
-
-        if (_currentTarget == null)
-            return false;
-
-        if (_slots == null)
+        if (targetingStatus == CombatTargetingStatus.Blocked)
         {
-            MonoBehaviour target = _currentTarget as MonoBehaviour;
-
-            if (target != null)
-                _slots = target.GetComponent<CombatSlots>();
+            anim.PlayIdle();
+            return;
         }
 
-        return _slots != null && _slots.Reserve(this, out position);
-    }
-    
-    private void ReleaseSlot()
-    {
-        if (_slots != null)
-            _slots.Release(this);
-
-        _slots = null;
-    }
-    
-    private void TryAction()
-    {
-        if (animation.IsBusy)
-            return;
-
-        if (!IsValidTarget(_currentTarget))
+        if (targetingStatus == CombatTargetingStatus.NoTarget)
         {
             movement.MoveForward(GetMoveSpeed());
             return;
         }
 
-        if (unitAction.UseSlots)
+        ICombatTarget target = _assignment.Target;
+
+        if (!_assignment.IsAssigned || !IsValidTarget(target))
         {
-            HandleSlotCombat();
+            ClearAssignment();
+            anim.PlayIdle();
             return;
         }
 
-        HandleDirectCombat();
-    }
-    
-    private void HandleSlotCombat()
-    {
-        if (!ReserveSlot(out Vector3 slotPosition))
-            return;
-
-        float slotDistance = Vector2.Distance(transform.position, slotPosition);
-        float attackDistance = GetHorizontalDistance(_currentTarget);
-
-        if (slotDistance <= slotLeeway && attackDistance <= model.Stats.AttackRange)
+        if (combat.IsInAttackRange(target))
         {
-            TryAttack();
+            combat.TryAttack(target);
+            return;
+        }
+
+        if (!_assignment.Slots.TryGetPosition(
+                this,
+                out Vector3 slotPosition))
+        {
+            ClearAssignment();
+            anim.PlayIdle();
             return;
         }
 
         movement.MoveTo(slotPosition, GetMoveSpeed());
-    }
-    
-    private void HandleDirectCombat()
-    {
-        float attackDistance = GetHorizontalDistance(_currentTarget);
-
-        if (attackDistance <= model.Stats.AttackRange)
-        {
-            TryAttack();
-            return;
-        }
-
-        movement.MoveTo(_currentTarget.TargetTransform.position, GetMoveSpeed());
-    }
-
-
-    private void TryAttack()
-    {
-        if (!model.CanAttack || !IsValidTarget(_currentTarget))
-            return;
-
-        ICombatTarget target = _currentTarget;
-        float power = model.Stats.AttackPower;
-
-        animation.PlayAttack(() =>
-        {
-            if (IsValidTarget(target))
-                unitAction.Execute(this, target, power);
-        });
-
-        model.ResetAttackCooldown();
     }
     
     public void TakeDamage(float damage)
@@ -273,10 +220,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         if (!_isInitialized || model.IsDead)
             return;
 
-        float before = model.CurrentHealth;
-
         model.TakeDamage(damage);
-        Debug.Log($"{name}: {before} → {model.CurrentHealth}, Damage: {damage}");
         
         healthBar.SetHealth(model.CurrentHealth, model.Stats.MaxHealth);
 
@@ -287,7 +231,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         }
 
         ApplyHitSlow();
-        animation.PlayHit();
+        anim.PlayHit();
     }
     
     public void ApplyHitSlow()
@@ -308,8 +252,8 @@ public class UnitController : MonoBehaviour, ICombatTarget
         
         _isInitialized = false;
         
-        ChangeTarget(null);
-        _battleArea?.Unregister(this);
+        ClearAssignment();
+        _battleArea?.UnregisterUnit(this);
         
         enabled = false;
 
@@ -318,7 +262,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         
         Died?.Invoke(this);
         
-        animation.PlayDie(ReleaseToPool);
+        anim.PlayDie(ReleaseToPool);
     }
     
     private void ReleaseToPool()
@@ -336,28 +280,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
         return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && unitAction.CanTarget(this, target);
     }
 
-    private float GetHorizontalDistance(ICombatTarget target)
-    {
-        if (unitCollider == null || target.TargetCollider == null)
-        
-            return Mathf.Abs(target.TargetTransform.position.x - transform.position.x);
-        
-        ColliderDistance2D distance = unitCollider.Distance(target.TargetCollider);
-
-        return Mathf.Max(0f, distance.distance);
-    }
-
-    private void ResetAnimation()
-    {
-        animation.ResetState();
-    }
-
     private void OnDisable()
     {
-        ReleaseSlot();
-        _battleArea?.Unregister(this);
-        CombatTargetTracker.Unregister(_currentTarget);
-        _currentTarget = null;
+        ClearAssignment();
+        _battleArea?.UnregisterUnit(this);
         _battleArea = null;
         _isInitialized = false;
     }

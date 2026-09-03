@@ -12,6 +12,9 @@ GameObject:
   - component: {fileID: 5459777805356014378}
   - component: {fileID: 7009212651998346272}
   - component: {fileID: 9214992315463159315}
+  - component: {fileID: 6526124282013287944}
+  - component: {fileID: 4772563290763978130}
+  - component: {fileID: 4996124014574244132}
   m_Layer: 6
   m_Name: Zombie
   m_TagString: Untagged
@@ -96,23 +99,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitController
   unitAction: {fileID: 4692294734169957994}
-  animation: {fileID: 7063893091265402562}
-  unitLayer:
-    serializedVersion: 2
-    m_Bits: 128
-  targetSearchRange: 1
-  _data: {fileID: 11400000, guid: fc41fa7b01a04e44e81e0381907c140d, type: 2}
+  anim: {fileID: 7063893091265402562}
+  targeting: {fileID: 4996124014574244132}
+  movement: {fileID: 6526124282013287944}
   unitCollider: {fileID: 5459777805356014378}
+  data: {fileID: 11400000, guid: fc41fa7b01a04e44e81e0381907c140d, type: 2}
+  combat: {fileID: 4772563290763978130}
   useHit: 0
   useHitSlow: 1
   hitSpeedRate: 0.6
   hitSlowTime: 0.15
-  targetReevaluationInterval: 0.3
-  attackerCountPenalty: 1
-  currentTargetBonus: 1.5
   combatYBounds: {x: -1.5, y: 1.5}
   slotTolerance: 0.05
   slotLeeway: 0.15
+  forwardStopDistance: 0.15
+  targetSearchWidth: 3
+  targetSearchHeight: 6
   healthBar: {fileID: 950938883093214631}
 --- !u!114 &9214992315463159315
 MonoBehaviour:
@@ -131,6 +133,43 @@ MonoBehaviour:
   angleStep: 40
   shape: 0
   yGap: 0.4
+--- !u!114 &6526124282013287944
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620372965101480489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb585d728f80c504ca0f66bfbf2e5262, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitMovement
+--- !u!114 &4772563290763978130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620372965101480489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 468499d281d98f34b8df43fa70181718, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitCombat
+--- !u!114 &4996124014574244132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620372965101480489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e4a0db7b558abb4794d3a65e775a2dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnitTargeting
+  frontLineTolerance: 0.5
 --- !u!1 &1942154731415359923
 GameObject:
   m_ObjectHideFlags: 0

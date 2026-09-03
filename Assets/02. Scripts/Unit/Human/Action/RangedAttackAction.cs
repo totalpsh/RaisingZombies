@@ -6,9 +6,6 @@ public class RangedAttackAction : UnitAction
     [SerializeField] private string projectileKey;
     [SerializeField] private Transform firePoint;
     [SerializeField, Min(0.01f)] private float projectileSpeed = 8f;
-    [SerializeField, Min(0.1f)] private float projectileLifetime = 5f;
-    
-    public override bool UseSlots => false;
 
     private int _session;
 
@@ -55,7 +52,16 @@ public class RangedAttackAction : UnitAction
         Transform origin = firePoint != null ? firePoint : owner.transform;
         Vector2 targetPosition = target.TargetCollider != null ? target.TargetCollider.bounds.center : target.TargetTransform.position;
         projectileObject.transform.SetPositionAndRotation(origin.position, origin.rotation);
-        projectile.Initialize(owner.Team, targetPosition, projectileSpeed, projectileLifetime);
+        if (!projectile.Initialize(
+                owner.Team,
+                targetPosition,
+                power,
+                projectileSpeed))
+        {
+            PoolManager.Instance.Release(projectileObject);
+            return;
+        }
+
         projectileObject.SetActive(true);
     }
 

@@ -1,8 +1,10 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class ProjectileController : MonoBehaviour
 {
-    [SerializeField] private Rigidbody2D rigidbody2D;
+    [FormerlySerializedAs("rigidbody2D")]
+    [SerializeField] private Rigidbody2D body;
     [SerializeField, Min(0f)] private float arcHeight = 1.5f;
     [SerializeField] private bool rotateToDirection = true;
 
@@ -34,15 +36,28 @@ public class ProjectileController : MonoBehaviour
 
         UpdateRotation(nextPosition);
 
-        rigidbody2D.MovePosition(nextPosition);
+        body.MovePosition(nextPosition);
         _previousPosition = nextPosition;
         
         if (normalizedTime >= 1f)
             Release();
     }
 
-    public void Initialize(UnitTeam ownerTeam, Vector2 targetPosition, float damage, float moveSpeed)
+    public bool Initialize(
+        UnitTeam ownerTeam,
+        Vector2 targetPosition,
+        float damage,
+        float moveSpeed)
     {
+        if (body == null)
+        {
+            Debug.LogError(
+                "Projectile Rigidbody2D가 없습니다.",
+                this);
+
+            return false;
+        }
+
         _ownerTeam = ownerTeam;
         _targetPosition = targetPosition;
         _damage = Mathf.Max(0f, damage);
@@ -56,6 +71,8 @@ public class ProjectileController : MonoBehaviour
         _elapsedTime = 0f;
         _isReleased = false;
         _isFlying = true;
+
+        return true;
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -94,7 +111,7 @@ public class ProjectileController : MonoBehaviour
 
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
-        rigidbody2D.SetRotation(angle);
+        body.SetRotation(angle);
     }
 
     private void Release()

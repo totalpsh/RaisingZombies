@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using UnityEngine;
 
 public class BattleArea : MonoBehaviour
@@ -9,9 +10,17 @@ public class BattleArea : MonoBehaviour
     
     private readonly List<UnitController> _zombies = new();
     private readonly List<UnitController> _humans = new();
-    private readonly List<StructureController> _structures = new();
     
-    public void Register(UnitController unit)
+    private readonly List<StructureController> _zombieStructures = new();
+    private readonly List<StructureController> _humanStructures = new();
+
+    private ReadOnlyCollection<UnitController> _zombieView;
+    private ReadOnlyCollection<UnitController> _humanView;
+
+    private ReadOnlyCollection<StructureController> _zombieStructureView;
+    private ReadOnlyCollection<StructureController> _humanStructureView;
+    
+    public void RegisterUnit(UnitController unit)
     {
         if (unit == null)
             return;
@@ -22,7 +31,7 @@ public class BattleArea : MonoBehaviour
             units.Add(unit);
     }
     
-    public void Unregister(UnitController unit)
+    public void UnregisterUnit(UnitController unit)
     {
         if (unit == null)
             return;
@@ -30,9 +39,9 @@ public class BattleArea : MonoBehaviour
         GetUnits(unit.Team).Remove(unit);
     }
 
-    public List<UnitController> GetEnemies(UnitTeam team)
+    public IReadOnlyList<UnitController> GetEnemyUnits(UnitTeam team)
     {
-        return team == UnitTeam.Zombie ? _humans : _zombies;
+        return team == UnitTeam.Zombie ? GetHumanView() : GetZombieView();
     }
 
     public void RegisterStructure(StructureController structure)
@@ -40,8 +49,10 @@ public class BattleArea : MonoBehaviour
         if (structure == null)
             return;
 
-        if (!_structures.Contains(structure))
-            _structures.Add(structure);
+        List<StructureController> structures = GetStructures(structure.Team);
+
+        if (!structures.Contains(structure))
+            structures.Add(structure);
     }
     
     public void UnregisterStructure(StructureController structure)
@@ -49,12 +60,12 @@ public class BattleArea : MonoBehaviour
         if (structure == null)
             return;
 
-        _structures.Remove(structure);
+        GetStructures(structure.Team).Remove(structure);
     }
     
-    public List<StructureController> GetEnemyStructures(UnitTeam team)
+    public IReadOnlyList<StructureController> GetEnemyStructures(UnitTeam team)
     {
-        return _structures.FindAll(structure => structure != null && !structure.IsDead && structure.Team != team);
+        return team == UnitTeam.Zombie ? GetHumanStructureView() : GetZombieStructureView();
     }
     
     private List<UnitController> GetUnits(UnitTeam team)
@@ -62,6 +73,31 @@ public class BattleArea : MonoBehaviour
         return team == UnitTeam.Zombie ? _zombies : _humans;
     }
     
+    private List<StructureController> GetStructures(UnitTeam team)
+    {
+        return team == UnitTeam.Zombie ? _zombieStructures : _humanStructures;
+    }
+
+    private IReadOnlyList<UnitController> GetZombieView()
+    {
+        return _zombieView ??= _zombies.AsReadOnly();
+    }
+
+    private IReadOnlyList<UnitController> GetHumanView()
+    {
+        return _humanView ??= _humans.AsReadOnly();
+    }
+
+    private IReadOnlyList<StructureController> GetZombieStructureView()
+    {
+        return _zombieStructureView ??= _zombieStructures.AsReadOnly();
+    }
+
+    private IReadOnlyList<StructureController> GetHumanStructureView()
+    {
+        return _humanStructureView ??= _humanStructures.AsReadOnly();
+    }
+
     public Vector3 ClampPosition(Vector3 position)
     {
         position.x = Mathf.Clamp(position.x, minBounds.x, maxBounds.x);
@@ -73,15 +109,8 @@ public class BattleArea : MonoBehaviour
 #if UNITY_EDITOR
     private void OnDrawGizmosSelected()
     {
-        Vector3 center = new(
-            (minBounds.x + maxBounds.x) * 0.5f,
-            (minBounds.y + maxBounds.y) * 0.5f,
-            transform.position.z);
-
-        Vector3 size = new(
-            maxBounds.x - minBounds.x,
-            maxBounds.y - minBounds.y,
-            0f);
+        Vector3 center = new((minBounds.x + maxBounds.x) * 0.5f, (minBounds.y + maxBounds.y) * 0.5f, transform.position.z);
+        Vector3 size = new(maxBounds.x - minBounds.x, maxBounds.y - minBounds.y, 0f);
 
         Gizmos.DrawWireCube(center, size);
     }

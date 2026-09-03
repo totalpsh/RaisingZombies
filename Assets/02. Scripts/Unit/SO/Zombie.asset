@@ -19,5 +19,5 @@ MonoBehaviour:
   healthRegen: 0
   attackPower: 100
   attackInterval: 1
-  attackRange: 3
+  attackRange: 0.3
   moveSpeed: 1

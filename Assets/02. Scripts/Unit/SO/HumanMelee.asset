@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9782c1e9602dd064f924f5a13e1069c8, type: 3}
-  m_Name: Human
+  m_Name: HumanMelee
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
   id: 101
   displayName: "\uC778\uAC04"
@@ -19,5 +19,5 @@ MonoBehaviour:
   healthRegen: 0
   attackPower: 10
   attackInterval: 1
-  attackRange: 3
+  attackRange: 0.3
   moveSpeed: 1
