@@ -10,6 +10,7 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
     private const int CurrentStageSaveVersion = 1; // Stage Provider 내부 데이터 형식 버전
     private const int DefaultStageNumber = 1; // 유효한 Stage 정의가 없을 때 사용할 최소 번호
 
+    [SerializeField] private BattleArea battleArea;
     [SerializeField] private StageCatalogData stageCatalog;
     [SerializeField] private StructureController zombieCamp;
     [SerializeField] private StructureController humanFortress;
@@ -95,8 +96,8 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         zombieCamp.gameObject.SetActive(true);
         humanFortress.gameObject.SetActive(true);
         
-        zombieCamp.Initialize();
-        humanFortress.Initialize();
+        zombieCamp.Initialize(battleArea);
+        humanFortress.Initialize(battleArea);
 
         zombieCamp.Destroyed += HandleZombieCampDestroyed;
         humanFortress.Destroyed += HandleHumanFortressDestroyed;

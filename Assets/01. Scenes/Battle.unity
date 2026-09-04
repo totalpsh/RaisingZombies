@@ -551,7 +551,7 @@ Transform:
   m_GameObject: {fileID: 1141245560}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.5, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -569,6 +569,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d8c0c4737b2bd2049badd60d50421171, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HumanSpawner
+  battleArea: {fileID: 1867709705}
   scalingData: {fileID: 11400000, guid: d520fc2be3456dc4485da3efffc98b31, type: 2}
 --- !u!1 &1448034532
 GameObject:
@@ -663,6 +664,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b987f61b4a24e54b8e6adfd4749ab7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageSpawner
+  battleArea: {fileID: 1867709705}
   stageOrigin: {fileID: 759086450}
 --- !u!1 &1818751324
 GameObject:
@@ -708,6 +710,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1867709704
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1867709706}
+  - component: {fileID: 1867709705}
+  m_Layer: 0
+  m_Name: BattleArea
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1867709705
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1867709704}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f4221a878a9722418a37cbb59852e08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleArea
+  minBounds: {x: -6.5, y: -2}
+  maxBounds: {x: 6.5, y: 5}
+--- !u!4 &1867709706
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1867709704}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1977440661
 GameObject:
   m_ObjectHideFlags: 0
@@ -737,6 +785,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0cb89ca55766974ebf056bca74666c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageManager
+  battleArea: {fileID: 1867709705}
   stageCatalog: {fileID: 11400000, guid: 5362f533e2721844596d58dd6885ad47, type: 2}
   zombieCamp: {fileID: 8615642909568846135}
   humanFortress: {fileID: 6349473873355835590}
@@ -787,7 +836,7 @@ Transform:
   m_GameObject: {fileID: 2015096597}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.5, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1012,7 +1061,8 @@ MonoBehaviour:
   team: 1
   spawnPoint: {fileID: 1141245561}
   maxHealth: 100
-  structureCollider: {fileID: 0}
+  structureCollider: {fileID: 3680348294672660214}
+  battleArea: {fileID: 1867709705}
 --- !u!114 &6349473873355835591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1126,7 +1176,8 @@ MonoBehaviour:
   team: 0
   spawnPoint: {fileID: 2015096598}
   maxHealth: 100
-  structureCollider: {fileID: 0}
+  structureCollider: {fileID: 3982713233936371126}
+  battleArea: {fileID: 1867709705}
 --- !u!114 &8615642909568846136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1139,6 +1190,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8449d8670a0c4764fab29bafa6de7947, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZombieSpawner
+  battleArea: {fileID: 1867709705}
   zombieKey: Zombie
   spawnPoint: {fileID: 2015096598}
   baseSpawnTime: 10
@@ -1168,6 +1220,7 @@ SceneRoots:
   - {fileID: 581138785}
   - {fileID: 1448034533}
   - {fileID: 1818751326}
+  - {fileID: 1867709706}
   - {fileID: 1977440663}
   - {fileID: 6349473873355835589}
   - {fileID: 5979130013593512176}

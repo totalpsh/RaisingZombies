@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9782c1e9602dd064f924f5a13e1069c8, type: 3}
-  m_Name: Human
+  m_Name: HumanHeavy
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  id: 101
-  displayName: "\uC778\uAC04"
+  id: 103
+  displayName: "\uD0F1\uCEE4"
   team: 1
-  maxHealth: 2000
+  maxHealth: 30
   healthRegen: 0
-  attackPower: 100
-  attackInterval: 1
-  attackRange: 3
-  moveSpeed: 1
+  attackPower: 15
+  attackInterval: 0.5
+  attackRange: 0.3
+  moveSpeed: 0.65

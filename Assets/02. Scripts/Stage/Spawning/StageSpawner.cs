@@ -4,14 +4,21 @@ using UnityEngine;
 
 public class StageSpawner : MonoBehaviour
 {
+    [SerializeField] private BattleArea battleArea;
     [SerializeField] private Transform stageOrigin;
     private List<StructureController> _spawnedDefenses = new();
     public List<StructureController> SpawnedDefenses => _spawnedDefenses;
     
-    public IReadOnlyList<StructureController> Spawn(StageRuntimeData stageData)
+    public List<StructureController> Spawn(StageRuntimeData stageData)
     {
         Clear();
 
+        if (battleArea == null)
+        {
+            Debug.LogError("[StageSpawner] BattleArea가 없습니다.");
+            return _spawnedDefenses;
+        }
+        
         if (stageData == null)
         {
             Debug.LogError("[StageSpawner] StageRuntimeData가 null입니다.");
@@ -35,8 +42,7 @@ public class StageSpawner : MonoBehaviour
         return _spawnedDefenses;
     }
 
-    private void SpawnDefense(
-        StageDefenseData defenseData)
+    private void SpawnDefense(StageDefenseData defenseData)
     {
         if (defenseData == null)
             return;
@@ -53,14 +59,9 @@ public class StageSpawner : MonoBehaviour
             stageOrigin.position
             + defenseData.SpawnOffset;
 
-        StructureController defense =
-            Instantiate(
-                defenseData.Prefab,
-                position,
-                stageOrigin.rotation);
+        StructureController defense = Instantiate(defenseData.Prefab, position, stageOrigin.rotation);
 
-        defense.Initialize(
-            defenseData.HealthMultiplier);
+        defense.Initialize(battleArea, defenseData.HealthMultiplier);
 
         _spawnedDefenses.Add(defense);
     }

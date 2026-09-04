@@ -160,7 +160,8 @@ MonoBehaviour:
   team: 1
   spawnPoint: {fileID: 0}
   maxHealth: 100
-  structureCollider: {fileID: 0}
+  structureCollider: {fileID: 9085656931097890658}
+  battleArea: {fileID: 0}
 --- !u!114 &2620048407187324355
 MonoBehaviour:
   m_ObjectHideFlags: 0

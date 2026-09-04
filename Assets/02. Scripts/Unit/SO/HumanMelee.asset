@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9782c1e9602dd064f924f5a13e1069c8, type: 3}
-  m_Name: RangedHuman
+  m_Name: HumanMelee
   m_EditorClassIdentifier: Assembly-CSharp::UnitData
-  id: 102
-  displayName: "\uC6D0\uAC70\uB9AC \uC778\uAC04"
+  id: 101
+  displayName: "\uC778\uAC04"
   team: 1
   maxHealth: 10
   healthRegen: 0
   attackPower: 10
-  attackInterval: 0.7
-  attackRange: 2
+  attackInterval: 1
+  attackRange: 0.3
   moveSpeed: 1

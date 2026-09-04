@@ -9,10 +9,12 @@ public class StageCatalogData : ScriptableObject
     [SerializeField] private StageProgressionData progression;
     [SerializeField] private List<StageTemplateData> templates;
     [SerializeField] private List<StageData> manualStages;
+    [SerializeField] private List<StageRuleData> rules = new();
 
     public StageProgressionData Progression => progression;
     public List<StageTemplateData> Templates => templates;
     public List<StageData> ManualStages => manualStages;
+    public List<StageRuleData> Rules => rules;
 
     public bool TryGetManualStage(int stageNumber, out StageData stageData)
     {

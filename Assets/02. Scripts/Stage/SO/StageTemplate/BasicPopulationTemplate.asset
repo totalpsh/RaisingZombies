@@ -19,12 +19,34 @@ MonoBehaviour:
   defenses: []
   humanDeployment:
     populationData:
-    - humanKey: Human
-      initialCount: 3
-      targetCount: 3
+    - humanKey: Human_Melee
+      initialCount: 15
+      targetCount: 15
       replenishCount: 1
       replenishInterval: 5
       spawnOffset: {x: 0, y: 0, z: 0}
-      spawnSpacing: 1
-    repeatRules: []
+      spawnSpacing: 0
+    - humanKey: Human_Ranged
+      initialCount: 5
+      targetCount: 5
+      replenishCount: 1
+      replenishInterval: 5
+      spawnOffset: {x: 0, y: 0, z: 0}
+      spawnSpacing: 0
+    - humanKey: Human_Heavy
+      initialCount: 5
+      targetCount: 5
+      replenishCount: 1
+      replenishInterval: 5
+      spawnOffset: {x: 0, y: 0, z: 0}
+      spawnSpacing: 0
+    repeatRules:
+    - startDelay: 0
+      repeatInterval: 3
+      repeatCount: 0
+      formation:
+      - humanKey: Human_Melee
+        count: 5
+        spawnOffset: {x: 0, y: 0, z: 0}
+        spawnSpacing: 0
     timedWaves: []

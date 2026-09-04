@@ -45,8 +45,7 @@ public class StageGenerator
 
         int additionalPopulation = progression != null ? progression.GetAdditionalPopulation(stageNumber) : 0;
 
-        StageHumanDeploymentData deployment = 
-            stageData.HumanDeployment != null ? stageData.HumanDeployment.CreateScaled(additionalPopulation) : new StageHumanDeploymentData();
+        StageHumanDeploymentData deployment = stageData.HumanDeployment != null ? stageData.HumanDeployment.CreateScaled(additionalPopulation) : new StageHumanDeploymentData();
 
         return new StageRuntimeData(
             stageNumber,
@@ -72,13 +71,16 @@ public class StageGenerator
             $"자동 템플릿 사용: {selectedTemplate.TemplateId}");
         
         StageDifficultyData difficulty = CreateDifficulty(stageNumber);
-
         StageHumanDeploymentData deployment = CreateHumanDeployment(selectedTemplate, stageNumber);
+        
+        List<StageDefenseData> defenses = selectedTemplate.Defenses != null ? new List<StageDefenseData>(selectedTemplate.Defenses) : new List<StageDefenseData>();
+        
+        ApplyRules(stageNumber, deployment, defenses);
 
         return new StageRuntimeData(
             stageNumber,
             difficulty,
-            selectedTemplate.Defenses,
+            defenses,
             deployment);
     }
 
@@ -138,5 +140,22 @@ public class StageGenerator
         int additionalPopulation = progression.GetAdditionalPopulation(stageNumber);
 
         return template.HumanDeployment.CreateScaled(additionalPopulation);
+    }
+    
+    private void ApplyRules(int stage, StageHumanDeploymentData deployment, List<StageDefenseData> defenses)
+    {
+        if (_catalog.Rules == null)
+            return;
+
+        foreach (StageRuleData rule in _catalog.Rules)
+        {
+            if (rule == null || !rule.Matches(stage))
+                continue;
+
+            deployment?.Merge(rule.Human);
+
+            if (rule.Defenses != null)
+                defenses.AddRange(rule.Defenses);
+        }
     }
 }

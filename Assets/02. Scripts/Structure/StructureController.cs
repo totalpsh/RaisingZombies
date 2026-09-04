@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public enum StructureType
 {
@@ -16,6 +17,7 @@ public class StructureController : MonoBehaviour, ICombatTarget
     [SerializeField, Min(1f)] private float maxHealth = 100f;
     [SerializeField] private Collider2D structureCollider;
 
+    [SerializeField] private BattleArea battleArea;
     public Collider2D TargetCollider => structureCollider;
     private float _runtimeMaxHealth;
     private float _currentHealth;
@@ -32,7 +34,7 @@ public class StructureController : MonoBehaviour, ICombatTarget
 
     public event Action<StructureController> Destroyed;
 
-    public void Initialize(float healthMultiplier = 1f)
+    public void Initialize(BattleArea battleArea, float healthMultiplier = 1f)
     {
         _runtimeMaxHealth = maxHealth * Mathf.Max(0.01f, healthMultiplier);
         _currentHealth = _runtimeMaxHealth;
@@ -43,6 +45,9 @@ public class StructureController : MonoBehaviour, ICombatTarget
         
         if (structureCollider != null)
             structureCollider.enabled = true;
+        
+        this.battleArea = battleArea;
+        this.battleArea.RegisterStructure(this);
         
         enabled = true;
     }
@@ -71,5 +76,10 @@ public class StructureController : MonoBehaviour, ICombatTarget
         gameObject.SetActive(false);
         
         Destroyed?.Invoke(this);
+    }
+
+    private void OnDisable()
+    {
+        battleArea?.UnregisterStructure(this);
     }
 }
