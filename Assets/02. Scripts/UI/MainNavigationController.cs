@@ -29,6 +29,10 @@ public sealed class MainNavigationController : MonoBehaviour
     [SerializeField] private Button[] tabButtons; // Info부터 Shop까지 순서대로 연결된 버튼 목록
     [SerializeField] private GameObject[] selectedObjects; // 선택된 탭에서만 켜질 버튼별 Focus 오브젝트
 
+    [Header("ContentBox 상점 이동 버튼")]
+    [SerializeField] private Button contentGemBoxButton; // ContentBox의 Button_GemBox 상점 이동 버튼
+    [SerializeField] private Button contentAddButton; // ContentBox의 Button_Add 상점 이동 버튼
+
     private MainUITab currentTab; // 현재 선택된 메인 UI 탭
     private bool isInitialized; // 중복 초기화 방지 상태
     private bool listenersRegistered; // 버튼 Listener 중복 등록 방지 상태
@@ -100,7 +104,7 @@ public sealed class MainNavigationController : MonoBehaviour
     {
         if (topUIController == null || contentRoot == null || infoRoot == null || upgradeRoot == null || battleRoot == null ||
             challengeRoot == null || shopRoot == null || tabButtons == null || tabButtons.Length != 5 ||
-            selectedObjects == null || selectedObjects.Length != 5)
+            selectedObjects == null || selectedObjects.Length != 5 || contentGemBoxButton == null || contentAddButton == null)
         {
             return false;
         }
@@ -137,6 +141,8 @@ public sealed class MainNavigationController : MonoBehaviour
         AddButtonListener(tabButtons[2], ShowBattleTab);
         AddButtonListener(tabButtons[3], ShowChallengeTab);
         AddButtonListener(tabButtons[4], ShowShopTab);
+        AddButtonListener(contentGemBoxButton, ShowShopTab);
+        AddButtonListener(contentAddButton, ShowShopTab);
         listenersRegistered = true;
     }
 
@@ -153,6 +159,8 @@ public sealed class MainNavigationController : MonoBehaviour
         RemoveButtonListener(tabButtons[2], ShowBattleTab);
         RemoveButtonListener(tabButtons[3], ShowChallengeTab);
         RemoveButtonListener(tabButtons[4], ShowShopTab);
+        RemoveButtonListener(contentGemBoxButton, ShowShopTab);
+        RemoveButtonListener(contentAddButton, ShowShopTab);
         listenersRegistered = false;
     }
 

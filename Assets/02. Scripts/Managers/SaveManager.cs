@@ -20,6 +20,7 @@ public sealed class SaveManager : Singleton<SaveManager>
 
     public event Action SaveLoaded; // 전체 로드와 Provider 복원 완료 이벤트
     public event Action SaveReset; // 전체 초기화 완료 이벤트
+    public string CurrentSaveId => _saveData == null ? string.Empty : _saveData.saveId; // 고객지원과 프로필 식별에 사용할 실제 저장 ID
 
     // 씬 배치 여부와 관계없이 SaveManager 인스턴스를 보장합니다.
     public static SaveManager EnsureInstance()

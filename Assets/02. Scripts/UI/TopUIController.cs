@@ -23,12 +23,14 @@ public sealed class TopUIController : MonoBehaviour
 
     [Header("설정")]
     [SerializeField] private Button settingsButton; // 설정 Placeholder를 여는 버튼
-    [SerializeField] private GameObject settingsRoot; // 실제 설정 UI가 생길 때 교체할 Placeholder Root
+    [SerializeField] private GameObject settingsRoot; // 실제 Settings Prefab을 포함하는 전체 화면 Root
+    [SerializeField] private SettingsController settingsController; // Settings 닫기 요청과 열기 시 갱신을 담당하는 Controller
 
     private UpgradeManager upgradeManager; // 실제 재화 원본과 변경 이벤트를 제공하는 기존 매니저
     private CombatPowerSnapshot currentCombatPower; // 가장 최근 실제 최종 스탯으로 계산한 전투력 결과
     private bool settingsListenerRegistered; // 설정 버튼 Listener 중복 등록 방지 상태
     private bool combatInfoListenerRegistered; // 전투력 정보 버튼 Listener 중복 등록 방지 상태
+    private bool settingsCloseEventRegistered; // Settings 닫기 이벤트 중복 구독 방지 상태
 
     // 기존 UpgradeManager를 재화와 전투력 표시 원본으로 연결합니다.
     public void Initialize(UpgradeManager manager)
@@ -61,6 +63,7 @@ public sealed class TopUIController : MonoBehaviour
     private void OnEnable()
     {
         RegisterSettingsListener();
+        RegisterSettingsCloseEvent();
         RegisterCombatInfoListener();
         SubscribeUpgradeEvents();
         EnsureNicknamePlaceholder();
@@ -72,6 +75,7 @@ public sealed class TopUIController : MonoBehaviour
     private void OnDisable()
     {
         UnregisterSettingsListener();
+        UnregisterSettingsCloseEvent();
         UnregisterCombatInfoListener();
         UnsubscribeUpgradeEvents();
     }
@@ -192,13 +196,35 @@ public sealed class TopUIController : MonoBehaviour
         settingsListenerRegistered = false;
     }
 
-    // 기존 설정 UI가 없으므로 Placeholder Root의 표시 상태를 전환합니다.
+    // Settings Root의 표시 상태를 전환하고 열릴 때 실제 설정값을 다시 표시합니다.
     private void HandleSettingsClicked()
     {
-        if (settingsRoot != null)
-        {
-            settingsRoot.SetActive(!settingsRoot.activeSelf);
-        }
+        if (settingsRoot == null) return;
+        bool open = !settingsRoot.activeSelf; // 버튼 입력 후 적용할 Settings 표시 상태
+        settingsRoot.SetActive(open);
+        if (open && settingsController != null) settingsController.RefreshUI();
+    }
+
+    // Settings 내부 X 버튼 요청으로 부모 Root만 닫아 현재 메인 탭을 유지합니다.
+    private void HandleSettingsCloseRequested()
+    {
+        SetActive(settingsRoot, false);
+    }
+
+    // Settings Controller의 닫기 요청 이벤트를 한 번만 구독합니다.
+    private void RegisterSettingsCloseEvent()
+    {
+        if (settingsCloseEventRegistered || settingsController == null) return;
+        settingsController.CloseRequested += HandleSettingsCloseRequested;
+        settingsCloseEventRegistered = true;
+    }
+
+    // Settings Controller의 닫기 요청 이벤트 구독을 해제합니다.
+    private void UnregisterSettingsCloseEvent()
+    {
+        if (!settingsCloseEventRegistered || settingsController == null) return;
+        settingsController.CloseRequested -= HandleSettingsCloseRequested;
+        settingsCloseEventRegistered = false;
     }
 
     // 오브젝트가 존재할 때 활성 상태를 변경합니다.

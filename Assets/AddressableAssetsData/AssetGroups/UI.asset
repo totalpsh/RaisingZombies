@@ -20,13 +20,33 @@ MonoBehaviour:
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0ad2f0271fbb4c8ba5ad3ad3caf46e92
+    m_Address: MainNavigationController
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 369c360843e088a4ba97215497b8bf82
     m_Address: LoadingUI
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 52bc45cd2091f6546adda6e66f0d8f03
+    m_Address: Settings
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 833776623152e1d419838efc2fe9d2d4
+    m_Address: SettingsConfirmationPopup
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 83fb69d66b86e014684fc3a1daed1cbc
     m_Address: StageFadeUI
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8d03fc430fc553e4b85c2375c3555db0
+    m_Address: SettingsLanguagePopup
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -42,11 +62,6 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: d7bb7a49f82ece6478d128ea9e98257a
     m_Address: EventSystem
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 0ad2f0271fbb4c8ba5ad3ad3caf46e92
-    m_Address: MainNavigationController
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
