@@ -133,3 +133,39 @@ MonoBehaviour:
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
     popupImage: {fileID: 0}
     unlockReward: 2
+  infiniteRules:
+  - type: 1
+    baseTarget: 5
+    targetIncreasePerCycle: 2
+    targetUpgrade: 0
+    targetStat: 0
+    productionUpgradeIndex: 0
+    descriptionFormat: "스테이지 {0} 클리어"
+    popupImage: {fileID: 0}
+  - type: 0
+    baseTarget: 15
+    targetIncreasePerCycle: 10
+    targetUpgrade: 0
+    targetStat: 0
+    productionUpgradeIndex: 0
+    descriptionFormat: "스탯 가챠 누적 {0}회 진행"
+    popupImage: {fileID: 0}
+  - type: 2
+    baseTarget: 30
+    targetIncreasePerCycle: 25
+    targetUpgrade: 0
+    targetStat: 0
+    productionUpgradeIndex: 0
+    descriptionFormat: "적 누적 {0}명 처치"
+    popupImage: {fileID: 0}
+  - type: 3
+    baseTarget: 10
+    targetIncreasePerCycle: 5
+    targetUpgrade: 0
+    targetStat: 0
+    productionUpgradeIndex: 0
+    descriptionFormat: "초당 재화 Lv.{0} 달성"
+    popupImage: {fileID: 0}
+  infiniteBaseReward: 50
+  rewardIncreasePerCycle: 5
+  infiniteRewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}

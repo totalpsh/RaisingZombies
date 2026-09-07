@@ -15,11 +15,6 @@ MonoBehaviour:
   m_GroupName: UI
   m_GUID: 7e470fa8ecc752d4c98155246a32b177
   m_SerializeEntries:
-  - m_GUID: af0011223344556677889900aabbcc07
-    m_Address: QuestPopup
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 08aaf67c9947c204fa8fe0ba1cf52e83
     m_Address: ModalPanel
     m_ReadOnly: 0
@@ -27,6 +22,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0ad2f0271fbb4c8ba5ad3ad3caf46e92
     m_Address: MainNavigationController
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 1f335d896a8d1654bb83435d085d528a
+    m_Address: QuestListPopup
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
@@ -57,6 +57,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 97dde6cf8debf5546b9aca8faede41cc
     m_Address: Canvas
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af0011223344556677889900aabbcc07
+    m_Address: QuestPopup
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

@@ -7,52 +7,56 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-// 기존 Editor 스모크 패턴으로 사용자 저장과 분리한 실제 퀘스트 연결을 검증합니다.
+// 기존 Editor 스모크 패턴으로 수동 수령, 무한 생성, 저장과 50행 재사용을 검증합니다.
 public static class QuestSmokeTestTool
 {
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic; // 테스트에서만 접근할 원본 필드 범위
+    private const string NavigationPath = "Assets/03. Prefabs/UI/Common/MainNavigationController.prefab"; // 실제 메인 QuestBox 프리팹
+    private const string MenuPath = "Assets/03. Prefabs/UI/Upgrade/UpgradeMenuController.prefab"; // 실제 강화 메뉴 프리팹
+    private const string DetailPath = "Assets/03. Prefabs/UI/Common/QuestPopup.prefab"; // 실제 상세 팝업 프리팹
+    private const string ListPath = "Assets/03. Prefabs/UI/Common/QuestListPopup.prefab"; // 실제 목록 팝업 프리팹
+    private const string RowPath = "Assets/03. Prefabs/UI/Common/QuestListRowView.prefab"; // 실제 재사용 행 프리팹
 
-    // 임시 저장과 미리보기 씬에서 신규 진행, 복원, 보상, 해금, UI를 검사합니다.
+    // 사용자 저장과 분리된 미리보기 씬에서 퀘스트의 주요 요구사항을 검사합니다.
     [MenuItem("Tools/Raising Zombies/Quest/Run Quest Smoke Test")]
     public static void Run()
     {
         Check(!EditorApplication.isPlayingOrWillChangePlaymode, "플레이 종료 후 실행하세요.");
         string directory = Path.Combine(Path.GetTempPath(), "RaisingZombiesQuestSmoke_" + Guid.NewGuid().ToString("N")); // 이번 검증 전용 저장 위치
-        SaveFileService files = new(directory); // 실제 사용자 파일과 격리된 저장 서비스
+        SaveFileService files = new(directory); // 사용자 저장과 격리한 파일 서비스
         Scene preview = EditorSceneManager.NewPreviewScene(); // 게임 씬을 변경하지 않는 검증 씬
         object oldSave = SingletonField<SaveManager>().GetValue(null); // 기존 저장 싱글턴
         object oldUpgrade = SingletonField<UpgradeManager>().GetValue(null); // 기존 강화 싱글턴
         object oldQuest = SingletonField<QuestManager>().GetValue(null); // 기존 퀘스트 싱글턴
         object oldUI = SingletonField<UIManager>().GetValue(null); // 기존 UI 싱글턴
-        QuestSettings settings = null; // 이미지 변경 검증용 메모리 복제본
-        GameObject navigation = null; // 기존 퀘스트 표시 프리팹 미리보기
-        GameObject menuRoot = null; // 기존 강화 메뉴 미리보기
-        GameObject popupRoot = null; // 새 안내 팝업 미리보기
-        UnitData humanData = null; // 사망 이벤트 검사용 인간 데이터
-        UnitData zombieData = null; // 비인간 사망 제외 검사용 데이터
-        Action<UnitController> deathListener = null; // 테스트 마지막에 반드시 제거할 구독
+        QuestSettings settings = null; // 원본 에셋을 바꾸지 않는 밸런스 복제본
+        UnitData humanData = null; // 실제 인간 사망 검증용 데이터
+        UnitData zombieData = null; // 좀비 사망 제외 검증용 데이터
+        Action<UnitController> deathListener = null; // 테스트 전용 전역 사망 구독
+        List<GameObject> instances = new(); // 미리보기 씬에 만든 프리팹 인스턴스
         try
         {
             SaveManager save = Create<SaveManager>(preview); // 격리된 통합 저장 매니저
             Set(save, "_fileService", files);
             Set(save, "_saveData", GameSaveData.CreateNew());
             SingletonField<SaveManager>().SetValue(null, save);
-            UpgradeManager upgrade = Create<UpgradeManager>(preview); // 기존 계산과 저장 API를 그대로 실행할 원본
+
+            UpgradeManager upgrade = Create<UpgradeManager>(preview); // 실제 뽑기·재화·강화 원본
             SingletonField<UpgradeManager>().SetValue(null, upgrade);
             Set(upgrade, "balanceSettings", AssetDatabase.LoadAssetAtPath<UpgradeBalanceSettings>("Assets/02. Scripts/Upgrade/UpgradeBalanceSettings_Default.asset"));
             Set(upgrade, "currencyUpgradeBalance", AssetDatabase.LoadAssetAtPath<CurrencyUpgradeBalanceSettings>("Assets/02. Scripts/Upgrade/CurrencyUpgradeBalanceSettings_Default.asset"));
-            StageManager stage = Create<StageManager>(preview); // 전투 시작 없이 실제 Stage 저장 API를 검증할 원본
-            QuestManager quests = Create<QuestManager>(preview); // 자동 부트스트랩을 실행하지 않는 퀘스트 매니저
+            StageManager stage = Create<StageManager>(preview); // 실제 Stage 진행 원본
+            QuestManager quests = Create<QuestManager>(preview); // 자동 부트스트랩 없이 연결할 퀘스트 매니저
             SingletonField<QuestManager>().SetValue(null, quests);
             settings = UnityEngine.Object.Instantiate(Resources.Load<QuestSettings>("QuestSettings_Default"));
-            Check(settings != null && settings.TryValidate(out _), "퀘스트 데이터 검증 실패");
+            Check(settings != null && settings.TryValidate(out _), "퀘스트 밸런스 검증 실패");
             Set(quests, "settings", settings);
             Set(quests, "_save", save);
-            Check(save.RegisterProvider(quests) && save.RegisterProvider(upgrade) && save.RegisterProvider(stage), "기존 Provider 등록 실패");
+            Check(save.RegisterProvider(upgrade) && save.RegisterProvider(stage) && save.RegisterProvider(quests), "기존 Save Provider 등록 실패");
             Set(quests, "_ready", true);
             Call(quests, "BindUpgrade", upgrade);
             Call(quests, "BindStage", stage);
@@ -60,137 +64,208 @@ public static class QuestSmokeTestTool
             save.SaveReset += quests.RefreshProgress;
             deathListener = (Action<UnitController>)Delegate.CreateDelegate(typeof(Action<UnitController>), quests, typeof(QuestManager).GetMethod("HandleUnitDied", Private));
             UnitController.AnyDied += deathListener;
-            Check(quests.CurrentQuestIndex == 0 && !quests.CurrencyUpgradeUnlocked && !quests.ProductionUpgradeUnlocked, "신규 게임 기본 상태 오류");
+            Check(quests.CurrentQuestIndex == 0 && quests.CurrentStatus == QuestStatus.InProgress, "신규 Quest 상태 오류");
+            Check(!quests.CurrencyUpgradeUnlocked && !quests.ProductionUpgradeUnlocked, "신규 Unlock 기본값 오류");
 
-            menuRoot = PrefabUtility.LoadPrefabContents("Assets/03. Prefabs/UI/Upgrade/UpgradeMenuController.prefab");
-            UpgradeMenuController menu = menuRoot.GetComponent<UpgradeMenuController>(); // 실제 카테고리 버튼과 진입 API
+            UpgradeMenuController menu = InstantiatePrefab<UpgradeMenuController>(MenuPath, preview, instances); // 실제 카테고리 잠금 표시
             Call(menu, "OnEnable");
             menu.ShowCurrencyUpgrade();
-            Check(menu.CurrentState == UpgradeMenuState.CategorySelection && !Get<Button>(menu, "currencyUpgradeButton").interactable, "재화 잠금 우회");
+            Check(menu.CurrentState == UpgradeMenuState.CategorySelection && !Get<Button>(menu, "currencyUpgradeButton").interactable, "재화 강화 초기 잠금 우회");
             menu.ShowProductionUpgrade();
-            Check(menu.CurrentState == UpgradeMenuState.CategorySelection && !Get<Button>(menu, "productionUpgradeButton").interactable, "생산 잠금 우회");
-            menu.ShowStatUpgrade();
-            Check(menu.CurrentState == UpgradeMenuState.StatUpgrade, "초기 스탯 접근 실패");
+            Check(menu.CurrentState == UpgradeMenuState.CategorySelection && !Get<Button>(menu, "productionUpgradeButton").interactable, "생산 강화 초기 잠금 우회");
 
-            navigation = PrefabUtility.LoadPrefabContents("Assets/03. Prefabs/UI/Common/MainNavigationController.prefab");
-            QuestController view = navigation.GetComponentInChildren<QuestController>(true); // 사용자가 만든 QuestBox
-            Check(view != null, "기존 QuestBox 누락");
+            QuestController view = InstantiatePrefab<QuestController>(NavigationPath, preview, instances, true); // 사용자가 만든 실제 QuestBox
             Call(view, "OnEnable");
-            Check(Get<TMP_Text>(view, "questLevelText").text == "0 / 3", "신규 UI 진행도 오류");
-            Check(Get<TMP_Text>(view, "questInfoText").text == settings.quests[0].description && Get<TMP_Text>(view, "questRewardText").text == "100", "내용/보상 수량 오류");
-            Check(Get<Image>(view, "questRewardImage").sprite == settings.quests[0].rewardIcon, "보상 Icon 연결 오류");
-            Check(view.GetComponentInChildren<Graphic>(true) != null, "QuestBox 클릭 Graphic 누락");
+            Check(Get<TMP_Text>(view, "questLevelText").text == "0 / 3", "메인 Quest 초기 진행도 오류");
+            Check(Get<TMP_Text>(view, "questRewardText").text == "100", "메인 Quest 보상 표시 오류");
 
-            Check(upgrade.TryDrawOne(out _), "단일 가챠 실패");
-            Check(upgrade.TotalDrawCount == 1 && Get<TMP_Text>(view, "questLevelText").text == "1 / 3", "실제 1회 반영 실패");
-            int afterFirst = upgrade.Currency; // 첫 뽑기 후 보상 전 재화
-            int nextCost = upgrade.GetDrawCostForCount(2); // 남은 두 번의 실제 비용
-            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "Q1 목표 뽑기 실패");
-            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterFirst - nextCost + 100, "Q1 이동/보상 오류");
+            int beforeDraw = upgrade.Currency; // 조건 달성 전 재화
+            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "Q1 실제 뽑기 실패");
+            int afterCondition = upgrade.Currency; // 자동 보상 여부를 판정할 조건 달성 직후 재화
+            Check(afterCondition < beforeDraw && quests.CurrentQuestIndex == 0, "조건 달성만으로 Q1이 이동함");
+            Check(quests.CurrentStatus == QuestStatus.Claimable && Get<TMP_Text>(view, "questLevelText").text == "3 / 3", "Q1 Claimable 표시 오류");
+            Check(!quests.CurrencyUpgradeUnlocked, "Claim 전 재화 강화가 해금됨");
+            view.HandleQuestClick();
+            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterCondition + 100, "메인 UI 수동 Claim 오류");
+            Check(!quests.TryClaimCurrentQuest() && upgrade.Currency == afterCondition + 100, "Q1 더블 클릭 중복 보상");
+            Check(quests.GetQuestStatus(0) == QuestStatus.Claimed, "지나간 Q1 Claimed 판정 오류");
+
             stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 2 });
-            Check(quests.CurrentQuestIndex == 2, "StageChanged로 클리어 반영 실패");
+            CheckClaimableWithoutAdvance(quests, 1, "Q2 Stage");
+            ClaimAndCheck(quests, upgrade, 2, 100, "Q2 Stage");
 
             humanData = ScriptableObject.CreateInstance<UnitData>();
             zombieData = ScriptableObject.CreateInstance<UnitData>();
             SetTeam(humanData, UnitTeam.Human);
             SetTeam(zombieData, UnitTeam.Zombie);
-            UnitController human = Create<UnitController>(preview); // 실제 Die 함수의 중복 방지 검사 대상
-            UnitAnimation animation = human.gameObject.AddComponent<UnitAnimation>(); // 풀 반환 콜백은 테스트에서 차단할 애니메이션
+            UnitController unit = Create<UnitController>(preview); // 실제 Die 중복 방지 경로를 실행할 대상
+            UnitAnimation animation = unit.gameObject.AddComponent<UnitAnimation>();
             Set(animation, "_isDead", true);
-            Set(human, "anim", animation);
-            Set(human, "data", humanData);
-            Call(human, "OnDisable");
-            Call(human, "Die");
-            Check(quests.EnemyKillCount == 0, "Despawn이 Kill로 계산됨");
-            for (int i = 0; i < 3; i++) // 서로 다른 생명 주기의 실제 사망 세 건
-            {
-                Set(human, "_isInitialized", true);
-                Call(human, "Die");
-                Call(human, "Die");
-            }
-            Check(quests.EnemyKillCount == 3 && quests.CurrentQuestIndex == 3, "실제 사망/중복 방지 오류");
-            Set(human, "data", zombieData);
-            Set(human, "_isInitialized", true);
-            Call(human, "Die");
+            Set(unit, "anim", animation);
+            Set(unit, "data", humanData);
+            Call(unit, "OnDisable");
+            Call(unit, "Die");
+            Check(quests.EnemyKillCount == 0, "Despawn을 Kill로 집계함");
+            Kill(unit, 3);
+            Check(quests.EnemyKillCount == 3, "인간 실제 사망 누적 오류");
+            CheckClaimableWithoutAdvance(quests, 2, "Q3 Kill");
+            ClaimAndCheck(quests, upgrade, 3, 100, "Q3 Kill");
+            Set(unit, "data", zombieData);
+            Kill(unit, 1);
             Check(quests.EnemyKillCount == 3, "좀비 사망을 적 처치로 집계함");
-            Set(human, "data", humanData);
-            Check(upgrade.TryDrawFive(out IReadOnlyList<GachaDrawResult> batch), "현재 연속 뽑기 실패");
-            Check(upgrade.TotalDrawCount == 3 + batch.Count && batch.Count == 5, "버튼 횟수와 실제 뽑기 수 혼동");
-            Check(quests.CurrentQuestIndex == 4 && quests.CurrencyUpgradeUnlocked && !quests.ProductionUpgradeUnlocked, "Q4 해금 실패");
-            Check(Get<Button>(menu, "currencyUpgradeButton").interactable, "즉시 버튼 해금 실패");
-            menu.ShowCurrencyUpgrade();
-            Check(menu.CurrentState == UpgradeMenuState.CurrencyUpgrade, "해금 후 재화 진입 실패");
-            for (int i = 0; i < 3; i++) Check(upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond), "재화 레벨 구매 실패"); // 실제 레벨 목표 달성
-            Check(quests.CurrentQuestIndex == 5, "강화 레벨 이벤트 반영 실패");
-            stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 3 });
-            for (int i = 3; i < 10; i++) { Set(human, "_isInitialized", true); Call(human, "Die"); } // 누적 처치 목표
-            Check(quests.CurrentQuestIndex == 7, "Q6/Q7 진행 오류");
-            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "누적 10회 도달 실패");
-            Check(upgrade.TotalDrawCount == 10 && quests.CurrentQuestIndex == 8, "실제 누적 10회 반영 실패");
-            Check(upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond) && upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond), "Lv.5 도달 실패");
-            stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 4 });
-            Check(quests.CurrentQuest == null && quests.ProductionUpgradeUnlocked, "Q10 완료/해금 실패");
-            menu.ShowProductionUpgrade();
-            Check(menu.CurrentState == UpgradeMenuState.ProductionUpgrade, "생산 화면 접근 실패");
-            int beforeRefresh = upgrade.Currency; // 중복 이벤트 이전 지급 완료 재화
-            quests.RefreshProgress(); quests.RefreshProgress();
-            Check(upgrade.Currency == beforeRefresh, "같은 완료 보상 중복 지급");
-            Check(save.SaveGame() && save.LoadGame(), "통합 파일 저장/복원 실패");
-            Check(quests.CurrentQuestIndex == 10 && quests.CurrencyUpgradeUnlocked && quests.ProductionUpgradeUnlocked && quests.EnemyKillCount == 10 && upgrade.TotalDrawCount == 10, "저장된 진행/해금 유실");
-            Check(((QuestState)quests.CaptureSaveData()).rewardedQuestIds.Count == 10, "완료 ID 중복 저장");
-            quests.ResetSaveData(); // 기존 진행도가 이미 충분한 저장의 연쇄 완료 검사
-            Set(quests, "_state", new QuestState { enemyKillCount = 10 });
-            quests.RefreshProgress();
-            Check(quests.CurrentQuestIndex == 10, "이미 달성한 Stage/Level 조건 인식 실패");
-            Check(save.LoadGame() && ((QuestState)quests.CaptureSaveData()).rewardedQuestIds.Count == 10, "로드 중 중간 데이터로 중복 완료됨");
-            Check(save.ResetSave() && quests.CurrentQuestIndex == 0 && !quests.CurrencyUpgradeUnlocked && upgrade.TotalDrawCount == 0, "전체 Reset 기본값 오류");
-            Check(!Get<Button>(menu, "currencyUpgradeButton").interactable, "Reset 잠금 갱신 실패");
+            Set(unit, "data", humanData);
 
-            UIManager ui = Create<UIManager>(preview); // Addressables 대신 기존 팝업 풀을 주입할 UIManager
+            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "Q4 누적 6회 뽑기 실패");
+            CheckClaimableWithoutAdvance(quests, 3, "Q4 Unlock");
+            Check(!quests.CurrencyUpgradeUnlocked && !Get<Button>(menu, "currencyUpgradeButton").interactable, "Q4 Claim 전 재화 강화 해제");
+            ClaimAndCheck(quests, upgrade, 4, 100, "Q4 Unlock");
+            Check(quests.CurrencyUpgradeUnlocked && Get<Button>(menu, "currencyUpgradeButton").interactable, "Q4 Claim 후 재화 강화 미해금");
+
+            for (int index = 0; index < 3; index++) Check(upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond), "Q5 재화 강화 실패");
+            Check(quests.GetRelatedProgressText(quests.CurrentQuest).Contains("현재 효과"), "재화 강화 상세 실제 효과 누락");
+            ClaimAndCheck(quests, upgrade, 5, 100, "Q5 Currency Upgrade");
+            stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 3 });
+            ClaimAndCheck(quests, upgrade, 6, 100, "Q6 Stage");
+            Kill(unit, 7);
+            ClaimAndCheck(quests, upgrade, 7, 100, "Q7 Kill");
+            for (int index = 0; index < 4; index++) Check(upgrade.TryDrawOne(out _), "Q8 누적 10회 뽑기 실패");
+            Check(upgrade.TotalDrawCount == 10, "실제 뽑기 누적 원본 오류");
+            ClaimAndCheck(quests, upgrade, 8, 100, "Q8 Gacha");
+            for (int index = 0; index < 2; index++) Check(upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond), "Q9 재화 강화 실패");
+            ClaimAndCheck(quests, upgrade, 9, 100, "Q9 Currency Upgrade");
+            stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 4 });
+            CheckClaimableWithoutAdvance(quests, 9, "Q10 Production Unlock");
+            Check(!quests.ProductionUpgradeUnlocked && !Get<Button>(menu, "productionUpgradeButton").interactable, "Q10 Claim 전 생산 강화 해제");
+            ClaimAndCheck(quests, upgrade, 10, 100, "Q10 Production Unlock");
+            Check(quests.ProductionUpgradeUnlocked && quests.CurrentQuest != null, "Q10 Claim 후 생산 해금 또는 Q11 생성 실패");
+            Check(Get<Button>(menu, "productionUpgradeButton").interactable, "Q10 Claim 후 생산 버튼 잠금 잔류");
+
+            stage.RestoreSaveData(new StageProgressState { version = 2, currentStageNumber = 6 });
+            Check(quests.CurrentStatus == QuestStatus.Claimable, "Q11 반복 Stage 판정 실패");
+            int claimableIndex = quests.CurrentQuestIndex; // 저장 후에도 유지돼야 할 수령 대기 인덱스
+            int claimableCurrency = upgrade.Currency; // 수령 전 그대로 유지돼야 할 재화
+            Check(save.SaveGame(), "Claimable 저장 실패");
+            quests.RestoreSaveData(new QuestState());
+            Check(save.LoadGame(), "Claimable 저장 로드 실패");
+            Check(quests.CurrentQuestIndex == claimableIndex && quests.CurrentStatus == QuestStatus.Claimable && upgrade.Currency == claimableCurrency, "Claimable 저장 복원 오류");
+            ClaimAndCheck(quests, upgrade, 11, settings.infiniteBaseReward, "Q11 Infinite Stage");
+
+            UpgradeState gachaState = (UpgradeState)upgrade.CaptureSaveData(); // Q12 실제 누적 뽑기 원본 갱신용 DTO
+            gachaState.totalDrawCount = 15;
+            gachaState.totalDrawCountInitialized = true;
+            upgrade.RestoreSaveData(gachaState);
+            ClaimAndCheck(quests, upgrade, 12, settings.infiniteBaseReward, "Q12 Infinite Gacha");
+            quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 12, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true, enemyKillCount = 30 });
+            ClaimAndCheck(quests, upgrade, 13, settings.infiniteBaseReward, "Q13 Infinite Kill");
+            UpgradeState currencyState = (UpgradeState)upgrade.CaptureSaveData(); // Q14 실제 재화 강화 레벨 원본 갱신용 DTO
+            currencyState.currencyPerSecondLevel = 10;
+            upgrade.RestoreSaveData(currencyState);
+            ClaimAndCheck(quests, upgrade, 14, settings.infiniteBaseReward, "Q14 Infinite Currency");
+
+            QuestDefinition generatedA = settings.GetQuest(999); // 결정성 비교 첫 결과
+            QuestDefinition generatedB = settings.GetQuest(999); // 결정성 비교 두 번째 결과
+            Check(generatedA != null && generatedB != null && generatedA.type == generatedB.type && generatedA.target == generatedB.target && generatedA.rewardAmount == generatedB.rewardAmount && generatedA.description == generatedB.description, "Quest 1000 결정적 생성 실패");
+            Check(settings.GetQuest(49) != null && settings.GetQuest(50) != null && settings.GetQuest(99) != null && settings.GetQuest(100) != null, "Quest 50/51/100/101 생성 실패");
+            int oldBaseTarget = settings.infiniteRules[0].baseTarget; // 오버플로 테스트 후 복원할 설정
+            int oldTargetGrowth = settings.infiniteRules[0].targetIncreasePerCycle; // 오버플로 테스트 후 복원할 증가량
+            int oldReward = settings.infiniteBaseReward; // 오버플로 테스트 후 복원할 보상
+            int oldRewardGrowth = settings.rewardIncreasePerCycle; // 오버플로 테스트 후 복원할 보상 증가량
+            settings.infiniteRules[0].baseTarget = int.MaxValue;
+            settings.infiniteRules[0].targetIncreasePerCycle = int.MaxValue;
+            settings.infiniteBaseReward = int.MaxValue;
+            settings.rewardIncreasePerCycle = int.MaxValue;
+            QuestDefinition overflow = settings.GetQuest(int.MaxValue); // 최대 인덱스의 안전한 목표와 보상
+            Check(overflow != null && overflow.target > 0 && overflow.rewardAmount == int.MaxValue, "높은 Quest Index 오버플로 보호 실패");
+            settings.infiniteRules[0].baseTarget = oldBaseTarget;
+            settings.infiniteRules[0].targetIncreasePerCycle = oldTargetGrowth;
+            settings.infiniteBaseReward = oldReward;
+            settings.rewardIncreasePerCycle = oldRewardGrowth;
+
+            InfiniteQuestRule sourceRule = settings.infiniteRules[0]; // 실제 생산 원본 연결 API 검증에 잠시 사용할 규칙
+            QuestType oldRuleType = sourceRule.type; // 검증 후 복원할 조건 종류
+            int oldRuleTarget = sourceRule.baseTarget; // 검증 후 복원할 목표
+            sourceRule.type = QuestType.ProductionUpgradeLevel;
+            sourceRule.baseTarget = 5;
+            FakeProductionSource production = new(5); // 프로젝트 생산 시스템이 구현할 인터페이스 대역
+            quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 10, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true });
+            quests.RegisterProductionProgressSource(production);
+            Check(quests.CurrentStatus == QuestStatus.Claimable && quests.GetRelatedProgressText(quests.CurrentQuest).Contains("Lv.5"), "생산 강화 원본 연결 API 실패");
+            quests.UnregisterProductionProgressSource(production);
+            Check(quests.CurrentStatus == QuestStatus.InProgress, "생산 강화 원본 해제 실패");
+            sourceRule.type = oldRuleType;
+            sourceRule.baseTarget = oldRuleTarget;
+
+            ValidatePrefabReferences();
+            UIManager ui = Create<UIManager>(preview); // 기존 Popup 풀을 직접 사용하는 UIManager
             SingletonField<UIManager>().SetValue(null, ui);
             Set(ui, "_isInitialized", true);
-            GameObject layer = new("QuestSmokePopupLayer", typeof(RectTransform)); // 별도 Canvas 없는 기존 레이어 대역
+            GameObject layer = new("QuestSmokePopupLayer", typeof(RectTransform)); // 기존 PopUp Canvas의 Transform 대역
+            layer.SetActive(true);
             SceneManager.MoveGameObjectToScene(layer, preview);
             Get<Dictionary<UILayer, Transform>>(ui, "_layers")[UILayer.PopUp] = layer.transform;
-            popupRoot = PrefabUtility.LoadPrefabContents("Assets/03. Prefabs/UI/Common/QuestPopup.prefab");
-            SceneManager.MoveGameObjectToScene(layer, popupRoot.scene); // 같은 미리보기 씬 안에서만 팝업 부모를 변경
-            QuestPopup popup = popupRoot.GetComponent<QuestPopup>(); // 실제 이미지와 닫기 버튼을 연결한 프리팹
-            Get<Dictionary<string, Stack<BaseUI>>>(ui, "_pooledUI")[nameof(QuestPopup)] = new Stack<BaseUI>(new BaseUI[] { popup });
-            settings.quests[0].popupImage = settings.quests[0].rewardIcon;
-            Call(popup, "OnEnable");
-            var firstOpen = QuestPopup.ShowAsync(); // 첫 UIManager 열기
-            var secondOpen = QuestPopup.ShowAsync(); // 연속 클릭의 재사용 확인
-            Check(firstOpen.IsCompleted && secondOpen.IsCompleted && firstOpen.Result == secondOpen.Result, "팝업 중복 생성");
+            QuestPopup detail = InstantiatePrefab<QuestPopup>(DetailPath, preview, instances); // 풀에서 꺼낼 상세 인스턴스
+            QuestListPopup list = InstantiatePrefab<QuestListPopup>(ListPath, preview, instances); // 풀에서 꺼낼 목록 인스턴스
+            detail.gameObject.SetActive(false);
+            list.gameObject.SetActive(false);
+            Get<Dictionary<string, Stack<BaseUI>>>(ui, "_pooledUI")[nameof(QuestPopup)] = new Stack<BaseUI>(new BaseUI[] { detail });
+            Get<Dictionary<string, Stack<BaseUI>>>(ui, "_pooledUI")[nameof(QuestListPopup)] = new Stack<BaseUI>(new BaseUI[] { list });
+
+            quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 999, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true, enemyKillCount = 100000 });
+            Call(list, "OnEnable"); // EditMode에서는 활성 전환 생명주기를 직접 재현
+            var firstList = QuestListPopup.ShowAsync(); // 첫 목록 생성 요청
+            var secondList = QuestListPopup.ShowAsync(); // 연속 목록 요청
+            Check(firstList.IsCompleted && secondList.IsCompleted && firstList.Result == secondList.Result, "Quest List Popup 중복 생성");
+            Check(list.CurrentPage == 19 && list.CreatedRowCount == 50, $"Quest 1000 현재 Page 또는 50행 제한 오류: Page={list.CurrentPage}, Rows={list.CreatedRowCount}");
+            List<QuestListRowView> rows = Get<List<QuestListRowView>>(list, "_rows"); // 페이지 이동 전 재사용 대상
+            QuestListRowView firstRow = rows[0]; // 같은 인스턴스 유지 확인 대상
+            list.ShowPreviousPage();
+            Check(list.CurrentPage == 18 && list.CreatedRowCount == 50 && ReferenceEquals(firstRow, rows[0]), "Page 이동 행 재사용 실패");
+            quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 63, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true });
+            list.ShowCurrentQuestPage();
+            Check(list.CurrentPage == 1 && list.CreatedRowCount == 50 && CountActive(rows) == 14, "Quest 63 Page 2 실제 표시 개수 오류");
+            list.ShowPreviousPage();
+            Check(list.CurrentPage == 0 && list.CreatedRowCount == 50 && CountActive(rows) == 50, "이전 Page 이동 오류");
+            list.ShowNextPage();
+            Check(list.CurrentPage == 1 && ReferenceEquals(firstRow, rows[0]), "다음 Page 이동 재사용 실패");
+
+            Call(detail, "OnEnable"); // EditMode에서는 활성 전환 생명주기를 직접 재현
+            var firstDetail = QuestPopup.ShowAsync(0); // Claimed 퀘스트 상세 열기
+            var secondDetail = QuestPopup.ShowAsync(0); // 연속 상세 요청
+            Check(firstDetail.IsCompleted && secondDetail.IsCompleted && firstDetail.Result == secondDetail.Result, "Quest Detail Popup 중복 생성");
+            Check(Get<TMP_Text>(detail, "statusText").text == "수령 완료", "Claimed 상세 상태 표시 오류");
+            Check(Get<TMP_Text>(detail, "progressText").text.Length > 0 && !Get<Button>(detail, "claimButton").gameObject.activeSelf, "Claimed 상세 Progress 또는 버튼 오류");
+            ui.CloseUI(detail);
+            UpgradeState inProgressState = (UpgradeState)upgrade.CaptureSaveData(); // Q1을 진행 중으로 되돌릴 실제 뽑기 원본
+            inProgressState.totalDrawCount = 0;
+            inProgressState.totalDrawCountInitialized = true;
+            upgrade.RestoreSaveData(inProgressState);
+            quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 0 });
             ExecuteEvents.Execute(view.gameObject, new PointerEventData(null) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
-            Check(ui.GetUI<QuestPopup>() == popup, "QuestBox 실제 포인터 이벤트 연결 실패");
-            Check(Get<Image>(popup, "questImage").sprite == settings.quests[0].popupImage, "퀘스트별 팝업 이미지 오류");
-            settings.quests[0].popupImage = null;
-            popup.RefreshImage();
-            Check(!Get<Image>(popup, "questImage").enabled, "null 팝업 이미지 오류");
-            Get<Button>(popup, "closeButton").onClick.Invoke();
-            Check(ui.GetUI<QuestPopup>() == null && !popup.gameObject.activeSelf, "닫기/풀 반환 오류");
-            popup.transform.SetParent(null); // 미리보기 프리팹 언로드 전 루트 관계 복원
-            Call(view, "OnDisable"); Call(view, "OnEnable"); Call(view, "OnEnable");
-            Check(Get<TMP_Text>(view, "questLevelText").text == "0 / 3", "UI 재진입 표시 오류");
-            int viewListeners = 0; // 중복 생명주기 호출 후 해당 UI의 구독 개수
-            foreach (Delegate listener in Get<Delegate>(quests, "Changed").GetInvocationList()) // 연결된 목표 표시 Listener
-                if (ReferenceEquals(listener.Target, view)) viewListeners++;
-            Check(viewListeners == 1, "Quest UI 중복 이벤트 구독");
-            settings.quests[0].rewardIcon = null;
-            view.Refresh();
-            Check(!Get<Image>(view, "questRewardImage").enabled, "null 보상 Icon 잔류");
-            upgrade.RestoreSaveData(JsonUtility.FromJson<UpgradeState>("{\"version\":2,\"currency\":1000,\"gachaLevel\":2,\"drawsAtCurrentLevel\":4}"));
-            long legacyDraws = upgrade.BalanceSettings.GetGachaLevel(1).drawsToNextLevel + 4L; // 기존 진행도에서 확실하게 복원할 횟수
-            Check(upgrade.TotalDrawCount == legacyDraws, "구버전 누적 뽑기 복원 오류");
-            Check(save.SaveGame() && save.LoadGame() && upgrade.TotalDrawCount == legacyDraws, "누적 뽑기 이전 중복 적용");
-            Debug.Log("[QuestSmokeTest] PASS: 신규/누적/실제 사망과 Despawn 구분/중복 사망/1회 및 실제 5회 뽑기/누적 10회/Stage·레벨 원본/자동 보상/10개 진행/해금·진입 차단/통합 저장·Load·Reset/UI·Icon·Popup·닫기·재사용.");
+            Check(ui.GetUI<QuestPopup>() == detail && Get<TMP_Text>(detail, "statusText").text == "진행 중", "InProgress 메인 클릭 상세 Popup 오류");
+            ui.CloseUI(detail);
+
+            Call(view, "OnDisable");
+            Call(view, "OnEnable");
+            Call(view, "OnEnable");
+            Check(CountListeners(quests, "Changed", view) == 1, "QuestBox 이벤트 중복 구독");
+            Call(list, "OnDisable");
+            Call(list, "OnEnable");
+            Call(list, "OnEnable");
+            Check(CountListeners(quests, "Changed", list) == 1, "Quest List 이벤트 중복 구독");
+            Call(detail, "OnDisable");
+            Call(detail, "OnEnable");
+            Call(detail, "OnEnable");
+            Check(CountListeners(quests, "Changed", detail) == 1, "Quest Detail 이벤트 중복 구독");
+
+            quests.RestoreSaveData(JsonUtility.FromJson<QuestState>("{\"version\":1,\"currentQuestIndex\":7,\"currencyUpgradeUnlocked\":true,\"enemyKillCount\":22}"));
+            QuestState migrated = (QuestState)quests.CaptureSaveData(); // 구버전에서 보존된 최소 상태
+            Check(migrated.version == 2 && migrated.currentQuestIndex == 7 && migrated.currencyUpgradeUnlocked && migrated.enemyKillCount == 22, "Quest Save v1 마이그레이션 실패");
+            Check(save.SaveGame() && save.LoadGame(), "최종 Quest 통합 저장·로드 실패");
+            Debug.Log("[QuestSmokeTest] PASS: 수동 Claim/중복 방지/Claim 전 Index·Unlock 유지/Q1~Q14/Stage·Gacha·Kill·Currency·Production 원본/무한 결정 생성/고인덱스 오버플로/Claimable 저장/상세·목록 Popup 중복 방지/50행 제한/페이지 이동·재사용/이벤트 중복 방지를 검증했습니다.");
         }
         finally
         {
             if (deathListener != null) UnitController.AnyDied -= deathListener;
-            if (popupRoot != null) PrefabUtility.UnloadPrefabContents(popupRoot);
-            if (navigation != null) PrefabUtility.UnloadPrefabContents(navigation);
-            if (menuRoot != null) PrefabUtility.UnloadPrefabContents(menuRoot);
             EditorSceneManager.ClosePreviewScene(preview);
             SingletonField<SaveManager>().SetValue(null, oldSave);
             SingletonField<UpgradeManager>().SetValue(null, oldUpgrade);
@@ -202,6 +277,87 @@ public static class QuestSmokeTestTool
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
         }
+    }
+
+    // 현재 목표가 이동하지 않은 Claimable 상태인지 확인합니다.
+    private static void CheckClaimableWithoutAdvance(QuestManager quests, int expectedIndex, string label)
+    {
+        Check(quests.CurrentQuestIndex == expectedIndex && quests.CurrentStatus == QuestStatus.Claimable, label + " Claim 전 상태 오류");
+    }
+
+    // 중앙 Claim API가 보상을 한 번만 지급하고 지정 인덱스로 이동하는지 확인합니다.
+    private static void ClaimAndCheck(QuestManager quests, UpgradeManager upgrade, int expectedIndex, int reward, string label)
+    {
+        int before = upgrade.Currency; // 이번 Claim 직전 재화
+        Check(quests.CurrentStatus == QuestStatus.Claimable, label + " Claimable 아님");
+        Check(quests.TryClaimCurrentQuest(), label + " Claim 실패");
+        Check(quests.CurrentQuestIndex == expectedIndex && upgrade.Currency == Math.Min(int.MaxValue, (long)before + reward), label + " Index 또는 Reward 오류");
+        int after = upgrade.Currency; // 첫 Claim 완료 재화
+        Check(!quests.TryClaimCurrentQuest() && upgrade.Currency == after, label + " 중복 Claim 허용");
+    }
+
+    // UnitController의 실제 사망 생명주기를 지정 횟수만큼 발생시킵니다.
+    private static void Kill(UnitController unit, int count)
+    {
+        for (int index = 0; index < count; index++)
+        {
+            Set(unit, "_isInitialized", true);
+            Call(unit, "Die");
+            Call(unit, "Die");
+        }
+    }
+
+    // Quest 전용 세 프리팹의 필수 컴포넌트와 Inspector 참조를 검사합니다.
+    private static void ValidatePrefabReferences()
+    {
+        GameObject detailRoot = PrefabUtility.LoadPrefabContents(DetailPath); // 상세 프리팹 내용
+        GameObject listRoot = PrefabUtility.LoadPrefabContents(ListPath); // 목록 프리팹 내용
+        GameObject rowRoot = PrefabUtility.LoadPrefabContents(RowPath); // 행 프리팹 내용
+        try
+        {
+            QuestPopup detail = detailRoot.GetComponent<QuestPopup>();
+            QuestListPopup list = listRoot.GetComponent<QuestListPopup>();
+            QuestListRowView row = rowRoot.GetComponent<QuestListRowView>();
+            Check(detail != null && Get<TMP_Text>(detail, "questDescriptionText") != null && Get<Button>(detail, "claimButton") != null && Get<Button>(detail, "closeButton") != null, "Quest Detail 프리팹 참조 누락");
+            Check(list != null && Get<Transform>(list, "rowsRoot") != null && Get<QuestListRowView>(list, "rowPrefab") != null && Get<Button>(list, "previousButton") != null && Get<Button>(list, "nextButton") != null, "Quest List 프리팹 참조 누락");
+            Check(row != null && Get<Button>(row, "rowButton") != null && Get<TMP_Text>(row, "progressText") != null, "Quest Row 프리팹 참조 누락");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(detailRoot);
+            PrefabUtility.UnloadPrefabContents(listRoot);
+            PrefabUtility.UnloadPrefabContents(rowRoot);
+        }
+    }
+
+    // 페이지에 현재 활성화된 재사용 행 수를 셉니다.
+    private static int CountActive(List<QuestListRowView> rows)
+    {
+        int count = 0; // 활성 행 누적값
+        foreach (QuestListRowView row in rows) if (row.gameObject.activeSelf) count++;
+        return count;
+    }
+
+    // 특정 객체가 이벤트에 중복 없이 한 번만 연결됐는지 셉니다.
+    private static int CountListeners(object source, string eventField, object target)
+    {
+        Delegate listeners = Get<Delegate>(source, eventField); // 현재 이벤트 Delegate
+        if (listeners == null) return 0;
+        int count = 0; // 지정 객체의 구독 수
+        foreach (Delegate listener in listeners.GetInvocationList()) if (ReferenceEquals(listener.Target, target)) count++;
+        return count;
+    }
+
+    // 실제 프리팹 에셋을 미리보기 씬에 인스턴스화하고 원하는 컴포넌트를 찾습니다.
+    private static T InstantiatePrefab<T>(string path, Scene scene, List<GameObject> instances, bool includeChildren = false) where T : Component
+    {
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(path); // 인스턴스화할 실제 프리팹 에셋
+        Check(asset != null, path + " 프리팹 누락");
+        GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(asset, scene); // 원본을 변경하지 않는 미리보기 인스턴스
+        instances.Add(instance);
+        T component = includeChildren ? instance.GetComponentInChildren<T>(true) : instance.GetComponent<T>();
+        Check(component != null, path + " 컴포넌트 누락: " + typeof(T).Name);
+        return component;
     }
 
     // Awake와 게임 시작 로직을 실행하지 않는 테스트 컴포넌트를 만듭니다.
@@ -216,16 +372,16 @@ public static class QuestSmokeTestTool
     // 테스트 종료 시 복원할 기존 싱글턴 필드입니다.
     private static FieldInfo SingletonField<T>() where T : Singleton<T> { return typeof(Singleton<T>).GetField("_instance", BindingFlags.Static | BindingFlags.NonPublic); }
 
-    // 실제 컴포넌트의 private 저장/참조를 테스트에서만 설정합니다.
+    // 실제 컴포넌트의 private 저장값이나 참조를 테스트에서만 설정합니다.
     private static void Set(object target, string name, object value) { target.GetType().GetField(name, Private).SetValue(target, value); }
 
-    // 실제 Inspector 참조나 저장 원본을 검사합니다.
+    // 실제 Inspector 참조나 런타임 목록을 검사합니다.
     private static T Get<T>(object target, string name) { return (T)target.GetType().GetField(name, Private).GetValue(target); }
 
-    // 실제 이벤트 처리 경로와 생명주기 함수를 검증합니다.
+    // 실제 이벤트 처리 경로와 생명주기 함수를 실행합니다.
     private static void Call(object target, string name, params object[] args) { target.GetType().GetMethod(name, Private).Invoke(target, args); }
 
-    // 원본 UnitData 에셋을 변경하지 않고 팀을 설정합니다.
+    // 원본 UnitData 에셋을 변경하지 않고 테스트 메모리 데이터의 팀만 설정합니다.
     private static void SetTeam(UnitData data, UnitTeam team)
     {
         SerializedObject serialized = new(data); // 메모리 데이터 편집 객체
@@ -233,7 +389,19 @@ public static class QuestSmokeTestTool
         serialized.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    // 검증 실패 지점을 콘솔에서 확인 가능한 예외로 남깁니다.
+    // 검증 실패 지점을 Console 예외로 남깁니다.
     private static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException("[QuestSmokeTest] " + message); }
+
+    // 실제 생산 시스템이 구현할 진행 원본 계약의 테스트 대역입니다.
+    private sealed class FakeProductionSource : IProductionUpgradeProgressSource
+    {
+        private readonly int _level; // 테스트에서 반환할 생산 강화 레벨
+
+        // 지정 레벨을 반환하는 테스트 원본을 만듭니다.
+        public FakeProductionSource(int level) { _level = level; }
+
+        // 생산 강화 항목별 실제 레벨 조회 계약을 검증합니다.
+        public int GetProductionUpgradeLevel(int upgradeIndex) { return _level; }
+    }
 }
 #endif
