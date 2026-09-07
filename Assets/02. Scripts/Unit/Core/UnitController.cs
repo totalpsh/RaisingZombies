@@ -22,6 +22,9 @@ public class UnitController : MonoBehaviour, ICombatTarget
     private bool _isInitialized;
     private UnitModel model;
     private CombatTargetAssignment _assignment;
+    private RangedTargetResult _rangedTarget;
+    private RangedPlacementAssignment _rangedPlacement;
+    private RangedFormationSlots _rangedFormationSlots;
     private float _slowEndTime;
     private BattleArea _battleArea;
     
@@ -48,15 +51,22 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         if (anim.IsBusy)
         {
-            if (_assignment.IsAssigned &&
-                !IsValidTarget(_assignment.Target))
-            {
-                ClearAssignment();
-            }
-
+            ValidateBusyState();
             return;
         }
 
+        if (unitAction.CombatType ==
+            UnitCombatType.Ranged)
+        {
+            UpdateRangedAction();
+            return;
+        }
+
+        UpdateMeleeAction();
+    }
+
+    private void UpdateMeleeAction()
+    {
         CombatTargetingStatus targetingStatus =
             targeting.FindAssignment(out CombatTargetAssignment assignment);
 
@@ -70,7 +80,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     public void Initialize(UnitData data, UnitStats stats, BattleArea battleArea)
     {
-        ClearAssignment();
+        ClearCombatState();
         _battleArea?.UnregisterUnit(this);
         _isInitialized = false;
 
@@ -80,13 +90,20 @@ public class UnitController : MonoBehaviour, ICombatTarget
         this.data = data;
         model = new UnitModel(stats);
         _battleArea = battleArea;
+        battleArea.TryGetComponent(
+            out _rangedFormationSlots);
 
         _assignment = default;
+        _rangedTarget = default;
+        _rangedPlacement = default;
         _slowEndTime = 0f;
 
         combat.Initialize(this, unitAction, model, anim);
         movement.Initialize(this, anim, battleArea);
-        targeting.Initialize(this, battleArea);
+        targeting.Initialize(
+            this,
+            battleArea,
+            combat);
 
         healthBar.SetHealth(
             model.CurrentHealth,
@@ -174,6 +191,294 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _assignment = default;
     }
 
+    private void UpdateRangedAction()
+    {
+        StructureController defenseLine =
+            targeting.FindFriendlyDefenseLine();
+
+        if (defenseLine != null)
+        {
+            UpdateDefenseRangedAction(defenseLine);
+            return;
+        }
+
+        UpdateFormationRangedAction();
+    }
+
+    private void UpdateDefenseRangedAction(
+        StructureController defenseLine)
+    {
+        if (!defenseLine.TryGetComponent(
+                out DefenseSlots defenseSlots))
+        {
+            ClearRangedState();
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!TryAssignDefensePlacement(
+                defenseSlots))
+        {
+            _rangedTarget = default;
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!defenseSlots.TryGetPosition(
+                this,
+                out Vector3 slotPosition))
+        {
+            ClearRangedPlacement();
+            _rangedTarget = default;
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!movement.HasReached(slotPosition))
+        {
+            _rangedTarget = default;
+
+            movement.MoveTo(
+                slotPosition,
+                GetMoveSpeed());
+
+            return;
+        }
+
+        _rangedTarget =
+            targeting.FindRangedTarget();
+
+        if (!_rangedTarget.HasTarget)
+        {
+            anim.PlayIdle();
+            return;
+        }
+
+        combat.TryAttack(_rangedTarget.Target);
+    }
+
+    private void UpdateFormationRangedAction()
+    {
+        if (_rangedPlacement.Type ==
+            RangedPlacementType.Defense)
+        {
+            ClearRangedPlacement();
+        }
+
+        _rangedTarget =
+            targeting.FindRangedTarget();
+
+        if (!_rangedTarget.HasTarget)
+        {
+            ClearRangedPlacement();
+            movement.MoveForward(GetMoveSpeed());
+            return;
+        }
+
+        if (!TryGetFrontLineX(
+                out float frontLineX))
+        {
+            ClearRangedPlacement();
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!TryAssignFormationPlacement())
+        {
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!_rangedFormationSlots.TryGetPosition(
+                this,
+                frontLineX,
+                out Vector3 slotPosition))
+        {
+            ClearRangedPlacement();
+            anim.PlayIdle();
+            return;
+        }
+
+        if (!movement.HasReached(slotPosition))
+        {
+            movement.MoveTo(
+                slotPosition,
+                GetMoveSpeed());
+
+            return;
+        }
+
+        combat.TryAttack(_rangedTarget.Target);
+    }
+
+    private bool TryGetFrontLineX(
+        out float frontLineX)
+    {
+        frontLineX = 0f;
+
+        if (_battleArea == null)
+            return false;
+
+        if (!_battleArea.TryGetFrontUnitX(
+                UnitTeam.Zombie,
+                out float zombieFrontX))
+        {
+            return false;
+        }
+
+        if (!_battleArea.TryGetFrontUnitX(
+                UnitTeam.Human,
+                out float humanFrontX))
+        {
+            return false;
+        }
+
+        frontLineX =
+            (zombieFrontX + humanFrontX) * 0.5f;
+
+        return true;
+    }
+
+    private bool TryAssignDefensePlacement(
+        DefenseSlots slots)
+    {
+        if (_rangedPlacement.Type ==
+                RangedPlacementType.Defense &&
+            _rangedPlacement.DefenseSlots == slots)
+        {
+            if (!slots.TryReserve(
+                    this,
+                    out int currentSlotIndex))
+            {
+                ClearRangedPlacement();
+                return false;
+            }
+
+            _rangedPlacement =
+                RangedPlacementAssignment.CreateDefense(
+                    slots,
+                    currentSlotIndex);
+
+            return true;
+        }
+
+        ClearRangedPlacement();
+
+        if (!slots.TryReserve(
+                this,
+                out int slotIndex))
+        {
+            return false;
+        }
+
+        _rangedPlacement =
+            RangedPlacementAssignment.CreateDefense(
+                slots,
+                slotIndex);
+
+        return true;
+    }
+
+    private bool TryAssignFormationPlacement()
+    {
+        if (_rangedFormationSlots == null)
+            return false;
+
+        if (_rangedPlacement.Type ==
+                RangedPlacementType.Formation &&
+            _rangedPlacement.FormationSlots ==
+                _rangedFormationSlots)
+        {
+            if (!_rangedFormationSlots.TryReserve(
+                    this,
+                    out int currentSlotIndex))
+            {
+                ClearRangedPlacement();
+                return false;
+            }
+
+            _rangedPlacement =
+                RangedPlacementAssignment.CreateFormation(
+                    _rangedFormationSlots,
+                    currentSlotIndex);
+
+            return true;
+        }
+
+        ClearRangedPlacement();
+
+        if (!_rangedFormationSlots.TryReserve(
+                this,
+                out int slotIndex))
+        {
+            return false;
+        }
+
+        _rangedPlacement =
+            RangedPlacementAssignment.CreateFormation(
+                _rangedFormationSlots,
+                slotIndex);
+
+        return true;
+    }
+
+    private void ClearRangedPlacement()
+    {
+        switch (_rangedPlacement.Type)
+        {
+            case RangedPlacementType.Defense:
+                if (_rangedPlacement.DefenseSlots != null)
+                {
+                    _rangedPlacement.DefenseSlots
+                        .Release(this);
+                }
+                break;
+
+            case RangedPlacementType.Formation:
+                if (_rangedPlacement.FormationSlots != null)
+                {
+                    _rangedPlacement.FormationSlots
+                        .Release(this);
+                }
+                break;
+        }
+
+        _rangedPlacement = default;
+    }
+
+    private void ClearRangedState()
+    {
+        _rangedTarget = default;
+        ClearRangedPlacement();
+    }
+
+    private void ClearCombatState()
+    {
+        ClearAssignment();
+        ClearRangedState();
+    }
+
+    private void ValidateBusyState()
+    {
+        if (unitAction.CombatType ==
+            UnitCombatType.Ranged)
+        {
+            if (_rangedTarget.HasTarget &&
+                !IsValidTarget(_rangedTarget.Target))
+            {
+                _rangedTarget = default;
+            }
+
+            return;
+        }
+
+        if (_assignment.IsAssigned &&
+            !IsValidTarget(_assignment.Target))
+        {
+            ClearAssignment();
+        }
+    }
+
     private void UpdateAction(CombatTargetingStatus targetingStatus)
     {
         if (targetingStatus == CombatTargetingStatus.Blocked)
@@ -252,7 +557,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         
         _isInitialized = false;
         
-        ClearAssignment();
+        ClearCombatState();
         _battleArea?.UnregisterUnit(this);
         
         enabled = false;
@@ -282,9 +587,10 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
     private void OnDisable()
     {
-        ClearAssignment();
+        ClearCombatState();
         _battleArea?.UnregisterUnit(this);
         _battleArea = null;
+        _rangedFormationSlots = null;
         _isInitialized = false;
     }
 }

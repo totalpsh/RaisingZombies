@@ -67,6 +67,50 @@ public class BattleArea : MonoBehaviour
     {
         return team == UnitTeam.Zombie ? GetHumanStructureView() : GetZombieStructureView();
     }
+
+    public IReadOnlyList<StructureController> GetFriendlyStructures(
+        UnitTeam team)
+    {
+        return team == UnitTeam.Zombie
+            ? GetZombieStructureView()
+            : GetHumanStructureView();
+    }
+
+    public bool TryGetFrontUnitX(
+        UnitTeam team,
+        out float frontX)
+    {
+        frontX = 0f;
+
+        List<UnitController> units = GetUnits(team);
+        bool found = false;
+
+        foreach (UnitController unit in units)
+        {
+            if (unit == null ||
+                unit.IsDead ||
+                !unit.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            float unitX = unit.transform.position.x;
+
+            if (!found)
+            {
+                frontX = unitX;
+                found = true;
+                continue;
+            }
+
+            if (team == UnitTeam.Zombie)
+                frontX = Mathf.Max(frontX, unitX);
+            else
+                frontX = Mathf.Min(frontX, unitX);
+        }
+
+        return found;
+    }
     
     private List<UnitController> GetUnits(UnitTeam team)
     {

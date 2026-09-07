@@ -3,18 +3,24 @@ using UnityEngine;
 
 public class UnitTargeting : MonoBehaviour
 {
+    [SerializeField, Min(0f)]
+    private float frontLineTolerance = 0.5f;
+
     private readonly List<UnitController> _unitCandidates = new();
     private readonly List<StructureController> _structureCandidates = new();
 
     private UnitController _owner;
     private BattleArea _battleArea;
+    private UnitCombat _combat;
 
     public void Initialize(
         UnitController owner,
-        BattleArea battleArea)
+        BattleArea battleArea,
+        UnitCombat combat)
     {
         _owner = owner;
         _battleArea = battleArea;
+        _combat = combat;
 
         _unitCandidates.Clear();
         _structureCandidates.Clear();
@@ -41,6 +47,69 @@ public class UnitTargeting : MonoBehaviour
         return FindStructureAssignment(out assignment);
     }
 
+    public RangedTargetResult FindRangedTarget()
+    {
+        if (_owner == null ||
+            _battleArea == null ||
+            _combat == null)
+        {
+            return default;
+        }
+
+        IReadOnlyList<UnitController> enemies =
+            _battleArea.GetEnemyUnits(_owner.Team);
+
+        if (CollectRangedUnitCandidates(enemies))
+        {
+            UnitController unitTarget =
+                SelectFirstFrontLineCandidate();
+
+            if (unitTarget != null)
+            {
+                return new RangedTargetResult(
+                    unitTarget);
+            }
+        }
+
+        StructureController structureTarget =
+            FindRangedStructureTarget();
+
+        return structureTarget != null
+            ? new RangedTargetResult(structureTarget)
+            : default;
+    }
+
+    public StructureController FindFriendlyDefenseLine()
+    {
+        if (_owner == null || _battleArea == null)
+            return null;
+
+        IReadOnlyList<StructureController> structures =
+            _battleArea.GetFriendlyStructures(_owner.Team);
+
+        _structureCandidates.Clear();
+
+        foreach (StructureController structure in structures)
+        {
+            if (!IsValidStructure(structure))
+                continue;
+
+            if (structure.StructureType !=
+                StructureType.DefenseLine)
+            {
+                continue;
+            }
+
+            _structureCandidates.Add(structure);
+        }
+
+        _structureCandidates.Sort(CompareStructures);
+
+        return _structureCandidates.Count > 0
+            ? _structureCandidates[0]
+            : null;
+    }
+
     private bool CollectUnitCandidates(
         IReadOnlyList<UnitController> enemies)
     {
@@ -57,12 +126,37 @@ public class UnitTargeting : MonoBehaviour
             _unitCandidates.Add(enemy);
         }
 
-        _unitCandidates.Sort(CompareUnitCandidates);
+        _unitCandidates.Sort(CompareUnitCandidatesByX);
 
         return _unitCandidates.Count > 0;
     }
 
-    private int CompareUnitCandidates(
+    private bool CollectRangedUnitCandidates(
+        IReadOnlyList<UnitController> enemies)
+    {
+        _unitCandidates.Clear();
+
+        foreach (UnitController enemy in enemies)
+        {
+            if (!IsValidUnit(enemy))
+                continue;
+
+            if (GetForwardDistance(enemy) < 0f)
+                continue;
+
+            if (!_combat.IsInAttackRange(enemy))
+                continue;
+
+            _unitCandidates.Add(enemy);
+        }
+
+        _unitCandidates.Sort(
+            CompareUnitCandidatesByX);
+
+        return _unitCandidates.Count > 0;
+    }
+
+    private int CompareUnitCandidatesByX(
         UnitController first,
         UnitController second)
     {
@@ -71,20 +165,6 @@ public class UnitTargeting : MonoBehaviour
 
         if (xComparison != 0)
             return xComparison;
-
-        float firstYDistance = Mathf.Abs(
-            first.transform.position.y -
-            _owner.transform.position.y);
-
-        float secondYDistance = Mathf.Abs(
-            second.transform.position.y -
-            _owner.transform.position.y);
-
-        int yComparison =
-            firstYDistance.CompareTo(secondYDistance);
-
-        if (yComparison != 0)
-            return yComparison;
 
         return first.GetInstanceID()
             .CompareTo(second.GetInstanceID());
@@ -106,13 +186,115 @@ public class UnitTargeting : MonoBehaviour
     {
         assignment = default;
 
-        foreach (UnitController candidate in _unitCandidates)
+        int groupStart = 0;
+
+        while (groupStart < _unitCandidates.Count)
         {
-            if (TryReserve(candidate, out assignment))
-                return true;
+            float nearestX =
+                GetForwardDistance(_unitCandidates[groupStart]);
+
+            int groupEnd = groupStart + 1;
+
+            while (groupEnd < _unitCandidates.Count)
+            {
+                float candidateX =
+                    GetForwardDistance(_unitCandidates[groupEnd]);
+
+                if (candidateX >
+                    nearestX + frontLineTolerance)
+                {
+                    break;
+                }
+
+                groupEnd++;
+            }
+
+            SortFrontLineGroup(
+                groupStart,
+                groupEnd - groupStart);
+
+            for (int i = groupStart; i < groupEnd; i++)
+            {
+                if (TryReserve(
+                        _unitCandidates[i],
+                        out assignment))
+                {
+                    return true;
+                }
+            }
+
+            groupStart = groupEnd;
         }
 
         return false;
+    }
+
+    private void SortFrontLineGroup(
+        int index,
+        int count)
+    {
+        _unitCandidates.Sort(
+            index,
+            count,
+            Comparer<UnitController>.Create(
+                CompareWithinFrontLine));
+    }
+
+    private int CompareWithinFrontLine(
+        UnitController first,
+        UnitController second)
+    {
+        float firstYDistance = Mathf.Abs(
+            first.transform.position.y -
+            _owner.transform.position.y);
+
+        float secondYDistance = Mathf.Abs(
+            second.transform.position.y -
+            _owner.transform.position.y);
+
+        int yComparison =
+            firstYDistance.CompareTo(secondYDistance);
+
+        if (yComparison != 0)
+            return yComparison;
+
+        int xComparison = GetForwardDistance(first)
+            .CompareTo(GetForwardDistance(second));
+
+        if (xComparison != 0)
+            return xComparison;
+
+        return first.GetInstanceID()
+            .CompareTo(second.GetInstanceID());
+    }
+
+    private UnitController SelectFirstFrontLineCandidate()
+    {
+        if (_unitCandidates.Count == 0)
+            return null;
+
+        float nearestX =
+            GetForwardDistance(_unitCandidates[0]);
+
+        int groupEnd = 1;
+
+        while (groupEnd < _unitCandidates.Count)
+        {
+            float candidateX =
+                GetForwardDistance(_unitCandidates[groupEnd]);
+
+            if (candidateX >
+                nearestX + frontLineTolerance)
+            {
+                break;
+            }
+
+            groupEnd++;
+        }
+
+        SortFrontLineGroup(0, groupEnd);
+
+        return _unitCandidates[0];
     }
 
     private CombatTargetingStatus FindStructureAssignment(
@@ -143,6 +325,59 @@ public class UnitTargeting : MonoBehaviour
         return TryAssignStructure(out assignment)
             ? CombatTargetingStatus.Assigned
             : CombatTargetingStatus.Blocked;
+    }
+
+    private StructureController FindRangedStructureTarget()
+    {
+        IReadOnlyList<StructureController> structures =
+            _battleArea.GetEnemyStructures(_owner.Team);
+
+        StructureController defenseLine =
+            FindFirstRangedStructure(
+                structures,
+                StructureType.DefenseLine);
+
+        if (defenseLine != null)
+            return defenseLine;
+
+        StructureType baseType =
+            _owner.Team == UnitTeam.Zombie
+                ? StructureType.HumanFortress
+                : StructureType.ZombieCamp;
+
+        return FindFirstRangedStructure(
+            structures,
+            baseType);
+    }
+
+    private StructureController FindFirstRangedStructure(
+        IReadOnlyList<StructureController> structures,
+        StructureType type)
+    {
+        _structureCandidates.Clear();
+
+        foreach (StructureController structure in structures)
+        {
+            if (!IsValidStructure(structure))
+                continue;
+
+            if (structure.StructureType != type)
+                continue;
+
+            if (!IsAhead(structure))
+                continue;
+
+            if (!_combat.IsInAttackRange(structure))
+                continue;
+
+            _structureCandidates.Add(structure);
+        }
+
+        _structureCandidates.Sort(CompareStructures);
+
+        return _structureCandidates.Count > 0
+            ? _structureCandidates[0]
+            : null;
     }
 
     private bool CollectStructures(

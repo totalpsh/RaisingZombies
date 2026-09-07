@@ -1,13 +1,26 @@
 using UnityEngine;
 
+public enum UnitCombatType
+{
+    Melee,
+    Ranged
+}
+
 public abstract class UnitAction : MonoBehaviour
 {
-    public virtual bool CanTarget(UnitController owner, ICombatTarget target)
+    public abstract UnitCombatType CombatType { get; }
+
+    public virtual bool CanTarget(
+        UnitController owner,
+        ICombatTarget target)
     {
         return owner != null &&
                target != null &&
                target.Team != owner.Team;
     }
     
-    public abstract void Execute(UnitController owner, ICombatTarget target, float power);
+    public abstract void Execute(
+        UnitController owner,
+        ICombatTarget target,
+        float power);
 }
