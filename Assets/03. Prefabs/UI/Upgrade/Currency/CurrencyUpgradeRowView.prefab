@@ -1155,7 +1155,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07b44dffcbddd5a4a9a69b4e446babc4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CurrencyUpgradeRowView
-  iconImage: {fileID: 0}
+  iconImage: {fileID: 8017710786810528159}
   nameText: {fileID: 2125402735621852664}
   descriptionText: {fileID: 0}
   levelText: {fileID: 7908155694970427279}

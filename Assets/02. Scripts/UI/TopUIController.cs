@@ -14,6 +14,9 @@ public sealed class TopUIController : MonoBehaviour
     [Header("재화")]
     [SerializeField] private TMP_Text currencyText; // 현재 보유 재화를 표시하는 텍스트
 
+    [Header("스테이지")]
+    [SerializeField] private TMP_Text stageText; // 현재 진행 중인 스테이지 번호만 표시하는 텍스트
+
     [Header("전투력")]
     [SerializeField] private UnitData zombieData; // 실제 전투에서 사용하는 기본 좀비 Stat 원본
     [SerializeField] private CombatPowerBalanceSettings combatPowerBalance; // 전투력 환산 Weight와 기준값
@@ -27,6 +30,7 @@ public sealed class TopUIController : MonoBehaviour
     [SerializeField] private SettingsController settingsController; // Settings 닫기 요청과 열기 시 갱신을 담당하는 Controller
 
     private UpgradeManager upgradeManager; // 실제 재화 원본과 변경 이벤트를 제공하는 기존 매니저
+    private StageManager stageManager; // 현재 씬에서 실제 Stage 진행값을 제공하는 매니저
     private CombatPowerSnapshot currentCombatPower; // 가장 최근 실제 최종 스탯으로 계산한 전투력 결과
     private bool settingsListenerRegistered; // 설정 버튼 Listener 중복 등록 방지 상태
     private bool combatInfoListenerRegistered; // 전투력 정보 버튼 Listener 중복 등록 방지 상태
@@ -41,12 +45,14 @@ public sealed class TopUIController : MonoBehaviour
         if (isActiveAndEnabled)
         {
             SubscribeUpgradeEvents();
+            SubscribeStageEvents();
         }
 
         SetActive(settingsRoot, false);
         if (combatInfoPanel != null) combatInfoPanel.Hide();
         EnsureNicknamePlaceholder();
         RefreshCurrency();
+        RefreshStage();
         RefreshCombatPower();
     }
 
@@ -66,8 +72,10 @@ public sealed class TopUIController : MonoBehaviour
         RegisterSettingsCloseEvent();
         RegisterCombatInfoListener();
         SubscribeUpgradeEvents();
+        SubscribeStageEvents();
         EnsureNicknamePlaceholder();
         RefreshCurrency();
+        RefreshStage();
         RefreshCombatPower();
     }
 
@@ -78,6 +86,7 @@ public sealed class TopUIController : MonoBehaviour
         UnregisterSettingsCloseEvent();
         UnregisterCombatInfoListener();
         UnsubscribeUpgradeEvents();
+        UnsubscribeStageEvents();
     }
 
     // 닉네임 원본이 연결되지 않은 상태를 가짜 이름 없이 표시합니다.
@@ -104,6 +113,58 @@ public sealed class TopUIController : MonoBehaviour
     {
         RefreshCurrency();
         RefreshCombatPower();
+    }
+
+    // 현재 StageManager의 실제 진행 번호를 숫자로만 표시합니다.
+    private void RefreshStage()
+    {
+        if (stageText == null || stageManager == null) return;
+        stageText.text = stageManager.CurrentStageNumber.ToString(CultureInfo.InvariantCulture);
+    }
+
+    // Stage 변경 이벤트가 전달한 번호를 다른 문구 없이 표시합니다.
+    private void HandleStageChanged(int stageNumber)
+    {
+        if (stageText == null) return;
+        stageText.text = stageNumber.ToString(CultureInfo.InvariantCulture);
+    }
+
+    // 씬 전환으로 활성 StageManager가 바뀌면 새 원본에 다시 연결합니다.
+    private void HandleActiveStageManagerChanged(StageManager manager)
+    {
+        BindStageManager(manager);
+    }
+
+    // 활성 StageManager와 번호 변경 이벤트를 중복 없이 구독합니다.
+    private void SubscribeStageEvents()
+    {
+        StageManager.ActiveInstanceChanged -= HandleActiveStageManagerChanged;
+        StageManager.ActiveInstanceChanged += HandleActiveStageManagerChanged;
+        BindStageManager(StageManager.ActiveInstance);
+    }
+
+    // 활성 StageManager와 번호 변경 이벤트 구독을 해제합니다.
+    private void UnsubscribeStageEvents()
+    {
+        StageManager.ActiveInstanceChanged -= HandleActiveStageManagerChanged;
+        BindStageManager(null);
+    }
+
+    // Stage 번호 원본을 교체하고 현재 값을 즉시 갱신합니다.
+    private void BindStageManager(StageManager manager)
+    {
+        if (stageManager != null)
+            stageManager.StageChanged -= HandleStageChanged;
+
+        stageManager = manager;
+
+        if (stageManager != null)
+        {
+            stageManager.StageChanged -= HandleStageChanged;
+            stageManager.StageChanged += HandleStageChanged;
+        }
+
+        RefreshStage();
     }
 
     // 현재 실제 최종 좀비 스탯을 기준으로 전투력과 열린 정보 패널을 갱신합니다.
