@@ -19,32 +19,44 @@ MonoBehaviour:
   definitions:
   - type: 0
     id: currency_per_second
-    displayName: 초당 재화
-    description: 매초 획득하는 재화를 고정 수치만큼 증가시킵니다.
+    displayName: "\uCD08\uB2F9 \uC7AC\uD654"
+    description: "\uB9E4\uCD08 \uD68D\uB4DD\uD558\uB294 \uC7AC\uD654\uB97C \uACE0\uC815
+      \uC218\uCE58\uB9CC\uD07C \uC99D\uAC00\uC2DC\uD0B5\uB2C8\uB2E4."
+    icon: {fileID: 21300000, guid: 62b640019ee084344a0a666cd42293ec, type: 3}
+    unlimited: 1
     maxLevel: 20
     baseCost: 50
     costGrowth: 1.45
     valuePerLevel: 1
   - type: 1
     id: human_kill_bonus
-    displayName: 인간 처치 보너스
-    description: 인간을 처치할 때 추가 재화를 획득합니다.
+    displayName: "\uC778\uAC04 \uCC98\uCE58 \uBCF4\uB108\uC2A4"
+    description: "\uC778\uAC04\uC744 \uCC98\uCE58\uD560 \uB54C \uCD94\uAC00 \uC7AC\uD654\uB97C
+      \uD68D\uB4DD\uD569\uB2C8\uB2E4."
+    icon: {fileID: 21300000, guid: 8611ad32044154925b5d030e5c0b2b20, type: 3}
+    unlimited: 1
     maxLevel: 20
     baseCost: 80
     costGrowth: 1.5
     valuePerLevel: 1
   - type: 2
     id: offline_max_time
-    displayName: 오프라인 적립 시간
-    description: 오프라인 재화가 저장되는 최대 시간을 늘립니다.
+    displayName: "\uC624\uD504\uB77C\uC778 \uC801\uB9BD \uC2DC\uAC04"
+    description: "\uC624\uD504\uB77C\uC778 \uC7AC\uD654\uAC00 \uC800\uC7A5\uB418\uB294
+      \uCD5C\uB300 \uC2DC\uAC04\uC744 \uB298\uB9BD\uB2C8\uB2E4."
+    icon: {fileID: 21300000, guid: 7cfe25bdc440f4a0d9be54dfb72173bb, type: 3}
+    unlimited: 1
     maxLevel: 10
     baseCost: 200
     costGrowth: 1.7
     valuePerLevel: 1
   - type: 3
     id: offline_efficiency
-    displayName: 오프라인 적립 효율
-    description: 오프라인 시간에 적용되는 재화 생산 효율을 높입니다.
+    displayName: "\uC624\uD504\uB77C\uC778 \uC801\uB9BD \uD6A8\uC728"
+    description: "\uC624\uD504\uB77C\uC778 \uC2DC\uAC04\uC5D0 \uC801\uC6A9\uB418\uB294
+      \uC7AC\uD654 \uC0DD\uC0B0 \uD6A8\uC728\uC744 \uB192\uC785\uB2C8\uB2E4."
+    icon: {fileID: 21300000, guid: 47bcfc7120e404cfa946ce17c3c6fc00, type: 3}
+    unlimited: 1
     maxLevel: 5
     baseCost: 300
     costGrowth: 2
