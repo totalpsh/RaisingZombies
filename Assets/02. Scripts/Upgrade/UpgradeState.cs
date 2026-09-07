@@ -9,6 +9,8 @@ public sealed class UpgradeState
     public int currency;
     public int gachaLevel = 1;
     public int drawsAtCurrentLevel;
+    public long totalDrawCount; // 성공한 스탯 뽑기 실제 누적 횟수 원본
+    public bool totalDrawCountInitialized; // 구버전 진행도에서 누적 횟수를 한 번 복원했는지 여부
     public List<UpgradeStatValue> stats = new List<UpgradeStatValue>();
     public int currencyPerSecondLevel; // 초당 재화 강화 레벨
     public int humanKillBonusLevel; // 인간 처치 추가 재화 강화 레벨

@@ -4,6 +4,7 @@ using UnityEngine.Serialization;
 
 public class UnitController : MonoBehaviour, ICombatTarget
 {
+    public static event Action<UnitController> AnyDied; // 풀 반환과 구분해 실제 사망 한 건을 전역 관찰자에게 알림
     [SerializeField] private UnitAction unitAction;
     [FormerlySerializedAs("animation")] [SerializeField] private UnitAnimation anim;
     [SerializeField] private UnitTargeting targeting;
@@ -260,6 +261,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
         if (unitCollider != null)
             unitCollider.enabled = false;
         
+        AnyDied?.Invoke(this);
         Died?.Invoke(this);
         
         anim.PlayDie(ReleaseToPool);

@@ -22,6 +22,8 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     private int _lastResumeProcessFrame = -1; // 같은 Background 구간의 Resume 중복 처리를 막는 프레임
 
     public event Action stateChanged; // 저장 상태 변경 이벤트
+    public static event Action<UpgradeManager> AvailabilityChanged; // 저장 복원을 마친 강화 원본의 생성 및 제거 알림
+    public long TotalDrawCount => _state == null ? 0 : _state.totalDrawCount; // 퀘스트가 읽는 실제 누적 뽑기 횟수
     public event Action<IReadOnlyList<GachaDrawResult>> drawCompleted; // 가챠 완료 이벤트
     public event Action<OfflineCurrencyReward> offlineRewardGranted; // 오프라인 보상 실제 지급 이벤트
     public int Currency => _state == null ? 0 : _state.currency;
@@ -40,6 +42,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         if (currencyUpgradeBalance == null)
             Debug.LogError("[UpgradeManager] CurrencyUpgradeBalanceSettings 참조가 없습니다. 재화 생산과 오프라인 보상이 비활성화됩니다.", this);
         InitializeSaveProvider();
+        AvailabilityChanged?.Invoke(this);
     }
 
     // Time.timeScale 영향을 받는 초 단위 재화를 지급합니다.
@@ -338,6 +341,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         int amount = RollGachaAmount(levelDefinition); // 등급 확률로 결정한 실제 당첨 수치
         UpgradeStatValue value = GetValue(type); // 당첨 스탯 저장값
         value.accumulatedValue += amount;
+        if (_state.totalDrawCount < long.MaxValue) _state.totalDrawCount++; // 실제 성공한 1회 실행만 집계
         bool increased = AdvanceGachaLevel(); // 레벨 상승 여부
         return new GachaDrawResult(type, amount, value.accumulatedValue, increased, _state.gachaLevel);
     }
@@ -636,6 +640,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         _state.currency = Mathf.Max(0, _state.currency);
         _state.gachaLevel = Mathf.Clamp(_state.gachaLevel, 1, GetMaximumGachaLevel());
         _state.drawsAtCurrentLevel = Mathf.Max(0, _state.drawsAtCurrentLevel);
+        InitializeTotalDrawCount();
         GachaLevelDefinition currentGacha = balanceSettings == null ? null : balanceSettings.GetGachaLevel(_state.gachaLevel); // 진행도를 검증할 현재 가챠 정의
         if (currentGacha != null && currentGacha.drawsToNextLevel > 0)
             _state.drawsAtCurrentLevel = Mathf.Min(_state.drawsAtCurrentLevel, currentGacha.drawsToNextLevel - 1);
@@ -653,6 +658,18 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
             value.accumulatedValue = Mathf.Max(0, value.accumulatedValue);
             value.researchLevel = Mathf.Max(0, value.researchLevel);
         }
+    }
+
+    // 구버전은 현재 레벨까지 확실하게 수행한 횟수만 한 번 복원합니다.
+    private void InitializeTotalDrawCount()
+    {
+        _state.totalDrawCount = Math.Max(0L, _state.totalDrawCount);
+        if (_state.totalDrawCountInitialized || balanceSettings == null) return;
+        long knownDraws = _state.drawsAtCurrentLevel; // 현재 레벨 안에서 저장된 실제 진행도
+        foreach (GachaLevelDefinition level in balanceSettings.GachaLevels) // 이전 레벨을 통과하는 데 필요했던 뽑기 횟수
+            if (level != null && level.level < _state.gachaLevel) knownDraws += Math.Max(0, level.drawsToNextLevel);
+        _state.totalDrawCount = Math.Max(_state.totalDrawCount, knownDraws);
+        _state.totalDrawCountInitialized = true;
     }
 
     // Upgrade Provider 버전을 현재 내부 형식으로 올릴 수 있는지 확인합니다.
@@ -855,6 +872,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     // 파괴되는 인스턴스의 Provider 등록을 해제합니다.
     protected override void OnDestroy()
     {
+        if (HasInstance && Instance == this) AvailabilityChanged?.Invoke(null);
         if (SaveManager.HasInstance) SaveManager.Instance.UnregisterProvider(this);
         base.OnDestroy();
     }

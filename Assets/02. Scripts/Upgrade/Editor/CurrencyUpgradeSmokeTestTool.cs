@@ -31,6 +31,8 @@ public static class CurrencyUpgradeSmokeTestTool
         FieldInfo upgradeSingleton = GetSingletonField<UpgradeManager>(); // 테스트 동안 교체할 강화 싱글턴 필드
         object previousSave = saveSingleton.GetValue(null); // 테스트 전 저장 매니저 참조
         object previousUpgrade = upgradeSingleton.GetValue(null); // 테스트 전 강화 매니저 참조
+        FieldInfo questSingleton = GetSingletonField<QuestManager>(); // 재화 UI 회귀 검증용 해금 원본
+        object previousQuest = questSingleton.GetValue(null); // 테스트 전 퀘스트 매니저 보존
         Scene previewScene = EditorSceneManager.NewPreviewScene(); // 실제 씬을 오염시키지 않을 검증 씬
         CurrencyUpgradeBalanceSettings balance = null; // 원본 대신 수정할 메모리 밸런스 복제본
         GameObject menuRoot = null; // 실제 메뉴 프리팹의 미리보기 루트
@@ -60,6 +62,10 @@ public static class CurrencyUpgradeSmokeTestTool
             TestUnlimitedPurchases(manager, balance, saveManager);
             TestOfflineAndNumericSafety(manager, balance);
             TestSaveRoundTrip(manager, saveManager, service);
+            QuestManager quests = CreateInactiveComponent<QuestManager>(previewScene); // 해금 이후 재화 UI만 검증할 격리 원본
+            SetField(quests, "_state", new QuestState { currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true });
+            SetField(quests, "_ready", true);
+            questSingleton.SetValue(null, quests);
             menuRoot = PrefabUtility.LoadPrefabContents(MenuPath);
             TestMenuAndIcons(menuRoot, manager, balance);
             Assert(File.ReadAllText(BalancePath) == originalBalance, "기존 밸런스 에셋 변경");
@@ -77,6 +83,7 @@ public static class CurrencyUpgradeSmokeTestTool
             EditorSceneManager.ClosePreviewScene(previewScene);
             saveSingleton.SetValue(null, previousSave);
             upgradeSingleton.SetValue(null, previousUpgrade);
+            questSingleton.SetValue(null, previousQuest);
             if (balance != null) UnityEngine.Object.DestroyImmediate(balance);
             service.DeleteAll();
             if (Directory.Exists(testDirectory)) Directory.Delete(testDirectory, false);
@@ -233,6 +240,7 @@ public static class CurrencyUpgradeSmokeTestTool
         Assert(GetReference<CurrencyUpgradeRowView>(panel, "rowPrefab") == prefab, "공용 Row 참조 불일치");
         Assert(GetReference<Image>(prefab, "iconImage") != null, "공용 Row 아이콘 참조 누락");
         SetField(manager, "_state", new UpgradeState { currency = int.MaxValue, currencyPerSecondLevel = 100 });
+        InvokePrivate(menu, "OnEnable"); // 편집 모드에서도 실제 해금 원본을 연결한 뒤 진입
         menu.ShowCurrencyUpgrade();
         InvokePrivate(panel, "OnEnable");
         Assert(menu.CurrentState == UpgradeMenuState.CurrencyUpgrade && panel.gameObject.activeInHierarchy, "재화 강화 진입 실패");
@@ -254,6 +262,7 @@ public static class CurrencyUpgradeSmokeTestTool
             balance.GetDefinition(CurrencyUpgradeType.CurrencyPerSecond).icon = second;
             panel.Refresh();
             Assert(passiveIcon.sprite == second && killIcon.sprite == second, "단일 정의의 아이콘 갱신 실패");
+            balance.GetDefinition(CurrencyUpgradeType.OfflineMaxTime).icon = null; // 사용자가 지정한 원본 Icon과 무관하게 복제본에서만 null 조건 구성
             passiveRow.Bind(manager, CurrencyUpgradeType.OfflineMaxTime);
             Assert(passiveIcon.sprite == null && !passiveIcon.enabled, "Row 재사용 시 이전 Sprite 잔류");
             passiveRow.Bind(null, CurrencyUpgradeType.CurrencyPerSecond);
