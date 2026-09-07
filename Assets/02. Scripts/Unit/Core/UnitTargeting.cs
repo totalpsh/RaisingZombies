@@ -37,7 +37,12 @@ public class UnitTargeting : MonoBehaviour
         IReadOnlyList<UnitController> enemies =
             _battleArea.GetEnemyUnits(_owner.Team);
 
-        if (CollectUnitCandidates(enemies))
+        StructureController defenseLine =
+            FindEnemyDefenseLine();
+
+        if (CollectUnitCandidates(
+                enemies,
+                defenseLine))
         {
             return TryAssignUnit(out assignment)
                 ? CombatTargetingStatus.Assigned
@@ -59,7 +64,12 @@ public class UnitTargeting : MonoBehaviour
         IReadOnlyList<UnitController> enemies =
             _battleArea.GetEnemyUnits(_owner.Team);
 
-        if (CollectRangedUnitCandidates(enemies))
+        StructureController defenseLine =
+            FindEnemyDefenseLine();
+
+        if (CollectRangedUnitCandidates(
+                enemies,
+                defenseLine))
         {
             UnitController unitTarget =
                 SelectFirstFrontLineCandidate();
@@ -72,7 +82,7 @@ public class UnitTargeting : MonoBehaviour
         }
 
         StructureController structureTarget =
-            FindRangedStructureTarget();
+            FindRangedStructureTarget(defenseLine);
 
         return structureTarget != null
             ? new RangedTargetResult(structureTarget)
@@ -111,7 +121,8 @@ public class UnitTargeting : MonoBehaviour
     }
 
     private bool CollectUnitCandidates(
-        IReadOnlyList<UnitController> enemies)
+        IReadOnlyList<UnitController> enemies,
+        StructureController defenseLine)
     {
         _unitCandidates.Clear();
 
@@ -122,6 +133,13 @@ public class UnitTargeting : MonoBehaviour
 
             if (GetForwardDistance(enemy) < 0f)
                 continue;
+
+            if (!IsExposedBeforeDefenseLine(
+                    enemy,
+                    defenseLine))
+            {
+                continue;
+            }
 
             _unitCandidates.Add(enemy);
         }
@@ -132,7 +150,8 @@ public class UnitTargeting : MonoBehaviour
     }
 
     private bool CollectRangedUnitCandidates(
-        IReadOnlyList<UnitController> enemies)
+        IReadOnlyList<UnitController> enemies,
+        StructureController defenseLine)
     {
         _unitCandidates.Clear();
 
@@ -143,6 +162,13 @@ public class UnitTargeting : MonoBehaviour
 
             if (GetForwardDistance(enemy) < 0f)
                 continue;
+
+            if (!IsExposedBeforeDefenseLine(
+                    enemy,
+                    defenseLine))
+            {
+                continue;
+            }
 
             if (!_combat.IsInAttackRange(enemy))
                 continue;
@@ -170,10 +196,10 @@ public class UnitTargeting : MonoBehaviour
             .CompareTo(second.GetInstanceID());
     }
 
-    private float GetForwardDistance(UnitController target)
+    private float GetForwardDistance(ICombatTarget target)
     {
         float offset =
-            target.transform.position.x -
+            target.TargetTransform.position.x -
             _owner.transform.position.x;
 
         return _owner.Team == UnitTeam.Zombie
@@ -327,18 +353,18 @@ public class UnitTargeting : MonoBehaviour
             : CombatTargetingStatus.Blocked;
     }
 
-    private StructureController FindRangedStructureTarget()
+    private StructureController FindRangedStructureTarget(
+        StructureController defenseLine)
     {
+        if (defenseLine != null)
+        {
+            return _combat.IsInAttackRange(defenseLine)
+                ? defenseLine
+                : null;
+        }
+
         IReadOnlyList<StructureController> structures =
             _battleArea.GetEnemyStructures(_owner.Team);
-
-        StructureController defenseLine =
-            FindFirstRangedStructure(
-                structures,
-                StructureType.DefenseLine);
-
-        if (defenseLine != null)
-            return defenseLine;
 
         StructureType baseType =
             _owner.Team == UnitTeam.Zombie
@@ -378,6 +404,48 @@ public class UnitTargeting : MonoBehaviour
         return _structureCandidates.Count > 0
             ? _structureCandidates[0]
             : null;
+    }
+
+    private StructureController FindEnemyDefenseLine()
+    {
+        IReadOnlyList<StructureController> structures =
+            _battleArea.GetEnemyStructures(_owner.Team);
+
+        _structureCandidates.Clear();
+
+        foreach (StructureController structure in structures)
+        {
+            if (!IsValidStructure(structure))
+                continue;
+
+            if (structure.StructureType !=
+                StructureType.DefenseLine)
+            {
+                continue;
+            }
+
+            if (!IsAhead(structure))
+                continue;
+
+            _structureCandidates.Add(structure);
+        }
+
+        _structureCandidates.Sort(CompareStructures);
+
+        return _structureCandidates.Count > 0
+            ? _structureCandidates[0]
+            : null;
+    }
+
+    private bool IsExposedBeforeDefenseLine(
+        UnitController enemy,
+        StructureController defenseLine)
+    {
+        if (defenseLine == null)
+            return true;
+
+        return GetForwardDistance(enemy) <
+               GetForwardDistance(defenseLine);
     }
 
     private bool CollectStructures(
