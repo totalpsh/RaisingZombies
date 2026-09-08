@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// 기존 QuestBox에 현재 퀘스트와 직접 보상 수령 동작을 연결합니다.
+// 기존 QuestBox에 현재 퀘스트 표시와 전체 퀘스트 목록 열기를 연결합니다.
 public class QuestController : MonoBehaviour, IPointerClickHandler
 {
     [SerializeField] private TextMeshProUGUI questLevelText; // 현재 진행도와 목표 표시
@@ -42,31 +42,24 @@ public class QuestController : MonoBehaviour, IPointerClickHandler
         if (questRewardGlowImage != null) questRewardGlowImage.enabled = quest != null && _quests.CurrentStatus == QuestStatus.Claimable;
     }
 
-    // 받을 수 있을 때만 수령하고 그 외에는 현재 퀘스트 상세를 엽니다.
+    // QuestBox를 왼쪽 클릭하면 현재 상태와 관계없이 퀘스트 목록을 엽니다.
     public void OnPointerClick(PointerEventData eventData)
     {
         if (eventData.button != PointerEventData.InputButton.Left) return;
         HandleQuestClick();
     }
 
-    // Inspector Button에서도 동일한 단일 Claim 경로를 호출할 수 있습니다.
+    // Inspector Button에서도 동일한 퀘스트 목록을 엽니다.
     public async void HandleQuestClick()
-    {
-        if (_quests == null || _quests.CurrentQuest == null) return;
-        if (_quests.TryClaimCurrentQuest()) return;
-        if (!UIManager.HasInstance) return;
-        try { await QuestPopup.ShowAsync(_quests.CurrentQuestIndex); }
-        catch (System.Exception exception) { Debug.LogException(exception, this); }
-    }
-
-    // 기존 Inspector 연결 이름을 유지하면서 현재 클릭 규칙을 실행합니다.
-    public void OpenPopup() { HandleQuestClick(); }
-
-    // 별도 목록 버튼에서 과거와 현재 퀘스트 목록을 엽니다.
-    public async void OpenQuestList()
     {
         if (!UIManager.HasInstance) return;
         try { await QuestListPopup.ShowAsync(); }
         catch (System.Exception exception) { Debug.LogException(exception, this); }
     }
+
+    // 기존 Inspector 연결 이름을 유지하면서 퀘스트 목록을 엽니다.
+    public void OpenPopup() { HandleQuestClick(); }
+
+    // 별도 목록 버튼에서도 QuestBox와 같은 동작을 실행합니다.
+    public void OpenQuestList() { HandleQuestClick(); }
 }

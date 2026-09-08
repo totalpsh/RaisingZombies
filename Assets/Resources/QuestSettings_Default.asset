@@ -15,6 +15,7 @@ MonoBehaviour:
   quests:
   - id: main_quest_01
     type: 0
+    title: "스탯 가챠"
     description: "스탯 가챠 누적 3회 진행"
     target: 3
     targetStage: 1
@@ -27,6 +28,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_02
     type: 1
+    title: "스테이지 클리어"
     description: "스테이지 1 클리어"
     target: 1
     targetStage: 1
@@ -39,6 +41,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_03
     type: 2
+    title: "적 처치"
     description: "적 누적 3명 처치"
     target: 3
     targetStage: 1
@@ -51,6 +54,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_04
     type: 0
+    title: "스탯 가챠"
     description: "스탯 가챠 누적 6회 진행"
     target: 6
     targetStage: 1
@@ -63,6 +67,7 @@ MonoBehaviour:
     unlockReward: 1
   - id: main_quest_05
     type: 3
+    title: "재화 강화"
     description: "초당 재화 Lv.3 달성"
     target: 3
     targetStage: 1
@@ -75,6 +80,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_06
     type: 1
+    title: "스테이지 클리어"
     description: "스테이지 2 클리어"
     target: 1
     targetStage: 2
@@ -87,6 +93,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_07
     type: 2
+    title: "적 처치"
     description: "적 누적 10명 처치"
     target: 10
     targetStage: 1
@@ -99,6 +106,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_08
     type: 0
+    title: "스탯 가챠"
     description: "스탯 가챠 누적 10회 진행"
     target: 10
     targetStage: 1
@@ -111,6 +119,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_09
     type: 3
+    title: "재화 강화"
     description: "초당 재화 Lv.5 달성"
     target: 5
     targetStage: 1
@@ -123,6 +132,7 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_10
     type: 1
+    title: "스테이지 클리어"
     description: "스테이지 3 클리어"
     target: 1
     targetStage: 3
@@ -135,6 +145,7 @@ MonoBehaviour:
     unlockReward: 2
   infiniteRules:
   - type: 1
+    title: "스테이지 클리어"
     baseTarget: 5
     targetIncreasePerCycle: 2
     targetUpgrade: 0
@@ -143,6 +154,7 @@ MonoBehaviour:
     descriptionFormat: "스테이지 {0} 클리어"
     popupImage: {fileID: 0}
   - type: 0
+    title: "스탯 가챠"
     baseTarget: 15
     targetIncreasePerCycle: 10
     targetUpgrade: 0
@@ -151,6 +163,7 @@ MonoBehaviour:
     descriptionFormat: "스탯 가챠 누적 {0}회 진행"
     popupImage: {fileID: 0}
   - type: 2
+    title: "적 처치"
     baseTarget: 30
     targetIncreasePerCycle: 25
     targetUpgrade: 0
@@ -159,6 +172,7 @@ MonoBehaviour:
     descriptionFormat: "적 누적 {0}명 처치"
     popupImage: {fileID: 0}
   - type: 3
+    title: "재화 강화"
     baseTarget: 10
     targetIncreasePerCycle: 5
     targetUpgrade: 0
