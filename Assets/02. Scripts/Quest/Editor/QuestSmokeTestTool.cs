@@ -85,8 +85,8 @@ public static class QuestSmokeTestTool
             Check(afterCondition < beforeDraw && quests.CurrentQuestIndex == 0, "조건 달성만으로 Q1이 이동함");
             Check(quests.CurrentStatus == QuestStatus.Claimable && Get<TMP_Text>(view, "questLevelText").text == "3 / 3", "Q1 Claimable 표시 오류");
             Check(!quests.CurrencyUpgradeUnlocked, "Claim 전 재화 강화가 해금됨");
-            Check(quests.TryClaimCurrentQuest(), "Q1 수동 Claim 실패");
-            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterCondition + 100, "Q1 수동 Claim 결과 오류");
+            view.HandleQuestClick();
+            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterCondition + 100, "메인 UI 수동 Claim 오류");
             Check(!quests.TryClaimCurrentQuest() && upgrade.Currency == afterCondition + 100, "Q1 더블 클릭 중복 보상");
             Check(quests.GetQuestStatus(0) == QuestStatus.Claimed, "지나간 Q1 Claimed 판정 오류");
 
@@ -247,6 +247,7 @@ public static class QuestSmokeTestTool
             Check(Get<TMP_Text>(detail, "statusText").text == "수령 완료", "Claimed 상세 상태 표시 오류");
             Check(Get<TMP_Text>(detail, "progressText").text.Length > 0 && !Get<Button>(detail, "claimButton").gameObject.activeSelf, "Claimed 상세 Progress 또는 버튼 오류");
             ui.CloseUI(detail);
+            Call(claimedRow, "Awake"); // EditMode에서 동적 Row의 Button 생명주기를 직접 재현
             Get<Button>(rows[49], "rowButton").onClick.Invoke();
             Check(ui.GetUI<QuestPopup>() == detail && Get<TMP_Text>(detail, "questNumberText").text == "Quest 51", "Quest List 행 클릭 상세 Popup 연결 오류");
             ui.CloseUI(detail);
