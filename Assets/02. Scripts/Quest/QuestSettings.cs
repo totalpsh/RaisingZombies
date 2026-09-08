@@ -20,6 +20,7 @@ public sealed class QuestDefinition
 {
     public string id; // 순서를 변경해도 유지해야 할 고유 식별자
     public QuestType type; // 실제 원본에서 읽을 조건 종류
+    public string title; // Quest List와 Detail에 표시할 짧은 제목
     [TextArea] public string description; // 현재 목표 설명
     [Min(1)] public int target = 1; // 누적 횟수 또는 목표 강화 레벨
     [Min(1)] public int targetStage = 1; // 클리어해야 할 스테이지 번호
@@ -38,6 +39,7 @@ public sealed class QuestDefinition
 public sealed class InfiniteQuestRule
 {
     public QuestType type; // 순환할 조건 종류
+    public string title; // 이 반복 조건이 생성할 Quest 제목
     [Min(1)] public int baseTarget = 5; // 이 규칙이 처음 등장할 때 목표
     [Min(0)] public int targetIncreasePerCycle = 5; // 순환 한 바퀴마다 증가할 목표
     public CurrencyUpgradeType targetUpgrade; // 재화 강화 규칙의 목표 종류
@@ -71,7 +73,7 @@ public sealed class QuestSettings : ScriptableObject
         int target = SaturateToInt((long)rule.baseTarget + cycle * rule.targetIncreasePerCycle); // 오버플로 없이 증가한 목표
         return new QuestDefinition
         {
-            id = $"infinite_{(long)questIndex + 1}", type = rule.type, description = FormatDescription(rule.descriptionFormat, target),
+            id = $"infinite_{(long)questIndex + 1}", type = rule.type, title = rule.title, description = FormatDescription(rule.descriptionFormat, target),
             target = target, targetStage = rule.type == QuestType.StageClear ? target : 1,
             targetUpgrade = rule.targetUpgrade, targetStat = rule.targetStat, productionUpgradeIndex = rule.productionUpgradeIndex,
             rewardType = QuestRewardType.Currency,
@@ -103,11 +105,13 @@ public sealed class QuestSettings : ScriptableObject
             if (quest == null || string.IsNullOrWhiteSpace(quest.id) || !ids.Add(quest.id) || quest.target < 1 ||
                 quest.targetStage < 1 || quest.rewardAmount < 0 || !IsValidEnum(quest))
             { error = "수동 퀘스트 ID 중복/누락, 목표 또는 보상 설정을 확인하세요."; return false; }
+            if (string.IsNullOrWhiteSpace(quest.title)) { error = $"수동 퀘스트 '{quest.id}'의 제목이 비어 있습니다."; return false; }
         }
         foreach (InfiniteQuestRule rule in infiniteRules) // 검사할 반복 규칙
         {
             if (rule == null || rule.baseTarget < 1 || rule.targetIncreasePerCycle < 0 || !Enum.IsDefined(typeof(QuestType), rule.type))
             { error = "반복 규칙의 조건 종류와 목표 증가량을 확인하세요."; return false; }
+            if (string.IsNullOrWhiteSpace(rule.title)) { error = $"반복 퀘스트 규칙 '{rule.type}'의 제목이 비어 있습니다."; return false; }
         }
         if (infiniteBaseReward < 0 || rewardIncreasePerCycle < 0) { error = "반복 보상은 음수가 될 수 없습니다."; return false; }
         return true;

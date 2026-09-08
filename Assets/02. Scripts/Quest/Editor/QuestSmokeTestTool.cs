@@ -215,18 +215,30 @@ public static class QuestSmokeTestTool
             var firstList = QuestListPopup.ShowAsync(); // 첫 목록 생성 요청
             var secondList = QuestListPopup.ShowAsync(); // 연속 목록 요청
             Check(firstList.IsCompleted && secondList.IsCompleted && firstList.Result == secondList.Result, "Quest List Popup 중복 생성");
-            Check(list.CurrentPage == 19 && list.CreatedRowCount == 50, $"Quest 1000 현재 Page 또는 50행 제한 오류: Page={list.CurrentPage}, Rows={list.CreatedRowCount}");
-            List<QuestListRowView> rows = Get<List<QuestListRowView>>(list, "_rows"); // 페이지 이동 전 재사용 대상
+            Check(list.RangeStartIndex == 950 && list.CreatedRowCount == 50 && list.VisibleRowCount == 50, $"Quest 1000 현재 범위 또는 50행 제한 오류: Start={list.RangeStartIndex}, Rows={list.CreatedRowCount}");
+            List<QuestListRowView> rows = Get<List<QuestListRowView>>(list, "_rows"); // Scroll 범위 이동 전 재사용 대상
             QuestListRowView firstRow = rows[0]; // 같은 인스턴스 유지 확인 대상
-            list.ShowPreviousPage();
-            Check(list.CurrentPage == 18 && list.CreatedRowCount == 50 && ReferenceEquals(firstRow, rows[0]), "Page 이동 행 재사용 실패");
+            list.ShowHigherQuestRange();
+            Check(list.RangeStartIndex == 1000 && list.CreatedRowCount == 50 && ReferenceEquals(firstRow, rows[0]), "미래 Scroll 묶음 이동 행 재사용 실패");
             quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 63, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true });
-            list.ShowCurrentQuestPage();
-            Check(list.CurrentPage == 1 && list.CreatedRowCount == 50 && CountActive(rows) == 14, "Quest 63 Page 2 실제 표시 개수 오류");
-            list.ShowPreviousPage();
-            Check(list.CurrentPage == 0 && list.CreatedRowCount == 50 && CountActive(rows) == 50, "이전 Page 이동 오류");
-            list.ShowNextPage();
-            Check(list.CurrentPage == 1 && ReferenceEquals(firstRow, rows[0]), "다음 Page 이동 재사용 실패");
+            list.ShowCurrentQuestRange();
+            Check(list.RangeStartIndex == 50 && list.CreatedRowCount == 50 && CountActive(rows) == 50, "Quest 64 현재·미래 Scroll 묶음 표시 개수 오류");
+            Check(Get<TMP_Text>(rows[0], "questNumberText").text == "100" && Get<GameObject>(rows[0], "lockObject").activeSelf, "높은 번호 우선 정렬 또는 미래 Quest 잠금 표시 오류");
+            list.ShowLowerQuestRange();
+            Check(list.RangeStartIndex == 0 && list.CreatedRowCount == 50 && CountActive(rows) == 50, "과거 Scroll 묶음 이동 오류");
+            list.ShowHigherQuestRange();
+            Check(list.RangeStartIndex == 50 && ReferenceEquals(firstRow, rows[0]), "미래 Scroll 묶음 복귀 재사용 실패");
+            QuestListRowView claimedRow = rows[49]; // Quest 51 수령 완료 행
+            QuestListRowView currentRow = rows[36]; // Quest 64 현재 행
+            Check(Get<TMP_Text>(claimedRow, "questNumberText").text == "51" && Get<TMP_Text>(claimedRow, "titleText").text == settings.GetQuest(50).title && Get<TMP_Text>(claimedRow, "descriptionText").text == settings.GetQuest(50).description, "재사용 행 QuestNumber/Title/Descript 잔류 또는 연결 오류");
+            Check(Get<GameObject>(claimedRow, "normalObject").activeSelf && !Get<GameObject>(claimedRow, "focusObject").activeSelf && Get<GameObject>(claimedRow, "disabledObject").activeSelf && Get<GameObject>(claimedRow, "checkObject").activeSelf && !Get<GameObject>(claimedRow, "lockObject").activeSelf, "Claimed 행 Normal/Disabled/Check 상태 오류");
+            Check(!Get<GameObject>(currentRow, "normalObject").activeSelf && Get<GameObject>(currentRow, "focusObject").activeSelf && !Get<GameObject>(currentRow, "disabledObject").activeSelf && !Get<GameObject>(currentRow, "checkObject").activeSelf && !Get<GameObject>(currentRow, "lockObject").activeSelf, "현재 행 Focus 상태 오류");
+            currentRow.Bind(new QuestListRowData(63, 64, "Claimable Test", "Claimable Test", QuestStatus.Claimable, true, false), null);
+            Check(!Get<GameObject>(currentRow, "normalObject").activeSelf && Get<GameObject>(currentRow, "focusObject").activeSelf && !Get<GameObject>(currentRow, "disabledObject").activeSelf && !Get<GameObject>(currentRow, "checkObject").activeSelf, "Claimable 현재 행 Focus 유지 오류");
+            claimedRow.Bind(new QuestListRowData(50, 51, "Claimed Test", "Claimed Test", QuestStatus.Claimed, false, false), null);
+            Graphic[] claimedLines = Get<Graphic[]>(claimedRow, "borderAndLineGraphics"); // 완료 색이 적용되는 기존 상하단 선
+            Check(claimedLines.Length > 0 && claimedLines[0].color == Get<Color>(claimedRow, "completedColor"), "Claimed Border/Line 완료 색 적용 오류");
+            list.ShowCurrentQuestRange();
 
             Call(detail, "OnEnable"); // EditMode에서는 활성 전환 생명주기를 직접 재현
             var firstDetail = QuestPopup.ShowAsync(0); // Claimed 퀘스트 상세 열기
@@ -234,6 +246,9 @@ public static class QuestSmokeTestTool
             Check(firstDetail.IsCompleted && secondDetail.IsCompleted && firstDetail.Result == secondDetail.Result, "Quest Detail Popup 중복 생성");
             Check(Get<TMP_Text>(detail, "statusText").text == "수령 완료", "Claimed 상세 상태 표시 오류");
             Check(Get<TMP_Text>(detail, "progressText").text.Length > 0 && !Get<Button>(detail, "claimButton").gameObject.activeSelf, "Claimed 상세 Progress 또는 버튼 오류");
+            ui.CloseUI(detail);
+            Get<Button>(rows[49], "rowButton").onClick.Invoke();
+            Check(ui.GetUI<QuestPopup>() == detail && Get<TMP_Text>(detail, "questNumberText").text == "Quest 51", "Quest List 행 클릭 상세 Popup 연결 오류");
             ui.CloseUI(detail);
             UpgradeState inProgressState = (UpgradeState)upgrade.CaptureSaveData(); // Q1을 진행 중으로 되돌릴 실제 뽑기 원본
             inProgressState.totalDrawCount = 0;
@@ -261,7 +276,7 @@ public static class QuestSmokeTestTool
             QuestState migrated = (QuestState)quests.CaptureSaveData(); // 구버전에서 보존된 최소 상태
             Check(migrated.version == 2 && migrated.currentQuestIndex == 7 && migrated.currencyUpgradeUnlocked && migrated.enemyKillCount == 22, "Quest Save v1 마이그레이션 실패");
             Check(save.SaveGame() && save.LoadGame(), "최종 Quest 통합 저장·로드 실패");
-            Debug.Log("[QuestSmokeTest] PASS: 수동 Claim/중복 방지/Claim 전 Index·Unlock 유지/Q1~Q14/Stage·Gacha·Kill·Currency·Production 원본/무한 결정 생성/고인덱스 오버플로/Claimable 저장/상세·목록 Popup 중복 방지/50행 제한/페이지 이동·재사용/이벤트 중복 방지를 검증했습니다.");
+            Debug.Log("[QuestSmokeTest] PASS: 수동 Claim/중복 방지/Claim 전 Index·Unlock 유지/Q1~Q14/Stage·Gacha·Kill·Currency·Production 원본/무한 결정 생성/고인덱스 오버플로/Claimable 저장/상세·목록 Popup 중복 방지/50행 Scroll 묶음 이동·재사용/행 상태·클릭/이벤트 중복 방지를 검증했습니다.");
         }
         finally
         {
@@ -319,8 +334,8 @@ public static class QuestSmokeTestTool
             QuestListPopup list = listRoot.GetComponent<QuestListPopup>();
             QuestListRowView row = rowRoot.GetComponent<QuestListRowView>();
             Check(detail != null && Get<TMP_Text>(detail, "questDescriptionText") != null && Get<Button>(detail, "claimButton") != null && Get<Button>(detail, "closeButton") != null, "Quest Detail 프리팹 참조 누락");
-            Check(list != null && Get<Transform>(list, "rowsRoot") != null && Get<QuestListRowView>(list, "rowPrefab") != null && Get<Button>(list, "previousButton") != null && Get<Button>(list, "nextButton") != null, "Quest List 프리팹 참조 누락");
-            Check(row != null && Get<Button>(row, "rowButton") != null && Get<TMP_Text>(row, "progressText") != null, "Quest Row 프리팹 참조 누락");
+            Check(list != null && Get<ScrollRect>(list, "scrollRect") != null && Get<Transform>(list, "rowsRoot") != null && Get<Transform>(list, "rowsRoot").childCount == 0 && Get<QuestListRowView>(list, "rowPrefab") != null, "Quest List Scroll 프리팹 참조 또는 수동 샘플 잔류 오류");
+            Check(row != null && Get<Button>(row, "rowButton") != null && Get<TMP_Text>(row, "questNumberText") != null && Get<TMP_Text>(row, "titleText") != null && Get<TMP_Text>(row, "descriptionText") != null && Get<GameObject>(row, "normalObject") != null && Get<GameObject>(row, "focusObject") != null && Get<GameObject>(row, "disabledObject") != null && Get<GameObject>(row, "lockObject") != null && Get<GameObject>(row, "checkObject") != null && Get<Graphic[]>(row, "borderAndLineGraphics").Length > 0, "Quest Row 상태/텍스트/버튼 프리팹 참조 누락");
         }
         finally
         {
