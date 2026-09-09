@@ -30,6 +30,7 @@ public sealed class TopUIController : MonoBehaviour
     [SerializeField] private SettingsController settingsController; // Settings 닫기 요청과 열기 시 갱신을 담당하는 Controller
 
     private UpgradeManager upgradeManager; // 실제 재화 원본과 변경 이벤트를 제공하는 기존 매니저
+    private BodyEquipmentManager bodyEquipmentManager; // 장착 변경과 실제 좀비 전투력 갱신 원본
     private StageManager stageManager; // 현재 씬에서 실제 Stage 진행값을 제공하는 매니저
     private CombatPowerSnapshot currentCombatPower; // 가장 최근 실제 최종 스탯으로 계산한 전투력 결과
     private bool settingsListenerRegistered; // 설정 버튼 Listener 중복 등록 방지 상태
@@ -45,6 +46,7 @@ public sealed class TopUIController : MonoBehaviour
         if (isActiveAndEnabled)
         {
             SubscribeUpgradeEvents();
+            SubscribeBodyEquipmentEvents();
             SubscribeStageEvents();
         }
 
@@ -72,6 +74,7 @@ public sealed class TopUIController : MonoBehaviour
         RegisterSettingsCloseEvent();
         RegisterCombatInfoListener();
         SubscribeUpgradeEvents();
+        SubscribeBodyEquipmentEvents();
         SubscribeStageEvents();
         EnsureNicknamePlaceholder();
         RefreshCurrency();
@@ -86,6 +89,7 @@ public sealed class TopUIController : MonoBehaviour
         UnregisterSettingsCloseEvent();
         UnregisterCombatInfoListener();
         UnsubscribeUpgradeEvents();
+        UnsubscribeBodyEquipmentEvents();
         UnsubscribeStageEvents();
     }
 
@@ -170,7 +174,7 @@ public sealed class TopUIController : MonoBehaviour
     // 현재 실제 최종 좀비 스탯을 기준으로 전투력과 열린 정보 패널을 갱신합니다.
     private void RefreshCombatPower()
     {
-        currentCombatPower = CombatPowerCalculator.Calculate(zombieData, upgradeManager, combatPowerBalance);
+        currentCombatPower = CombatPowerCalculator.Calculate(zombieData, bodyEquipmentManager, combatPowerBalance);
         if (combatPowerText != null)
         {
             string formattedPower = currentCombatPower.CombatPower.ToString("N0", CultureInfo.InvariantCulture); // 천 단위 구분 기호를 적용한 최종 전투력
@@ -199,6 +203,40 @@ public sealed class TopUIController : MonoBehaviour
         {
             upgradeManager.stateChanged -= HandleUpgradeStateChanged;
         }
+    }
+
+    // 신체 장비 Manager 생성과 장착 상태 변경을 전투력 갱신에 연결합니다.
+    private void SubscribeBodyEquipmentEvents()
+    {
+        BodyEquipmentManager.AvailabilityChanged -= HandleBodyEquipmentAvailabilityChanged;
+        BodyEquipmentManager.AvailabilityChanged += HandleBodyEquipmentAvailabilityChanged;
+        BindBodyEquipmentManager(BodyEquipmentManager.HasInstance ? BodyEquipmentManager.Instance : null);
+    }
+
+    // 신체 장비 Manager의 정적 생성 알림과 상태 이벤트를 해제합니다.
+    private void UnsubscribeBodyEquipmentEvents()
+    {
+        BodyEquipmentManager.AvailabilityChanged -= HandleBodyEquipmentAvailabilityChanged;
+        BindBodyEquipmentManager(null);
+    }
+
+    // 장비 Manager가 재생성되면 실제 상태 이벤트 원본을 교체합니다.
+    private void HandleBodyEquipmentAvailabilityChanged(BodyEquipmentManager manager)
+    {
+        BindBodyEquipmentManager(manager);
+    }
+
+    // 장비 상태 이벤트를 중복 없이 연결하고 현재 전투력을 즉시 갱신합니다.
+    private void BindBodyEquipmentManager(BodyEquipmentManager manager)
+    {
+        if (bodyEquipmentManager != null) bodyEquipmentManager.EquippedStatsChanged -= RefreshCombatPower;
+        bodyEquipmentManager = manager;
+        if (bodyEquipmentManager != null)
+        {
+            bodyEquipmentManager.EquippedStatsChanged -= RefreshCombatPower;
+            bodyEquipmentManager.EquippedStatsChanged += RefreshCombatPower;
+        }
+        RefreshCombatPower();
     }
 
     // 전투력 정보 버튼으로 상세 패널의 표시 상태를 전환합니다.

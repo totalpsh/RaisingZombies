@@ -7,5 +7,5 @@ public interface ICombatTarget
     Transform TargetTransform { get; }
     Collider2D TargetCollider { get; }
     
-    void TakeDamage(float damage);
+    float TakeDamage(float damage);
 }

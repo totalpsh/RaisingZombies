@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07769e96dfc6f204db31fb69f79ebf31, type: 3}
+  m_Name: BodyRarity_Tier06
+  m_EditorClassIdentifier: Assembly-CSharp::BodyRarityDefinitionSO
+  tier: 6
+  displayName: "\uC720\uC77C"
+  uiColor: {r: 0.46050006, g: 0.35000002, b: 1, a: 1}
+  frameSprite: {fileID: 0}
+  mainRollMin: 100
+  mainRollMax: 250
+  subStatMinCount: 2
+  subStatMaxCount: 2
+  subStatMultiplier: 1.9000001
+  dismantleResearchPoint: 25

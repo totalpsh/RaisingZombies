@@ -5,7 +5,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 
-// 업그레이드 저장, 연구, 뽑기 비용, 패널 이벤트 갱신을 빠르게 확인합니다.
+// 폐기 전 스탯 가챠의 저장 호환과 현재 비활성 상태를 빠르게 확인합니다.
 public static class UpgradeSmokeTestTool
 {
     private const string SaveKey = "RaisingZombies.Upgrade.State";
@@ -26,7 +26,6 @@ public static class UpgradeSmokeTestTool
             UpgradeBalanceSettings balance = AssetDatabase.LoadAssetAtPath<UpgradeBalanceSettings>(BalancePath);
             UpgradePanel panelPrefab = AssetDatabase.LoadAssetAtPath<UpgradePanel>(PanelPath);
             Assert(balance != null, $"기본 밸런스 에셋을 찾을 수 없습니다: {BalancePath}");
-            Assert(panelPrefab != null, $"업그레이드 패널 프리팹을 찾을 수 없습니다: {PanelPath}");
 
             var validationErrors = new List<string>();
             balance.CollectValidationErrors(validationErrors);
@@ -38,6 +37,21 @@ public static class UpgradeSmokeTestTool
             UpgradeManager firstManager = firstManagerObject.AddComponent<UpgradeManager>();
             AssignBalance(firstManager, balance);
             SetState(firstManager, CreateResearchTestState());
+
+            if (!firstManager.LegacyStatGachaEnabled)
+            {
+                int currencyBeforeDisabledCalls = firstManager.Currency; // 폐기 API 호출 전 보존할 기존 저장 재화
+                UpgradeStatSnapshot snapshotBeforeDisabledCalls = firstManager.GetStatSnapshot(UpgradeStatType.Health); // 폐기 API 호출 전 보존할 기존 스탯 Snapshot
+                Assert(!firstManager.TryDrawOne(out _) && !firstManager.TryDrawFive(out _) && !firstManager.TryUpgradeResearch(UpgradeStatType.Health),
+                    "폐기된 스탯 가챠 또는 연구 API가 실행됐습니다.");
+                UpgradeStatSnapshot snapshotAfterDisabledCalls = firstManager.GetStatSnapshot(UpgradeStatType.Health); // 폐기 API 호출 후 비교할 기존 Snapshot
+                Assert(firstManager.Currency == currencyBeforeDisabledCalls && snapshotAfterDisabledCalls.RawAccumulatedValue == snapshotBeforeDisabledCalls.RawAccumulatedValue &&
+                    snapshotAfterDisabledCalls.ResearchLevel == snapshotBeforeDisabledCalls.ResearchLevel, "폐기 API 호출이 기존 저장 상태를 변경했습니다.");
+                Debug.Log("[UpgradeSmokeTest] 통과: 기존 Stat Gacha 저장 Snapshot은 읽을 수 있고 Draw/Research 변경 API는 비활성 상태입니다.");
+                return;
+            }
+
+            Assert(panelPrefab != null, $"업그레이드 패널 프리팹을 찾을 수 없습니다: {PanelPath}");
 
             UpgradeStatSnapshot beforeResearch = firstManager.GetStatSnapshot(UpgradeStatType.Health);
             int researchCost = firstManager.GetResearchCost(UpgradeStatType.Health);
@@ -153,8 +167,8 @@ public static class UpgradeSmokeTestTool
 
     private static void SetState(UpgradeManager manager, UpgradeState state)
     {
-        FieldInfo field = typeof(UpgradeManager).GetField("state", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert(field != null, "UpgradeManager.state 필드를 찾을 수 없습니다.");
+        FieldInfo field = typeof(UpgradeManager).GetField("_state", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert(field != null, "UpgradeManager._state 필드를 찾을 수 없습니다.");
         field.SetValue(manager, state);
     }
 

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba6f8a384154ae54eb4d2afa11ed412c, type: 3}
+  m_Name: BodyEquipment_Head
+  m_EditorClassIdentifier: Assembly-CSharp::BodyEquipmentDefinitionSO
+  definitionId: head
+  displayName: "\uBD80\uD328\uD55C \uBA38\uB9AC"
+  slotDisplayName: "\uBA38\uB9AC"
+  slot: 0
+  icon: {fileID: 0}
+  equipmentSprite: {fileID: 0}
+  drawWeight: 1
+  possibleMainStats:
+  - {fileID: 11400000, guid: 92616ac9f96aa374fbf7a10811777ed4, type: 2}
+  - {fileID: 11400000, guid: a4066850341ebe3429d9361a8ff20a8a, type: 2}
+  possibleSubStats:
+  - {fileID: 11400000, guid: 435153dbe5613244a9fde95354d647cc, type: 2}
+  - {fileID: 11400000, guid: 36e0194d1098b5f4dbe5ef43d8d8d277, type: 2}
+  - {fileID: 11400000, guid: 9568a7d9eb6df9a4ab24a629bd9ad09a, type: 2}
+  - {fileID: 11400000, guid: c2351b689c931584f8251111211f3728, type: 2}
+  description: "\uBA38\uB9AC \uC2AC\uB86F\uC5D0 \uC7A5\uCC29\uD558\uB294 \uC880\uBE44
+    \uC2E0\uCCB4 \uC7A5\uBE44\uC785\uB2C8\uB2E4."

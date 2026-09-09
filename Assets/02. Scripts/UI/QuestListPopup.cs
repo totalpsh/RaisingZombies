@@ -137,7 +137,8 @@ public sealed class QuestListPopup : BaseUI
                 questIndex == _quests.CurrentQuestIndex,
                 questIndex > _quests.CurrentQuestIndex,
                 quest.rewardType,
-                quest.unlockReward);
+                quest.unlockReward,
+                quest.rewardIcon);
             row.Bind(data, HandleRowClicked);
         }
         SetScrollPosition(normalizedPosition);

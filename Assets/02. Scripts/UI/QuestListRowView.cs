@@ -15,10 +15,11 @@ public readonly struct QuestListRowData
     public readonly bool IsLocked; // 향후 미래 퀘스트 표시 확장용 잠금 여부
     public readonly QuestRewardType RewardType; // 행에 표시할 보상 종류
     public readonly QuestUnlockType UnlockReward; // 전용 아이콘으로 표시할 해금 보상 종류
+    public readonly Sprite RewardIcon; // Quest Definition에 직접 연결된 보상 아이콘
 
     // 목록 행에 필요한 값만 보관하는 읽기 전용 데이터를 만듭니다.
     public QuestListRowData(int questIndex, int questNumber, string title, string description, QuestStatus status, bool isCurrent, bool isLocked,
-        QuestRewardType rewardType = QuestRewardType.None, QuestUnlockType unlockReward = QuestUnlockType.None)
+        QuestRewardType rewardType = QuestRewardType.None, QuestUnlockType unlockReward = QuestUnlockType.None, Sprite rewardIcon = null)
     {
         QuestIndex = questIndex;
         QuestNumber = questNumber;
@@ -29,6 +30,7 @@ public readonly struct QuestListRowData
         IsLocked = isLocked;
         RewardType = rewardType;
         UnlockReward = unlockReward;
+        RewardIcon = rewardIcon;
     }
 }
 
@@ -113,7 +115,7 @@ public sealed class QuestListRowView : MonoBehaviour
         {
             QuestUnlockType.CurrencyUpgrade => rewardUpgradeCurrencyIconImage,
             QuestUnlockType.ProductionUpgrade => unlockLabIconImage,
-            _ => data.RewardType == QuestRewardType.Currency ? rewardCurrencyIconImage : null
+            _ => data.RewardIcon != null ? data.RewardIcon : data.RewardType == QuestRewardType.Currency ? rewardCurrencyIconImage : null
         };
         rewardIconImage.sprite = sprite;
         rewardIconImage.enabled = sprite != null;

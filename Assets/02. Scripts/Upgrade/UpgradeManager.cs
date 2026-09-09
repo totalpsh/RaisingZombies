@@ -29,6 +29,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     public int Currency => _state == null ? 0 : _state.currency;
     public int GachaLevel => _state == null ? 1 : _state.gachaLevel;
     public int DrawsAtCurrentLevel => _state == null ? 0 : _state.drawsAtCurrentLevel;
+    public bool LegacyStatGachaEnabled => false; // 새 신체 장비 뽑기로 대체된 구형 스탯 가챠 활성 여부
     public UpgradeBalanceSettings BalanceSettings => balanceSettings;
     public CurrencyUpgradeBalanceSettings CurrencyUpgradeBalance => currencyUpgradeBalance;
     string ISaveDataProvider.SaveKey => ProviderKey; // 통합 저장에 노출하는 Provider 키
@@ -148,6 +149,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     public bool TryDrawOne(out GachaDrawResult result)
     {
         result = default;
+        if (!LegacyStatGachaEnabled) return false;
         if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetCurrentDrawCost()) return false;
         result = ExecuteOneDraw();
         SaveAndNotify(true);
@@ -159,6 +161,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     public bool TryDrawFive(out IReadOnlyList<GachaDrawResult> results)
     {
         results = null;
+        if (!LegacyStatGachaEnabled) return false;
         if (!CanUseBalance() || !HasUnlockedDrawPool() || _state.currency < GetDrawCostForCount(10)) return false;
         List<GachaDrawResult> values = new(10); // 이번 10회 뽑기 결과
         for (int index = 0; index < 5; index++) values.Add(ExecuteOneDraw()); // 뽑기 순번
@@ -171,6 +174,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     // 원본 누적값은 유지하고 지정 스탯의 연구 레벨만 올립니다.
     public bool TryUpgradeResearch(UpgradeStatType type)
     {
+        if (!LegacyStatGachaEnabled) return false;
         UpgradeStatDefinition definition = balanceSettings == null ? null : balanceSettings.GetStat(type); // 연구할 스탯 정의
         if (definition == null || !IsUnlocked(type)) return false;
         UpgradeStatValue value = GetValue(type); // 저장된 스탯 값

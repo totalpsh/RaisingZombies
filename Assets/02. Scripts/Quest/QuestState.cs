@@ -9,6 +9,7 @@ public sealed class QuestState
     public bool currencyUpgradeUnlocked; // 재화 강화 해금 여부
     public bool productionUpgradeUnlocked; // 생산 강화 해금 여부
     public long enemyKillCount; // 실제 인간 사망 이벤트로만 증가하는 영구 처치 원본
+    public long dungeonClearCount; // Dungeon 완료 Hook으로 증가하는 영구 클리어 횟수
 }
 
 // 실제 생산 강화 시스템이 추가될 때 퀘스트에 레벨 원본을 제공하는 최소 계약입니다.

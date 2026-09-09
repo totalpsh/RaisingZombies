@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba6f8a384154ae54eb4d2afa11ed412c, type: 3}
+  m_Name: BodyEquipment_Arms
+  m_EditorClassIdentifier: Assembly-CSharp::BodyEquipmentDefinitionSO
+  definitionId: arms
+  displayName: "\uAD34\uB825\uC758 \uD314"
+  slotDisplayName: "\uD314"
+  slot: 2
+  icon: {fileID: 0}
+  equipmentSprite: {fileID: 0}
+  drawWeight: 1
+  possibleMainStats:
+  - {fileID: 11400000, guid: ab425392ad6868b4aa7c205103dee899, type: 2}
+  possibleSubStats:
+  - {fileID: 11400000, guid: b216b133ed4502f4b82dd00156f215d8, type: 2}
+  - {fileID: 11400000, guid: 421f8f30e54b0614e86cf0724297ebab, type: 2}
+  - {fileID: 11400000, guid: f2cb4f644427ae14e9d7a98f363cbaad, type: 2}
+  - {fileID: 11400000, guid: 13cece71541800d468b2759e2267f107, type: 2}
+  description: "\uD314 \uC2AC\uB86F\uC5D0 \uC7A5\uCC29\uD558\uB294 \uC880\uBE44 \uC2E0\uCCB4
+    \uC7A5\uBE44\uC785\uB2C8\uB2E4."

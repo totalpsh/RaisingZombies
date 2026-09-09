@@ -31,6 +31,8 @@ public static class QuestSmokeTestTool
         Scene preview = EditorSceneManager.NewPreviewScene(); // 게임 씬을 변경하지 않는 검증 씬
         object oldSave = SingletonField<SaveManager>().GetValue(null); // 기존 저장 싱글턴
         object oldUpgrade = SingletonField<UpgradeManager>().GetValue(null); // 기존 강화 싱글턴
+        object oldWallet = SingletonField<CurrencyWalletManager>().GetValue(null); // 기존 타입형 지갑 싱글턴
+        object oldBodyEquipment = SingletonField<BodyEquipmentManager>().GetValue(null); // 기존 신체 장비 싱글턴
         object oldQuest = SingletonField<QuestManager>().GetValue(null); // 기존 퀘스트 싱글턴
         object oldUI = SingletonField<UIManager>().GetValue(null); // 기존 UI 싱글턴
         QuestSettings settings = null; // 원본 에셋을 바꾸지 않는 밸런스 복제본
@@ -49,6 +51,15 @@ public static class QuestSmokeTestTool
             SingletonField<UpgradeManager>().SetValue(null, upgrade);
             Set(upgrade, "balanceSettings", AssetDatabase.LoadAssetAtPath<UpgradeBalanceSettings>("Assets/02. Scripts/Upgrade/UpgradeBalanceSettings_Default.asset"));
             Set(upgrade, "currencyUpgradeBalance", AssetDatabase.LoadAssetAtPath<CurrencyUpgradeBalanceSettings>("Assets/02. Scripts/Upgrade/CurrencyUpgradeBalanceSettings_Default.asset"));
+            CurrencyWalletManager wallet = Create<CurrencyWalletManager>(preview); // 신체 뽑기권 보상과 소비 원본
+            SingletonField<CurrencyWalletManager>().SetValue(null, wallet);
+            Set(wallet, "_save", save);
+            BodyEquipmentManager bodyEquipment = Create<BodyEquipmentManager>(preview); // Quest가 읽을 실제 신체 장비 진행 원본
+            SingletonField<BodyEquipmentManager>().SetValue(null, bodyEquipment);
+            Set(bodyEquipment, "database", AssetDatabase.LoadAssetAtPath<BodyEquipmentDatabaseSO>("Assets/Resources/BodyEquipment/BodyEquipmentDatabase_Default.asset"));
+            Set(bodyEquipment, "researchSettings", AssetDatabase.LoadAssetAtPath<BodyDrawResearchSettingsSO>("Assets/Resources/BodyEquipment/BodyDrawResearchSettings_Default.asset"));
+            Set(bodyEquipment, "_wallet", wallet);
+            Set(bodyEquipment, "_save", save);
             StageManager stage = Create<StageManager>(preview); // 실제 Stage 진행 원본
             QuestManager quests = Create<QuestManager>(preview); // 자동 부트스트랩 없이 연결할 퀘스트 매니저
             SingletonField<QuestManager>().SetValue(null, quests);
@@ -56,9 +67,13 @@ public static class QuestSmokeTestTool
             Check(settings != null && settings.TryValidate(out _), "퀘스트 밸런스 검증 실패");
             Set(quests, "settings", settings);
             Set(quests, "_save", save);
-            Check(save.RegisterProvider(upgrade) && save.RegisterProvider(stage) && save.RegisterProvider(quests), "기존 Save Provider 등록 실패");
+            Check(save.RegisterProvider(upgrade) && save.RegisterProvider(wallet) && save.RegisterProvider(bodyEquipment) && save.RegisterProvider(stage) && save.RegisterProvider(quests), "기존 Save Provider 등록 실패");
+            Set(wallet, "_ready", true);
+            Set(bodyEquipment, "_ready", true);
             Set(quests, "_ready", true);
             Call(quests, "BindUpgrade", upgrade);
+            Call(quests, "BindBodyEquipment", bodyEquipment);
+            Call(quests, "BindWallet", wallet);
             Call(quests, "BindStage", stage);
             save.SaveLoaded += quests.RefreshProgress;
             save.SaveReset += quests.RefreshProgress;
@@ -80,13 +95,13 @@ public static class QuestSmokeTestTool
             Check(Get<TMP_Text>(view, "questRewardText").text == "100", "메인 Quest 보상 표시 오류");
 
             int beforeDraw = upgrade.Currency; // 조건 달성 전 재화
-            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "Q1 실제 뽑기 실패");
+            Check(bodyEquipment.TryDraw(1, out _) && bodyEquipment.TryDraw(1, out _) && bodyEquipment.TryDraw(1, out _), "Q1 실제 신체 장비 뽑기 실패");
             int afterCondition = upgrade.Currency; // 자동 보상 여부를 판정할 조건 달성 직후 재화
-            Check(afterCondition < beforeDraw && quests.CurrentQuestIndex == 0, "조건 달성만으로 Q1이 이동함");
+            Check(afterCondition == beforeDraw && quests.CurrentQuestIndex == 0, "신체 뽑기가 기존 재화를 소비했거나 조건 달성만으로 Q1이 이동함");
             Check(quests.CurrentStatus == QuestStatus.Claimable && Get<TMP_Text>(view, "questLevelText").text == "3 / 3", "Q1 Claimable 표시 오류");
             Check(!quests.CurrencyUpgradeUnlocked, "Claim 전 재화 강화가 해금됨");
-            Check(quests.TryClaimCurrentQuest(), "Q1 수동 Claim 실패");
-            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterCondition + 100, "Q1 수동 Claim 결과 오류");
+            view.HandleQuestClick();
+            Check(quests.CurrentQuestIndex == 1 && upgrade.Currency == afterCondition + 100, "메인 UI 수동 Claim 오류");
             Check(!quests.TryClaimCurrentQuest() && upgrade.Currency == afterCondition + 100, "Q1 더블 클릭 중복 보상");
             Check(quests.GetQuestStatus(0) == QuestStatus.Claimed, "지나간 Q1 Claimed 판정 오류");
 
@@ -115,7 +130,7 @@ public static class QuestSmokeTestTool
             Check(quests.EnemyKillCount == 3, "좀비 사망을 적 처치로 집계함");
             Set(unit, "data", humanData);
 
-            Check(upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _) && upgrade.TryDrawOne(out _), "Q4 누적 6회 뽑기 실패");
+            Check(bodyEquipment.TryDraw(1, out _) && bodyEquipment.TryDraw(1, out _) && bodyEquipment.TryDraw(1, out _), "Q4 누적 6회 신체 장비 뽑기 실패");
             CheckClaimableWithoutAdvance(quests, 3, "Q4 Unlock");
             Check(!quests.CurrencyUpgradeUnlocked && !Get<Button>(menu, "currencyUpgradeButton").interactable, "Q4 Claim 전 재화 강화 해제");
             ClaimAndCheck(quests, upgrade, 4, 100, "Q4 Unlock");
@@ -128,8 +143,8 @@ public static class QuestSmokeTestTool
             ClaimAndCheck(quests, upgrade, 6, 100, "Q6 Stage");
             Kill(unit, 7);
             ClaimAndCheck(quests, upgrade, 7, 100, "Q7 Kill");
-            for (int index = 0; index < 4; index++) Check(upgrade.TryDrawOne(out _), "Q8 누적 10회 뽑기 실패");
-            Check(upgrade.TotalDrawCount == 10, "실제 뽑기 누적 원본 오류");
+            for (int index = 0; index < 4; index++) Check(bodyEquipment.TryDraw(1, out _), "Q8 누적 10회 신체 장비 뽑기 실패");
+            Check(bodyEquipment.TotalBodyDrawCount == 10, "실제 신체 장비 뽑기 누적 원본 오류");
             ClaimAndCheck(quests, upgrade, 8, 100, "Q8 Gacha");
             for (int index = 0; index < 2; index++) Check(upgrade.TryUpgradeCurrency(CurrencyUpgradeType.CurrencyPerSecond), "Q9 재화 강화 실패");
             ClaimAndCheck(quests, upgrade, 9, 100, "Q9 Currency Upgrade");
@@ -150,10 +165,9 @@ public static class QuestSmokeTestTool
             Check(quests.CurrentQuestIndex == claimableIndex && quests.CurrentStatus == QuestStatus.Claimable && upgrade.Currency == claimableCurrency, "Claimable 저장 복원 오류");
             ClaimAndCheck(quests, upgrade, 11, settings.infiniteBaseReward, "Q11 Infinite Stage");
 
-            UpgradeState gachaState = (UpgradeState)upgrade.CaptureSaveData(); // Q12 실제 누적 뽑기 원본 갱신용 DTO
-            gachaState.totalDrawCount = 15;
-            gachaState.totalDrawCountInitialized = true;
-            upgrade.RestoreSaveData(gachaState);
+            BodyEquipmentState bodyState = (BodyEquipmentState)bodyEquipment.CaptureSaveData(); // Q12 실제 누적 신체 뽑기 원본 갱신용 DTO
+            bodyState.totalBodyDrawCount = 15;
+            bodyEquipment.RestoreSaveData(bodyState);
             ClaimAndCheck(quests, upgrade, 12, settings.infiniteBaseReward, "Q12 Infinite Gacha");
             quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 12, currencyUpgradeUnlocked = true, productionUpgradeUnlocked = true, enemyKillCount = 30 });
             ClaimAndCheck(quests, upgrade, 13, settings.infiniteBaseReward, "Q13 Infinite Kill");
@@ -247,13 +261,13 @@ public static class QuestSmokeTestTool
             Check(Get<TMP_Text>(detail, "statusText").text == "수령 완료", "Claimed 상세 상태 표시 오류");
             Check(Get<TMP_Text>(detail, "progressText").text.Length > 0 && !Get<Button>(detail, "claimButton").gameObject.activeSelf, "Claimed 상세 Progress 또는 버튼 오류");
             ui.CloseUI(detail);
+            Call(claimedRow, "Awake"); // EditMode에서 동적 Row의 Button 생명주기를 직접 재현
             Get<Button>(rows[49], "rowButton").onClick.Invoke();
             Check(ui.GetUI<QuestPopup>() == detail && Get<TMP_Text>(detail, "questNumberText").text == "Quest 51", "Quest List 행 클릭 상세 Popup 연결 오류");
             ui.CloseUI(detail);
-            UpgradeState inProgressState = (UpgradeState)upgrade.CaptureSaveData(); // Q1을 진행 중으로 되돌릴 실제 뽑기 원본
-            inProgressState.totalDrawCount = 0;
-            inProgressState.totalDrawCountInitialized = true;
-            upgrade.RestoreSaveData(inProgressState);
+            BodyEquipmentState inProgressState = (BodyEquipmentState)bodyEquipment.CaptureSaveData(); // Q1을 진행 중으로 되돌릴 실제 신체 뽑기 원본
+            inProgressState.totalBodyDrawCount = 0;
+            bodyEquipment.RestoreSaveData(inProgressState);
             quests.RestoreSaveData(new QuestState { version = 2, currentQuestIndex = 0 });
             ExecuteEvents.Execute(view.gameObject, new PointerEventData(null) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
             Check(ui.GetUI<QuestListPopup>() == list && ui.GetUI<QuestPopup>() == null, "메인 QuestBox 클릭 목록 Popup 연결 오류");
@@ -284,6 +298,8 @@ public static class QuestSmokeTestTool
             EditorSceneManager.ClosePreviewScene(preview);
             SingletonField<SaveManager>().SetValue(null, oldSave);
             SingletonField<UpgradeManager>().SetValue(null, oldUpgrade);
+            SingletonField<CurrencyWalletManager>().SetValue(null, oldWallet);
+            SingletonField<BodyEquipmentManager>().SetValue(null, oldBodyEquipment);
             SingletonField<QuestManager>().SetValue(null, oldQuest);
             SingletonField<UIManager>().SetValue(null, oldUI);
             if (settings != null) UnityEngine.Object.DestroyImmediate(settings);
