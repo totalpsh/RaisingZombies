@@ -19,10 +19,19 @@ public sealed class CurrencyUpgradeDefinition
     public string id; // 저장 및 검증에 사용하는 고유 ID
     public string displayName; // UI에 표시할 한국어 이름
     [TextArea] public string description; // UI에 표시할 설명
-    [Min(1)] public int maxLevel = 10; // 강화 최대 레벨
+    public Sprite icon; // 공용 Row에 표시할 이 강화 전용 아이콘
+    [Tooltip("켜면 Max Level을 적용하지 않습니다. 기존 재화 강화도 기본적으로 무제한입니다.")]
+    public bool unlimited = true; // 재화 강화의 레벨 제한을 사용하지 않을지 여부
+    [Min(1)] public int maxLevel = 10; // Unlimited를 끈 경우에만 적용할 최대 레벨
     [Min(0)] public int baseCost = 100; // 0레벨에서 다음 레벨로 올릴 때의 비용
     [Min(1f)] public float costGrowth = 1.5f; // 레벨마다 곱하는 비용 배율
     [Min(0f)] public float valuePerLevel = 1f; // 레벨당 효과이며 오프라인 시간 종류만 시간 단위
+
+    // 유한 레벨 정책을 사용하는 정의가 최대 레벨에 도달했는지 확인합니다.
+    public bool IsMaxLevel(int level)
+    {
+        return !unlimited && level >= maxLevel;
+    }
 }
 
 // 재화 생산과 오프라인 보상의 기본값 및 네 강화 정의를 보관합니다.
@@ -70,10 +79,10 @@ public sealed class CurrencyUpgradeBalanceSettings : ScriptableObject
                 if (!types.Add(definition.type)) errors.Add($"중복 강화 종류: {definition.type}");
                 if (string.IsNullOrWhiteSpace(definition.id)) errors.Add($"{definition.type}의 ID가 비어 있습니다.");
                 else if (!ids.Add(definition.id)) errors.Add($"중복 강화 ID: {definition.id}");
-                if (definition.maxLevel <= 0) errors.Add($"{definition.type}의 최대 레벨은 1 이상이어야 합니다.");
+                if (!definition.unlimited && definition.maxLevel <= 0) errors.Add($"{definition.type}의 유한 최대 레벨은 1 이상이어야 합니다.");
                 if (definition.baseCost < 0) errors.Add($"{definition.type}의 기본 비용이 음수입니다.");
-                if (definition.costGrowth < 1f) errors.Add($"{definition.type}의 비용 증가 배율은 1 이상이어야 합니다.");
-                if (definition.valuePerLevel <= 0f) errors.Add($"{definition.type}의 레벨당 증가 수치는 0보다 커야 합니다.");
+                if (!IsFinite(definition.costGrowth) || definition.costGrowth < 1f) errors.Add($"{definition.type}의 비용 증가 배율은 유한한 1 이상이어야 합니다.");
+                if (!IsFinite(definition.valuePerLevel) || definition.valuePerLevel <= 0f) errors.Add($"{definition.type}의 레벨당 증가 수치는 유한한 양수여야 합니다.");
             }
         }
 
@@ -82,11 +91,34 @@ public sealed class CurrencyUpgradeBalanceSettings : ScriptableObject
             if (!types.Contains(type)) errors.Add($"재화 강화 정의 누락: {type}");
         }
 
+        if (!IsFinite(baseCurrencyPerSecond) || baseCurrencyPerSecond < 0f) errors.Add("기본 초당 재화는 유한한 0 이상이어야 합니다.");
+        if (!IsFinite(baseOfflineMaxHours) || baseOfflineMaxHours < 0f) errors.Add("기본 오프라인 시간은 유한한 0 이상이어야 합니다.");
+        if (!IsFinite(baseOfflineEfficiency) || baseOfflineEfficiency < 0f || baseOfflineEfficiency > 1f)
+            errors.Add("기본 오프라인 효율은 0~1 범위여야 합니다.");
+        if (!IsFinite(maximumOfflineEfficiency) || maximumOfflineEfficiency < 0f || maximumOfflineEfficiency > 1f)
+            errors.Add("오프라인 효율 상한은 0~1 범위여야 합니다.");
         if (maximumOfflineEfficiency < baseOfflineEfficiency)
             errors.Add("오프라인 효율 상한이 기본 효율보다 작습니다.");
         CurrencyUpgradeDefinition efficiency = GetDefinition(CurrencyUpgradeType.OfflineEfficiency); // 효율 상한을 검사할 정의
-        if (efficiency != null && baseOfflineEfficiency + efficiency.valuePerLevel * efficiency.maxLevel > maximumOfflineEfficiency + 0.0001f)
+        if (efficiency != null && !efficiency.unlimited && baseOfflineEfficiency + (double)efficiency.valuePerLevel * efficiency.maxLevel > maximumOfflineEfficiency + 0.0001d)
             errors.Add("최대 레벨의 오프라인 효율이 설정된 효율 상한을 초과합니다.");
+    }
+
+    // 무제한 레벨과 별개로 효과가 멈추는 기존 효율 상한을 안내합니다.
+    public void CollectValidationWarnings(List<string> warnings)
+    {
+        if (warnings == null) throw new ArgumentNullException(nameof(warnings));
+        warnings.Clear();
+        CurrencyUpgradeDefinition efficiency = GetDefinition(CurrencyUpgradeType.OfflineEfficiency); // 효과 상한을 안내할 강화 정의
+        if (efficiency == null || !efficiency.unlimited || !IsFinite(efficiency.valuePerLevel) || efficiency.valuePerLevel <= 0f) return;
+        double capLevel = Math.Ceiling(Math.Max(0d, (maximumOfflineEfficiency - (double)baseOfflineEfficiency) / efficiency.valuePerLevel)); // 현재 공식에서 효율 상한에 도달하는 레벨
+        warnings.Add($"오프라인 효율은 Lv.{capLevel:0}부터 {maximumOfflineEfficiency * 100d:0.##}% 상한에 도달합니다. 이후에도 레벨은 오르지만 실제 보상 효율은 증가하지 않습니다.");
+    }
+
+    // Inspector 수치가 NaN이나 무한대가 아닌지 확인합니다.
+    private static bool IsFinite(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 
     // 현재 밸런스 검증 결과를 콘솔에 출력합니다.
@@ -98,10 +130,11 @@ public sealed class CurrencyUpgradeBalanceSettings : ScriptableObject
         if (errors.Count == 0)
         {
             Debug.Log("[CurrencyUpgradeBalanceSettings] 검증을 통과했습니다.", this);
-            return;
         }
 
         foreach (string error in errors) Debug.LogError($"[CurrencyUpgradeBalanceSettings] {error}", this);
+        CollectValidationWarnings(errors);
+        foreach (string warning in errors) Debug.LogWarning($"[CurrencyUpgradeBalanceSettings] {warning}", this); // 레벨 제한과 다른 효과 상한 안내
     }
 }
 
@@ -117,10 +150,11 @@ public readonly struct CurrencyUpgradeSnapshot
     public readonly float CurrentEffect; // 현재 총 효과
     public readonly float NextEffect; // 다음 레벨 총 효과
     public readonly bool IsMaxLevel; // 최대 레벨 여부
+    public readonly bool IsUnlimited; // 정의의 무제한 레벨 정책 여부
 
     // 계산된 재화 강화 표시 데이터를 생성합니다.
     public CurrencyUpgradeSnapshot(CurrencyUpgradeType type, string name, string description, int level, int maxLevel,
-        int nextCost, float currentEffect, float nextEffect)
+        int nextCost, float currentEffect, float nextEffect, bool unlimited = false)
     {
         Type = type;
         DisplayName = name;
@@ -130,7 +164,8 @@ public readonly struct CurrencyUpgradeSnapshot
         NextCost = nextCost;
         CurrentEffect = currentEffect;
         NextEffect = nextEffect;
-        IsMaxLevel = level >= maxLevel;
+        IsUnlimited = unlimited;
+        IsMaxLevel = !unlimited && level >= maxLevel;
     }
 }
 

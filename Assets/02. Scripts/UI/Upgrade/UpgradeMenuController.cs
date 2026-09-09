@@ -56,12 +56,18 @@ public sealed class UpgradeMenuController : BaseUI
     private Button currencyBackButton; // 재화 강화에서 종류 선택으로 이동
 
     private UpgradeMenuState _currentState; // 현재 화면 상태
+    [SerializeField] private GameObject currencyLockObject; // 선택적으로 표시할 기존 재화 잠금 표시
+    [SerializeField] private GameObject productionLockObject; // 선택적으로 표시할 기존 생산 잠금 표시
+    private QuestManager _quests; // 저장된 해금을 제공할 퀘스트 원본
 
     public UpgradeMenuState CurrentState => _currentState;
 
     // 버튼 이벤트를 연결합니다.
     private void OnEnable()
     {
+        _quests = QuestManager.HasInstance ? QuestManager.Instance : null;
+        if (_quests != null) { _quests.Changed -= RefreshUnlocks; _quests.Changed += RefreshUnlocks; }
+        RefreshUnlocks();
         AddButtonListener(statUpgradeButton, ShowStatUpgrade);
         AddButtonListener(productionUpgradeButton, ShowProductionUpgrade);
         AddButtonListener(currencyUpgradeButton, ShowCurrencyUpgrade);
@@ -76,6 +82,8 @@ public sealed class UpgradeMenuController : BaseUI
     // 버튼 이벤트 중복을 막기 위해 해제합니다.
     private void OnDisable()
     {
+        if (_quests != null) _quests.Changed -= RefreshUnlocks;
+        _quests = null;
         RemoveButtonListener(statUpgradeButton, ShowStatUpgrade);
         RemoveButtonListener(productionUpgradeButton, ShowProductionUpgrade);
         RemoveButtonListener(currencyUpgradeButton, ShowCurrencyUpgrade);
@@ -118,12 +126,28 @@ public sealed class UpgradeMenuController : BaseUI
     // 현재 상태에 해당하는 화면 하나만 활성화합니다.
     public void SetState(UpgradeMenuState state)
     {
+        if ((state == UpgradeMenuState.CurrencyUpgrade && (_quests == null || !_quests.CurrencyUpgradeUnlocked)) ||
+            (state == UpgradeMenuState.ProductionUpgrade && (_quests == null || !_quests.ProductionUpgradeUnlocked)))
+            state = UpgradeMenuState.CategorySelection;
         _currentState = state;
 
         SetActive(categorySelectionRoot, state == UpgradeMenuState.CategorySelection);
         SetActive(statUpgradeRoot, state == UpgradeMenuState.StatUpgrade);
         SetActive(productionUpgradeRoot, state == UpgradeMenuState.ProductionUpgrade);
         SetActive(currencyUpgradeRoot, state == UpgradeMenuState.CurrencyUpgrade);
+    }
+
+    // 버튼과 직접 화면 진입 모두 동일한 저장 해금 상태를 적용합니다.
+    private void RefreshUnlocks()
+    {
+        bool currencyOpen = _quests != null && _quests.CurrencyUpgradeUnlocked; // 재화 강화 접근 가능 여부
+        bool productionOpen = _quests != null && _quests.ProductionUpgradeUnlocked; // 생산 강화 접근 가능 여부
+        if (currencyUpgradeButton != null) currencyUpgradeButton.interactable = currencyOpen;
+        if (productionUpgradeButton != null) productionUpgradeButton.interactable = productionOpen;
+        SetActive(currencyLockObject, !currencyOpen);
+        SetActive(productionLockObject, !productionOpen);
+        if ((_currentState == UpgradeMenuState.CurrencyUpgrade && !currencyOpen) ||
+            (_currentState == UpgradeMenuState.ProductionUpgrade && !productionOpen)) ShowCategorySelection();
     }
 
     // 버튼이 존재할 때 이벤트를 연결합니다.

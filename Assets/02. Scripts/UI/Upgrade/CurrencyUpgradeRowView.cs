@@ -19,7 +19,9 @@ public sealed class CurrencyUpgradeRowView : MonoBehaviour
     // 구매 버튼 이벤트를 한 번 연결합니다.
     private void Awake()
     {
-        if (upgradeButton != null) upgradeButton.onClick.AddListener(HandleUpgradeClicked);
+        if (upgradeButton == null) return;
+        upgradeButton.onClick.RemoveListener(HandleUpgradeClicked);
+        upgradeButton.onClick.AddListener(HandleUpgradeClicked);
     }
 
     // 구매 버튼 이벤트를 해제합니다.
@@ -39,6 +41,7 @@ public sealed class CurrencyUpgradeRowView : MonoBehaviour
     // 계산은 매니저에 맡기고 현재 표시와 버튼 상태만 갱신합니다.
     public void Refresh()
     {
+        RefreshIcon();
         if (_manager == null)
         {
             if (upgradeButton != null) upgradeButton.interactable = false;
@@ -51,9 +54,20 @@ public sealed class CurrencyUpgradeRowView : MonoBehaviour
         SetText(levelText, $"Lv.{snapshot.CurrentLevel}");
         SetText(currentEffectText, $"{FormatEffect(snapshot.Type, snapshot.CurrentEffect)}");
         SetText(nextEffectText, snapshot.IsMaxLevel ? "-" : $"{FormatEffect(snapshot.Type, snapshot.NextEffect)}");
+        if (snapshot.IsUnlimited && snapshot.Type == CurrencyUpgradeType.OfflineEfficiency && snapshot.CurrentEffect >= snapshot.NextEffect)
+            SetText(nextEffectText, $"{FormatEffect(snapshot.Type, snapshot.NextEffect)} (효율 상한)");
         SetText(costText, snapshot.NextCost.ToString());
-        if (upgradeButton != null) upgradeButton.interactable = !snapshot.IsMaxLevel && _manager.Currency >= snapshot.NextCost;
-        if (iconImage != null) iconImage.enabled = iconImage.sprite != null;
+        if (upgradeButton != null) upgradeButton.interactable = _manager.CanUpgradeCurrency(_type);
+    }
+
+    // 현재 정의의 아이콘을 매번 적용하고 미지정 상태에서는 이미지만 숨깁니다.
+    private void RefreshIcon()
+    {
+        if (iconImage == null) return;
+        CurrencyUpgradeDefinition definition = _manager == null || _manager.CurrencyUpgradeBalance == null
+            ? null : _manager.CurrencyUpgradeBalance.GetDefinition(_type); // 이 Row에 연결된 강화 정의
+        iconImage.sprite = definition?.icon;
+        iconImage.enabled = iconImage.sprite != null;
     }
 
     // 강화 버튼 클릭을 매니저의 원자적 구매 함수로 전달합니다.
@@ -70,7 +84,7 @@ public sealed class CurrencyUpgradeRowView : MonoBehaviour
             CurrencyUpgradeType.CurrencyPerSecond => $"초당 {value:0.##}",
             CurrencyUpgradeType.HumanKillBonus => $"처치당 +{value:0.##}",
             CurrencyUpgradeType.OfflineMaxTime => $"최대 {value:0.##}시간",
-            CurrencyUpgradeType.OfflineEfficiency => $"{value * 100f:0.##}%",
+            CurrencyUpgradeType.OfflineEfficiency => $"{value * 100d:0.##}%",
             _ => value.ToString("0.##")
         };
     }

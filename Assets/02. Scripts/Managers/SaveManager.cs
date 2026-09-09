@@ -20,6 +20,7 @@ public sealed class SaveManager : Singleton<SaveManager>
 
     public event Action SaveLoaded; // 전체 로드와 Provider 복원 완료 이벤트
     public event Action SaveReset; // 전체 초기화 완료 이벤트
+    public bool IsRestoring { get; private set; } // 여러 Provider 복원 중 중간 상태로 보상을 판정하지 않도록 알림
     public string CurrentSaveId => _saveData == null ? string.Empty : _saveData.saveId; // 고객지원과 프로필 식별에 사용할 실제 저장 ID
 
     // 씬 배치 여부와 관계없이 SaveManager 인스턴스를 보장합니다.
@@ -208,7 +209,9 @@ public sealed class SaveManager : Singleton<SaveManager>
     public bool LoadGame()
     {
         bool loaded = LoadFileIntoMemory(); // 메인 또는 백업 로드 성공 여부
-        RestoreAllProviders();
+        IsRestoring = true;
+        try { RestoreAllProviders(); }
+        finally { IsRestoring = false; }
         if (_isDirty) SaveGame();
         SaveLoaded?.Invoke();
         return loaded;
@@ -223,11 +226,16 @@ public sealed class SaveManager : Singleton<SaveManager>
         _loadedFromBackup = false;
         bool providersReset = true; // 모든 Provider 초기화와 Legacy 정리 성공 여부
 
-        foreach (ISaveDataProvider provider in _providers.Values) // 초기화할 등록 Provider
+        IsRestoring = true;
+        try
         {
-            if (!TryResetProvider(provider)) providersReset = false;
-            if (!TryClearLegacySaveData(provider)) providersReset = false;
+            foreach (ISaveDataProvider provider in _providers.Values) // 초기화할 등록 Provider
+            {
+                if (!TryResetProvider(provider)) providersReset = false;
+                if (!TryClearLegacySaveData(provider)) providersReset = false;
+            }
         }
+        finally { IsRestoring = false; }
 
         _isDirty = true;
         bool saved = SaveGame(); // 기본값 저장 성공 여부

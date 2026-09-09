@@ -7,7 +7,7 @@ using UnityEngine;
 public class StageManager : MonoBehaviour, ISaveDataProvider
 {
     private const string ProviderKey = "stage_progress"; // 통합 저장에서 사용할 Stage 진행 Provider 키
-    private const int CurrentStageSaveVersion = 1; // Stage Provider 내부 데이터 형식 버전
+    private const int CurrentStageSaveVersion = 2; // 기존 버전 1 진행도를 보존해 마이그레이션하는 현재 Stage 저장 버전
     private const int DefaultStageNumber = 1; // 유효한 Stage 정의가 없을 때 사용할 최소 번호
 
     [SerializeField] private BattleArea battleArea;
@@ -31,7 +31,10 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
     private bool _isStageRunning;
     private bool _isTransitioning;
     private bool _hasStarted; // Stage Runtime 초기화가 시작됐는지 여부
+    public static StageManager ActiveInstance { get; private set; } // 현재 씬에서 실제 진행을 담당하는 StageManager
     public int CurrentStageNumber => _currentStageNumber;
+    public static event Action<StageManager> ActiveInstanceChanged; // 활성 StageManager가 교체될 때 UI 연결을 갱신하는 이벤트
+    public event Action<int> StageChanged; // 현재 Stage 번호가 적용될 때 변경값을 알리는 이벤트
 
     private bool _allStagesCompleted; // 현재 등록된 모든 Stage를 완료했는지 여부
     string ISaveDataProvider.SaveKey => ProviderKey; // 통합 저장에 노출하는 Stage Provider 키
@@ -46,6 +49,8 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         
         if (!saveManager.RegisterProvider(this)) 
             Debug.LogError("[StageManager] Stage Progress Provider 등록에 실패했습니다.", this);
+
+        SetActiveInstance(this);
     }
 
     // 복원된 진행 상태를 기준으로 현재 Stage Runtime을 시작합니다.
@@ -89,7 +94,7 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
             return;
         }
         
-        _currentStageNumber = _currentStageData.StageNumber;
+        SetCurrentStageNumber(_currentStageData.StageNumber, true);
         
         // StageData stageData = stages[stageNumber];
 
@@ -192,7 +197,7 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
     private void AdvanceStageProgressAndSave()
     {
         if (_currentStageNumber < int.MaxValue)
-            _currentStageNumber++;
+            SetCurrentStageNumber(_currentStageNumber + 1);
         
         // int nextStageIndex = FindNextValidStageIndex(_currentStageIndex); // Clear 후 진행할 다음 유효 Stage 인덱스
         //
@@ -240,7 +245,7 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         if (!TryMigrateStageProgressState(restoredState)) 
             throw new InvalidOperationException("지원하지 않는 Stage Provider 저장 버전입니다.");
 
-        _currentStageNumber = Mathf.Max(DefaultStageNumber, restoredState.currentStageNumber);
+        SetCurrentStageNumber(restoredState.currentStageNumber, true);
         
         // ApplyStageProgressState(restoredState);
         
@@ -258,7 +263,7 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         // _currentStageIndex = firstStageIndex >= 0 ? firstStageIndex : 0;
         // _allStagesCompleted = firstStageIndex < 0;
 
-        _currentStageNumber = DefaultStageNumber;
+        SetCurrentStageNumber(DefaultStageNumber, true);
         
         if (_hasStarted) _ = RestartStageFromProgressAsync();
     }
@@ -383,6 +388,25 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
         await StartStageAsync(_currentStageNumber);
     }
 
+    // 현재 Stage 번호를 원본 필드에 적용하고 필요한 시점에 변경 이벤트를 보냅니다.
+    private void SetCurrentStageNumber(int stageNumber, bool forceNotify = false)
+    {
+        int validStageNumber = Mathf.Max(DefaultStageNumber, stageNumber); // UI와 저장에 반영할 유효한 Stage 번호
+        bool changed = _currentStageNumber != validStageNumber; // 실제 Stage 번호가 달라졌는지 여부
+        _currentStageNumber = validStageNumber;
+
+        if (changed || forceNotify)
+            StageChanged?.Invoke(_currentStageNumber);
+    }
+
+    // 씬에서 실제 진행을 담당하는 StageManager 참조를 UI에 알립니다.
+    private static void SetActiveInstance(StageManager stageManager)
+    {
+        if (ReferenceEquals(ActiveInstance, stageManager)) return;
+        ActiveInstance = stageManager;
+        ActiveInstanceChanged?.Invoke(stageManager);
+    }
+
     private void StopBattle()
     {
         if (zombieSpawner != null)
@@ -456,6 +480,9 @@ public class StageManager : MonoBehaviour, ISaveDataProvider
 
     private void OnDestroy()
     {
+        if (ReferenceEquals(ActiveInstance, this))
+            SetActiveInstance(null);
+
         if (SaveManager.HasInstance) 
             SaveManager.Instance.UnregisterProvider(this);
         

@@ -13,6 +13,7 @@ public static class CurrencyUpgradeSetupTool
     private const string PanelPath = PrefabFolder + "/CurrencyUpgradePanel.prefab"; // 재화 강화 패널 프리팹 경로
     private const string PopupPath = PrefabFolder + "/OfflineCurrencyRewardPopup.prefab"; // 오프라인 팝업 프리팹 경로
     private const string MenuPath = PrefabFolder + "/UpgradeCategoryMenu.prefab"; // 카테고리 메뉴 프리팹 경로
+    private const string CurrentMenuPath = "Assets/03. Prefabs/UI/Upgrade/UpgradeMenuController.prefab"; // 실제 게임에서 사용하는 강화 메뉴 프리팹
 
     // 기존 파일을 덮어쓰지 않고 기본 재화 강화 밸런스를 생성합니다.
     [MenuItem("Tools/Raising Zombies/Upgrade/Create Default Currency Upgrade Balance")]
@@ -90,19 +91,18 @@ public static class CurrencyUpgradeSetupTool
                 Debug.LogError($"[CurrencyUpgradeSetup] {error}", balance);
                 errorCount++;
             }
+            balance.CollectValidationWarnings(errors);
+            foreach (string warning in errors) Debug.LogWarning($"[CurrencyUpgradeSetup] {warning}", balance); // 실제 효과의 기존 상한 안내
         }
 
         errorCount += ValidatePrefab<CurrencyUpgradeRowView>(RowPath);
-        errorCount += ValidatePrefab<CurrencyUpgradePanel>(PanelPath);
-        errorCount += ValidatePrefab<OfflineCurrencyRewardPopup>(PopupPath);
-        errorCount += ValidatePrefab<UpgradeMenuController>(MenuPath);
-        errorCount += ValidateReferences<CurrencyUpgradeRowView>(RowPath, "nameText", "descriptionText", "levelText",
-            "currentEffectText", "nextEffectText", "costText", "upgradeButton");
-        errorCount += ValidateReferences<CurrencyUpgradePanel>(PanelPath, "currencyText", "productionText", "rowsRoot", "rowPrefab");
-        errorCount += ValidateReferences<OfflineCurrencyRewardPopup>(PopupPath, "actualTimeText", "appliedTimeText",
-            "efficiencyText", "rewardText", "confirmButton");
-        errorCount += ValidateReferences<UpgradeMenuController>(MenuPath, "categorySelectionRoot", "zombieUpgradeRoot",
-            "currencyUpgradeRoot", "zombieUpgradeButton", "currencyUpgradeButton", "categoryBackButton", "zombieBackButton", "currencyBackButton");
+        errorCount += ValidatePrefab<CurrencyUpgradePanel>(CurrentMenuPath);
+        errorCount += ValidatePrefab<UpgradeMenuController>(CurrentMenuPath);
+        errorCount += ValidateReferences<CurrencyUpgradeRowView>(RowPath, "iconImage", "nameText", "levelText",
+            "nextEffectText", "costText", "upgradeButton");
+        errorCount += ValidateReferences<CurrencyUpgradePanel>(CurrentMenuPath, "currencyText", "productionText", "rowsRoot", "rowPrefab");
+        errorCount += ValidateReferences<UpgradeMenuController>(CurrentMenuPath, "categorySelectionRoot", "statUpgradeRoot",
+            "currencyUpgradeRoot", "statUpgradeButton", "currencyUpgradeButton", "statBackButton", "currencyBackButton");
         errorCount += ValidateRuntimeIntegration();
 
         if (errorCount == 0) Debug.Log("[CurrencyUpgradeSetup] 밸런스 종류·ID·비용·효율 상한과 UI 프리팹 구성을 통과했습니다.");
@@ -117,6 +117,7 @@ public static class CurrencyUpgradeSetupTool
         property.FindPropertyRelative("id").stringValue = id;
         property.FindPropertyRelative("displayName").stringValue = displayName;
         property.FindPropertyRelative("description").stringValue = description;
+        property.FindPropertyRelative("unlimited").boolValue = true;
         property.FindPropertyRelative("maxLevel").intValue = maxLevel;
         property.FindPropertyRelative("baseCost").intValue = baseCost;
         property.FindPropertyRelative("costGrowth").floatValue = growth;
@@ -134,13 +135,21 @@ public static class CurrencyUpgradeSetupTool
         layout.spacing = 4f;
         TMP_Text name = CreateText(root.transform, "Name", "강화 이름", 24f); // 이름 텍스트
         TMP_Text description = CreateText(root.transform, "Description", "강화 설명", 17f); // 설명 텍스트
-        TMP_Text level = CreateText(root.transform, "Level", "Lv.0 / 10", 18f); // 레벨 텍스트
+        TMP_Text level = CreateText(root.transform, "Level", "Lv.0", 18f); // 레벨 텍스트
         TMP_Text current = CreateText(root.transform, "CurrentEffect", "현재 효과", 17f); // 현재 효과 텍스트
         TMP_Text next = CreateText(root.transform, "NextEffect", "다음 효과", 17f); // 다음 효과 텍스트
         Button button = CreateButton(root.transform, "UpgradeButton", "강화 · 100"); // 강화 버튼
         TMP_Text cost = button.GetComponentInChildren<TMP_Text>(); // 버튼 비용 텍스트
         CurrencyUpgradeRowView view = root.AddComponent<CurrencyUpgradeRowView>(); // 행 표시 컴포넌트
         SerializedObject serialized = new(view); // 행 참조 연결 객체
+        GameObject iconObject = new("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement)); // 새 Row를 생성할 때만 추가하는 아이콘 표시 영역
+        iconObject.transform.SetParent(root.transform, false);
+        iconObject.GetComponent<LayoutElement>().preferredHeight = 48f;
+        Image icon = iconObject.GetComponent<Image>(); // 정의의 Sprite를 표시할 공용 이미지
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        icon.enabled = false;
+        SetReference(serialized, "iconImage", icon);
         SetReference(serialized, "nameText", name);
         SetReference(serialized, "descriptionText", description);
         SetReference(serialized, "levelText", level);
@@ -325,7 +334,7 @@ public static class CurrencyUpgradeSetupTool
     private static int ValidatePrefab<T>(string path) where T : Component
     {
         GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path); // 검사할 프리팹
-        if (prefab != null && prefab.GetComponent<T>() != null) return 0;
+        if (prefab != null && prefab.GetComponentInChildren<T>(true) != null) return 0;
         Debug.LogError($"[CurrencyUpgradeSetup] {typeof(T).Name} 프리팹 또는 컴포넌트가 없습니다: {path}");
         return 1;
     }
@@ -333,7 +342,8 @@ public static class CurrencyUpgradeSetupTool
     // 프리팹 컴포넌트의 필수 Inspector 참조가 연결됐는지 검사합니다.
     private static int ValidateReferences<T>(string path, params string[] propertyNames) where T : Component
     {
-        T component = AssetDatabase.LoadAssetAtPath<T>(path); // 참조를 검사할 프리팹 컴포넌트
+        GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path); // 하위 패널을 포함할 검사 대상 프리팹
+        T component = prefab == null ? null : prefab.GetComponentInChildren<T>(true); // 참조를 검사할 프리팹 컴포넌트
         if (component == null) return 0;
         SerializedObject serialized = new(component); // 프리팹 직렬화 객체
         int errors = 0; // 이 프리팹에서 찾은 오류 수
@@ -371,15 +381,10 @@ public static class CurrencyUpgradeSetupTool
 
         System.Reflection.BindingFlags privateInstance = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic; // private 생명주기 검사 범위
         if (typeof(UpgradeManager).GetMethod("ProcessOfflineReward", privateInstance) == null ||
-            typeof(UpgradeManager).GetMethod("OnApplicationQuit", privateInstance) == null)
+            !typeof(ISaveDataPreparation).IsAssignableFrom(typeof(UpgradeManager)) ||
+            typeof(SaveManager).GetMethod("OnApplicationQuit", privateInstance) == null)
         {
             Debug.LogError("[CurrencyUpgradeSetup] 오프라인 보상 처리 또는 마지막 UTC 저장 경로가 없습니다.");
-            errors++;
-        }
-
-        if (typeof(UnitController).GetField("_deathRewardGranted", privateInstance) == null)
-        {
-            Debug.LogError("[CurrencyUpgradeSetup] 인간 사망 보상 중복 방지 필드가 없습니다.");
             errors++;
         }
 

@@ -14,7 +14,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     [SerializeField, Min(0)] private int startingCurrency = 10000; // 최초 저장 생성 시 지급할 테스트 재화
     private UpgradeState _state; // 현재 저장 상태
     private float _currencyProductionSeconds; // 다음 정수 초 지급까지 누적한 게임 시간
-    private float _currencyProductionRemainder; // 정수로 지급하지 못한 재화 소수 잔여량
+    private double _currencyProductionRemainder; // 높은 생산량에서도 안전하게 유지할 재화 소수 잔여량
     private OfflineCurrencyReward _pendingOfflineReward; // 아직 UI가 소비하지 않은 오프라인 보상 결과
     private bool _hasPendingOfflineReward; // 오프라인 결과가 표시 대기 중인지 여부
     private bool _legacyMigrationPending; // 통합 파일 저장 성공을 기다리는 Legacy 이전 상태
@@ -22,6 +22,8 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     private int _lastResumeProcessFrame = -1; // 같은 Background 구간의 Resume 중복 처리를 막는 프레임
 
     public event Action stateChanged; // 저장 상태 변경 이벤트
+    public static event Action<UpgradeManager> AvailabilityChanged; // 저장 복원을 마친 강화 원본의 생성 및 제거 알림
+    public long TotalDrawCount => _state == null ? 0 : _state.totalDrawCount; // 퀘스트가 읽는 실제 누적 뽑기 횟수
     public event Action<IReadOnlyList<GachaDrawResult>> drawCompleted; // 가챠 완료 이벤트
     public event Action<OfflineCurrencyReward> offlineRewardGranted; // 오프라인 보상 실제 지급 이벤트
     public int Currency => _state == null ? 0 : _state.currency;
@@ -40,6 +42,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         if (currencyUpgradeBalance == null)
             Debug.LogError("[UpgradeManager] CurrencyUpgradeBalanceSettings 참조가 없습니다. 재화 생산과 오프라인 보상이 비활성화됩니다.", this);
         InitializeSaveProvider();
+        AvailabilityChanged?.Invoke(this);
     }
 
     // Time.timeScale 영향을 받는 초 단위 재화를 지급합니다.
@@ -51,10 +54,17 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         int elapsedWholeSeconds = Mathf.FloorToInt(_currencyProductionSeconds); // 이번 프레임까지 완성된 정수 초
         if (elapsedWholeSeconds <= 0) return;
         _currencyProductionSeconds -= elapsedWholeSeconds;
-        _currencyProductionRemainder += GetCurrencyPerSecond() * elapsedWholeSeconds;
-        int wholeCurrency = Mathf.FloorToInt(_currencyProductionRemainder); // 실제 지급 가능한 정수 재화
+        ProduceCurrency(elapsedWholeSeconds);
+    }
+
+    // 완성된 초의 생산량을 안전하게 지급하고 소수 잔여량만 보관합니다.
+    private void ProduceCurrency(int elapsedWholeSeconds)
+    {
+        if (elapsedWholeSeconds <= 0) return;
+        _currencyProductionRemainder += (double)GetCurrencyPerSecond() * elapsedWholeSeconds;
+        int wholeCurrency = ToSafeCurrency(Math.Floor(_currencyProductionRemainder)); // 지갑 범위로 제한한 정수 지급액
         if (wholeCurrency <= 0) return;
-        _currencyProductionRemainder -= wholeCurrency;
+        _currencyProductionRemainder -= Math.Floor(_currencyProductionRemainder);
         AddCurrency(wholeCurrency);
     }
 
@@ -250,18 +260,15 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     // 현재 초당 재화 생산량을 반환합니다.
     public float GetCurrencyPerSecond()
     {
-        if (currencyUpgradeBalance == null) return 0f;
-        CurrencyUpgradeDefinition definition = currencyUpgradeBalance.GetDefinition(CurrencyUpgradeType.CurrencyPerSecond); // 초당 재화 정의
-        float added = definition == null ? 0f : definition.valuePerLevel * GetCurrencyUpgradeLevel(CurrencyUpgradeType.CurrencyPerSecond); // 강화 누적 증가량
-        return Mathf.Max(0f, currencyUpgradeBalance.baseCurrencyPerSecond + added);
+        return GetDisplayedCurrencyEffect(CurrencyUpgradeType.CurrencyPerSecond, GetCurrencyUpgradeLevel(CurrencyUpgradeType.CurrencyPerSecond));
     }
 
     // 인간 사망 한 건에 해당하는 추가 재화를 한 번 지급합니다.
     public int GrantHumanKillBonus(UnitData defeatedUnit)
     {
         if (defeatedUnit == null || defeatedUnit.Team != UnitTeam.Human || currencyUpgradeBalance == null) return 0;
-        CurrencyUpgradeDefinition definition = currencyUpgradeBalance.GetDefinition(CurrencyUpgradeType.HumanKillBonus); // 인간 처치 보너스 정의
-        int bonus = definition == null ? 0 : Mathf.Max(0, Mathf.RoundToInt(definition.valuePerLevel * GetCurrencyUpgradeLevel(CurrencyUpgradeType.HumanKillBonus))); // 지급할 고정 보너스
+        int bonus = ToSafeCurrency(Math.Round(GetCurrencyUpgradeTotalEffect(CurrencyUpgradeType.HumanKillBonus,
+            GetCurrencyUpgradeLevel(CurrencyUpgradeType.HumanKillBonus)))); // 기존 반올림 규칙과 지갑 범위를 적용한 처치 보너스
         if (bonus > 0) AddCurrency(bonus);
         return bonus;
     }
@@ -271,23 +278,32 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     {
         CurrencyUpgradeDefinition definition = currencyUpgradeBalance == null ? null : currencyUpgradeBalance.GetDefinition(type); // 요청한 강화 정의
         if (definition == null) return new CurrencyUpgradeSnapshot(type, type.ToString(), string.Empty, 0, 0, 0, 0f, 0f);
-        int level = Mathf.Clamp(GetCurrencyUpgradeLevel(type), 0, definition.maxLevel); // 현재 유효 레벨
+        int level = ClampCurrencyUpgradeLevel(type, GetCurrencyUpgradeLevel(type)); // 무제한 정책까지 반영한 현재 유효 레벨
         float currentEffect = GetDisplayedCurrencyEffect(type, level); // 기본값과 상한까지 반영한 현재 효과
-        float nextEffect = GetDisplayedCurrencyEffect(type, Mathf.Min(level + 1, definition.maxLevel)); // 기본값과 상한까지 반영한 다음 효과
-        int cost = level >= definition.maxLevel ? 0 : CalculateCurrencyUpgradeCost(definition, level); // 다음 강화 비용
+        int nextLevel = definition.IsMaxLevel(level) || level == int.MaxValue ? level : level + 1; // 정수 오버플로와 유한 최대 레벨을 방지한 다음 레벨
+        float nextEffect = GetDisplayedCurrencyEffect(type, nextLevel); // 기본값과 상한까지 반영한 다음 효과
+        int cost = definition.IsMaxLevel(level) ? 0 : CalculateCurrencyUpgradeCost(definition, level); // 다음 강화 비용
         return new CurrencyUpgradeSnapshot(type, definition.displayName, definition.description, level,
-            definition.maxLevel, cost, currentEffect, nextEffect);
+            definition.maxLevel, cost, currentEffect, nextEffect, definition.unlimited);
     }
 
-    // 비용과 최대 레벨을 확인한 뒤 재화 강화를 한 단계 올립니다.
-    public bool TryUpgradeCurrency(CurrencyUpgradeType type)
+    // 재화와 정의의 레벨 정책을 기준으로 추가 강화가 가능한지 확인합니다.
+    public bool CanUpgradeCurrency(CurrencyUpgradeType type)
     {
         CurrencyUpgradeDefinition definition = currencyUpgradeBalance == null ? null : currencyUpgradeBalance.GetDefinition(type); // 강화할 정의
-        if (definition == null) return false;
+        if (definition == null || _state == null) return false;
         int level = GetCurrencyUpgradeLevel(type); // 강화 전 레벨
-        if (level >= definition.maxLevel) return false;
+        if (level == int.MaxValue || definition.IsMaxLevel(level)) return false;
+        return _state.currency >= CalculateCurrencyUpgradeCost(definition, level);
+    }
+
+    // 공통 강화 가능 검사를 통과하면 비용 차감과 레벨 증가를 한 번 처리합니다.
+    public bool TryUpgradeCurrency(CurrencyUpgradeType type)
+    {
+        if (!CanUpgradeCurrency(type)) return false;
+        CurrencyUpgradeDefinition definition = currencyUpgradeBalance.GetDefinition(type); // 구매할 재화 강화 정의
+        int level = Mathf.Max(0, GetCurrencyUpgradeLevel(type)); // 증가 전 저장 레벨
         int cost = CalculateCurrencyUpgradeCost(definition, level); // 정확히 한 번 차감할 비용
-        if (_state == null || _state.currency < cost) return false;
         _state.currency -= cost;
         SetCurrencyUpgradeLevel(type, level + 1);
         SaveAndNotify(true);
@@ -310,7 +326,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         double appliedSeconds = Math.Min(safeActualSeconds, GetOfflineMaxSeconds()); // 적립 상한 적용 초
         float efficiency = GetOfflineEfficiency(); // 현재 오프라인 효율
         double rawReward = GetCurrencyPerSecond() * appliedSeconds * efficiency; // 반올림 전 보상
-        int earnedCurrency = rawReward <= 0d ? 0 : (int)Math.Min(int.MaxValue, Math.Floor(rawReward)); // 지급할 정수 보상
+        int earnedCurrency = ToSafeCurrency(Math.Floor(rawReward)); // 비정상 수치와 지갑 범위를 보호한 정수 보상
         return new OfflineCurrencyReward(safeActualSeconds, appliedSeconds, efficiency, earnedCurrency);
     }
 
@@ -325,6 +341,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         int amount = RollGachaAmount(levelDefinition); // 등급 확률로 결정한 실제 당첨 수치
         UpgradeStatValue value = GetValue(type); // 당첨 스탯 저장값
         value.accumulatedValue += amount;
+        if (_state.totalDrawCount < long.MaxValue) _state.totalDrawCount++; // 실제 성공한 1회 실행만 집계
         bool increased = AdvanceGachaLevel(); // 레벨 상승 여부
         return new GachaDrawResult(type, amount, value.accumulatedValue, increased, _state.gachaLevel);
     }
@@ -623,6 +640,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         _state.currency = Mathf.Max(0, _state.currency);
         _state.gachaLevel = Mathf.Clamp(_state.gachaLevel, 1, GetMaximumGachaLevel());
         _state.drawsAtCurrentLevel = Mathf.Max(0, _state.drawsAtCurrentLevel);
+        InitializeTotalDrawCount();
         GachaLevelDefinition currentGacha = balanceSettings == null ? null : balanceSettings.GetGachaLevel(_state.gachaLevel); // 진행도를 검증할 현재 가챠 정의
         if (currentGacha != null && currentGacha.drawsToNextLevel > 0)
             _state.drawsAtCurrentLevel = Mathf.Min(_state.drawsAtCurrentLevel, currentGacha.drawsToNextLevel - 1);
@@ -640,6 +658,18 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
             value.accumulatedValue = Mathf.Max(0, value.accumulatedValue);
             value.researchLevel = Mathf.Max(0, value.researchLevel);
         }
+    }
+
+    // 구버전은 현재 레벨까지 확실하게 수행한 횟수만 한 번 복원합니다.
+    private void InitializeTotalDrawCount()
+    {
+        _state.totalDrawCount = Math.Max(0L, _state.totalDrawCount);
+        if (_state.totalDrawCountInitialized || balanceSettings == null) return;
+        long knownDraws = _state.drawsAtCurrentLevel; // 현재 레벨 안에서 저장된 실제 진행도
+        foreach (GachaLevelDefinition level in balanceSettings.GachaLevels) // 이전 레벨을 통과하는 데 필요했던 뽑기 횟수
+            if (level != null && level.level < _state.gachaLevel) knownDraws += Math.Max(0, level.drawsToNextLevel);
+        _state.totalDrawCount = Math.Max(_state.totalDrawCount, knownDraws);
+        _state.totalDrawCountInitialized = true;
     }
 
     // Upgrade Provider 버전을 현재 내부 형식으로 올릴 수 있는지 확인합니다.
@@ -670,12 +700,12 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         return maximumLevel;
     }
 
-    // 재화 강화 레벨을 0과 Balance 최대 레벨 사이로 제한합니다.
+    // 무제한 강화의 저장 레벨은 유지하고 유한 정의에만 최대 레벨을 적용합니다.
     private int ClampCurrencyUpgradeLevel(CurrencyUpgradeType type, int level)
     {
         CurrencyUpgradeDefinition definition = currencyUpgradeBalance == null ? null : currencyUpgradeBalance.GetDefinition(type); // 최대 레벨을 제공할 재화 강화 정의
-        int maximumLevel = definition == null ? int.MaxValue : Mathf.Max(0, definition.maxLevel); // 적용 가능한 재화 강화 최대 레벨
-        return Mathf.Clamp(level, 0, maximumLevel);
+        if (definition == null || definition.unlimited) return Mathf.Max(0, level);
+        return Mathf.Clamp(level, 0, Mathf.Max(0, definition.maxLevel));
     }
 
     // 스탯 enum과 무관하게 유지되는 저장 ID를 반환합니다.
@@ -770,52 +800,58 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     }
 
     // 지정 레벨의 누적 강화 효과를 반환합니다.
-    private float GetCurrencyUpgradeTotalEffect(CurrencyUpgradeType type, int level)
+    private double GetCurrencyUpgradeTotalEffect(CurrencyUpgradeType type, int level)
     {
         CurrencyUpgradeDefinition definition = currencyUpgradeBalance == null ? null : currencyUpgradeBalance.GetDefinition(type); // 강화 효과 정의
-        return definition == null ? 0f : Mathf.Max(0, level) * definition.valuePerLevel;
+        return definition == null ? 0d : (double)Mathf.Max(0, level) * definition.valuePerLevel;
     }
 
     // UI에 표시할 기본값과 상한이 반영된 최종 효과를 계산합니다.
     private float GetDisplayedCurrencyEffect(CurrencyUpgradeType type, int level)
     {
         if (currencyUpgradeBalance == null) return 0f;
-        float added = GetCurrencyUpgradeTotalEffect(type, level); // 지정 레벨의 강화 증가량
-        return type switch
+        double added = GetCurrencyUpgradeTotalEffect(type, level); // 높은 레벨의 곱셈을 double로 계산한 증가량
+        double effect = type switch // 기본값과 기존 오프라인 효율 상한을 적용한 효과
         {
             CurrencyUpgradeType.CurrencyPerSecond => currencyUpgradeBalance.baseCurrencyPerSecond + added,
             CurrencyUpgradeType.HumanKillBonus => added,
             CurrencyUpgradeType.OfflineMaxTime => currencyUpgradeBalance.baseOfflineMaxHours + added,
-            CurrencyUpgradeType.OfflineEfficiency => Mathf.Min(currencyUpgradeBalance.maximumOfflineEfficiency,
+            CurrencyUpgradeType.OfflineEfficiency => Math.Min(currencyUpgradeBalance.maximumOfflineEfficiency,
                 currencyUpgradeBalance.baseOfflineEfficiency + added),
             _ => added
         };
+        if (double.IsNaN(effect) || effect <= 0d) return 0f;
+        return (float)Math.Min(float.MaxValue, effect);
     }
 
     // 지수 비용을 올림하고 int 범위로 보호합니다.
     private static int CalculateCurrencyUpgradeCost(CurrencyUpgradeDefinition definition, int currentLevel)
     {
+        if (definition.baseCost <= 0) return 0;
         double cost = definition.baseCost * Math.Pow(definition.costGrowth, Math.Max(0, currentLevel)); // 올림 전 지수 비용
         if (double.IsNaN(cost) || double.IsInfinity(cost) || cost >= int.MaxValue) return int.MaxValue;
         return Math.Max(0, (int)Math.Ceiling(cost));
     }
 
     // 현재 오프라인 최대 적립 초를 반환합니다.
-    private float GetOfflineMaxSeconds()
+    private double GetOfflineMaxSeconds()
     {
         if (currencyUpgradeBalance == null) return 0f;
-        float totalHours = currencyUpgradeBalance.baseOfflineMaxHours +
-            GetCurrencyUpgradeTotalEffect(CurrencyUpgradeType.OfflineMaxTime, GetCurrencyUpgradeLevel(CurrencyUpgradeType.OfflineMaxTime)); // 데이터의 시간 단위 최대 적립량
-        return Mathf.Max(0f, totalHours * 3600f);
+        return (double)GetDisplayedCurrencyEffect(CurrencyUpgradeType.OfflineMaxTime,
+            GetCurrencyUpgradeLevel(CurrencyUpgradeType.OfflineMaxTime)) * 3600d;
     }
 
     // 상한이 적용된 현재 오프라인 적립 효율을 반환합니다.
     private float GetOfflineEfficiency()
     {
-        if (currencyUpgradeBalance == null) return 0f;
-        float efficiency = currencyUpgradeBalance.baseOfflineEfficiency +
-            GetCurrencyUpgradeTotalEffect(CurrencyUpgradeType.OfflineEfficiency, GetCurrencyUpgradeLevel(CurrencyUpgradeType.OfflineEfficiency)); // 상한 적용 전 효율
-        return Mathf.Clamp(efficiency, 0f, currencyUpgradeBalance.maximumOfflineEfficiency);
+        return GetDisplayedCurrencyEffect(CurrencyUpgradeType.OfflineEfficiency, GetCurrencyUpgradeLevel(CurrencyUpgradeType.OfflineEfficiency));
+    }
+
+    // 정수 변환 전에 비정상 수치와 지갑의 최대 재화 범위를 처리합니다.
+    private static int ToSafeCurrency(double amount)
+    {
+        if (double.IsNaN(amount) || amount <= 0d) return 0;
+        return amount >= int.MaxValue ? int.MaxValue : (int)amount;
     }
 
     // 현재 상태를 Dirty 처리하고 필요하면 UI에 알립니다.
@@ -836,6 +872,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
     // 파괴되는 인스턴스의 Provider 등록을 해제합니다.
     protected override void OnDestroy()
     {
+        if (HasInstance && Instance == this) AvailabilityChanged?.Invoke(null);
         if (SaveManager.HasInstance) SaveManager.Instance.UnregisterProvider(this);
         base.OnDestroy();
     }
