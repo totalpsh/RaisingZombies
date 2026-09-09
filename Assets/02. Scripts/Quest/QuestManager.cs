@@ -48,7 +48,7 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         _save.SaveReset += RefreshProgress;
         UpgradeManager.AvailabilityChanged += BindUpgrade;
         StageManager.ActiveInstanceChanged += BindStage;
-        UnitController.AnyDied += HandleUnitDied;
+        UnitController.GlobalDied += HandleUnitDied;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         BindUpgrade(UpgradeManager.HasInstance ? UpgradeManager.Instance : null);
         BindStage(StageManager.ActiveInstance);
@@ -221,7 +221,7 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         if (_stage != null) _stage.StageChanged -= HandleStageChanged;
         UpgradeManager.AvailabilityChanged -= BindUpgrade;
         StageManager.ActiveInstanceChanged -= BindStage;
-        UnitController.AnyDied -= HandleUnitDied;
+        UnitController.GlobalDied -= HandleUnitDied;
         SceneManager.sceneLoaded -= HandleSceneLoaded;
         if (_save != null)
         {

@@ -37,6 +37,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
     public Transform TargetTransform => transform;
 
     public event Action<UnitController> Died;
+    public static event Action<UnitController> GlobalDied;
 
     private void Update()
     {

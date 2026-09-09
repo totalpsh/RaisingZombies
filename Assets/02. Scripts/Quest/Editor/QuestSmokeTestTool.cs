@@ -63,7 +63,7 @@ public static class QuestSmokeTestTool
             save.SaveLoaded += quests.RefreshProgress;
             save.SaveReset += quests.RefreshProgress;
             deathListener = (Action<UnitController>)Delegate.CreateDelegate(typeof(Action<UnitController>), quests, typeof(QuestManager).GetMethod("HandleUnitDied", Private));
-            UnitController.AnyDied += deathListener;
+            UnitController.GlobalDied += deathListener;
             Check(quests.CurrentQuestIndex == 0 && quests.CurrentStatus == QuestStatus.InProgress, "신규 Quest 상태 오류");
             Check(!quests.CurrencyUpgradeUnlocked && !quests.ProductionUpgradeUnlocked, "신규 Unlock 기본값 오류");
 
@@ -280,7 +280,7 @@ public static class QuestSmokeTestTool
         }
         finally
         {
-            if (deathListener != null) UnitController.AnyDied -= deathListener;
+            if (deathListener != null) UnitController.GlobalDied -= deathListener;
             EditorSceneManager.ClosePreviewScene(preview);
             SingletonField<SaveManager>().SetValue(null, oldSave);
             SingletonField<UpgradeManager>().SetValue(null, oldUpgrade);
