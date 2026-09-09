@@ -58,8 +58,13 @@ public sealed class CombatStatInfoPanel : MonoBehaviour
             $"좀비 능력치\n\n전투력  {snapshot.CombatPower.ToString("N0", CultureInfo.InvariantCulture)}\n\n" +
             $"공격력  {snapshot.Attack.ToString("N2", CultureInfo.InvariantCulture)}\n" +
             $"체력  {snapshot.MaxHealth.ToString("N2", CultureInfo.InvariantCulture)}\n" +
-            $"방어력(초당 회복)  {snapshot.HealthRegen.ToString("N2", CultureInfo.InvariantCulture)}\n" +
+            $"체력 재생  {snapshot.HealthRegen.ToString("N2", CultureInfo.InvariantCulture)}/초\n" +
+            $"방어력  {snapshot.Defense.ToString("N2", CultureInfo.InvariantCulture)}\n" +
+            $"피해 감소  {(snapshot.DamageReduction * 100f).ToString("N2", CultureInfo.InvariantCulture)}%\n" +
             $"공격속도  {snapshot.AttackSpeed.ToString("N2", CultureInfo.InvariantCulture)}/s\n" +
+            $"치명타 확률  {(snapshot.CriticalChance * 100f).ToString("N2", CultureInfo.InvariantCulture)}%\n" +
+            $"치명타 피해  {(snapshot.CriticalDamageMultiplier * 100f).ToString("N2", CultureInfo.InvariantCulture)}%\n" +
+            $"흡혈  {(snapshot.LifeSteal * 100f).ToString("N2", CultureInfo.InvariantCulture)}%\n" +
             $"이동속도  {snapshot.MoveSpeed.ToString("N2", CultureInfo.InvariantCulture)}";
     }
 

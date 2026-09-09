@@ -13,7 +13,7 @@ public enum UpgradeMenuState
     CurrencyUpgrade = 3
 }
 
-// 스탯, 생산, 재화 강화 화면 전환을 관리합니다.
+// 신체 장비, 생산, 재화 강화 화면 전환을 관리합니다.
 public sealed class UpgradeMenuController : BaseUI
 {
     [Header("화면")]
@@ -23,7 +23,7 @@ public sealed class UpgradeMenuController : BaseUI
 
     [FormerlySerializedAs("zombieUpgradeRoot")]
     [SerializeField]
-    private GameObject statUpgradeRoot; // 기존 좀비 스탯 강화 화면
+    private GameObject statUpgradeRoot; // 직렬화 값을 유지하며 신체 장비 화면으로 사용하는 기존 Root
 
     [SerializeField]
     private GameObject productionUpgradeRoot; // 생산 강화 화면
@@ -35,7 +35,7 @@ public sealed class UpgradeMenuController : BaseUI
 
     [FormerlySerializedAs("zombieUpgradeButton")]
     [SerializeField]
-    private Button statUpgradeButton; // 스탯 강화 선택 버튼
+    private Button statUpgradeButton; // 신체 장비 선택에 재사용하는 기존 버튼
 
     [SerializeField]
     private Button productionUpgradeButton; // 생산 강화 선택 버튼
@@ -47,7 +47,7 @@ public sealed class UpgradeMenuController : BaseUI
 
     [FormerlySerializedAs("zombieBackButton")]
     [SerializeField]
-    private Button statBackButton; // 스탯 강화에서 종류 선택으로 이동
+    private Button statBackButton; // 기존 직렬화 호환용 뒤로가기 버튼
 
     [SerializeField]
     private Button productionBackButton; // 생산 강화에서 종류 선택으로 이동
@@ -99,10 +99,16 @@ public sealed class UpgradeMenuController : BaseUI
         SetState(UpgradeMenuState.CategorySelection);
     }
 
-    // 기존 좀비 스탯 강화 화면을 표시합니다.
+    // 신체 장비 뽑기 화면을 표시합니다.
     public void ShowStatUpgrade()
     {
         SetState(UpgradeMenuState.StatUpgrade);
+    }
+
+    // 새 코드에서 의미가 분명한 이름으로 신체 장비 화면을 표시합니다.
+    public void ShowBodyEquipment()
+    {
+        ShowStatUpgrade();
     }
 
     // 생산 강화 화면을 표시합니다.
