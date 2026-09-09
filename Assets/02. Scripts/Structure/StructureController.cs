@@ -52,18 +52,15 @@ public class StructureController : MonoBehaviour, ICombatTarget
         enabled = true;
     }
  
-    // 구조물에 피해를 적용하고 실제 감소한 체력을 반환합니다.
-    public float TakeDamage(float damage)
+    public void TakeDamage(float damage)
     {
         if (_isDestroyed || damage <= 0f)
-            return 0f;
+            return;
 
-        float actualDamage = Mathf.Min(_currentHealth, damage); // 남은 체력을 넘지 않는 실제 피해
-        _currentHealth = Mathf.Max(0f, _currentHealth - actualDamage);
+        _currentHealth = Mathf.Max(0f, _currentHealth - damage);
 
         if (_currentHealth <= 0f)
             DestroyStructure();
-        return actualDamage;
     }
     
     private void DestroyStructure()
