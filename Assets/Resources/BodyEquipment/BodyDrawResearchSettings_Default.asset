@@ -1,0 +1,357 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 969f49ffde6abc94293cc4ae03a6a0f1, type: 3}
+  m_Name: BodyDrawResearchSettings_Default
+  m_EditorClassIdentifier: Assembly-CSharp::BodyDrawResearchSettingsSO
+  inventoryCapacity: 500
+  singleDrawTicketCost: 1
+  tenDrawTicketCost: 10
+  initialResearchLevel: 1
+  defenseReductionConstant: 100
+  baseCriticalDamageMultiplier: 1.5
+  levels:
+  - level: 1
+    requiredResearchPoints: 10
+    durationSeconds: 300
+    rarityWeights:
+    - rarityTier: 1
+      weight: 650000
+    - rarityTier: 2
+      weight: 250000
+    - rarityTier: 3
+      weight: 80000
+    - rarityTier: 4
+      weight: 18000
+    - rarityTier: 5
+      weight: 1800
+    - rarityTier: 6
+      weight: 180
+    - rarityTier: 7
+      weight: 18
+    - rarityTier: 8
+      weight: 2
+    - rarityTier: 9
+      weight: 0.2
+    - rarityTier: 10
+      weight: 0.02
+    - rarityTier: 11
+      weight: 0.002
+    - rarityTier: 12
+      weight: 0.0002
+  - level: 2
+    requiredResearchPoints: 25
+    durationSeconds: 600
+    rarityWeights:
+    - rarityTier: 1
+      weight: 598000
+    - rarityTier: 2
+      weight: 280000
+    - rarityTier: 3
+      weight: 99200
+    - rarityTier: 4
+      weight: 24480
+    - rarityTier: 5
+      weight: 2664
+    - rarityTier: 6
+      weight: 288
+    - rarityTier: 7
+      weight: 30.96
+    - rarityTier: 8
+      weight: 3.68
+    - rarityTier: 9
+      weight: 0.392
+    - rarityTier: 10
+      weight: 0.0416
+    - rarityTier: 11
+      weight: 0.0044
+    - rarityTier: 12
+      weight: 0.000464
+  - level: 3
+    requiredResearchPoints: 60
+    durationSeconds: 1800
+    rarityWeights:
+    - rarityTier: 1
+      weight: 550160
+    - rarityTier: 2
+      weight: 313600
+    - rarityTier: 3
+      weight: 123008
+    - rarityTier: 4
+      weight: 33292.8
+    - rarityTier: 5
+      weight: 3942.72
+    - rarityTier: 6
+      weight: 460.8
+    - rarityTier: 7
+      weight: 53.2512
+    - rarityTier: 8
+      weight: 6.7712
+    - rarityTier: 9
+      weight: 0.76832
+    - rarityTier: 10
+      weight: 0.086528
+    - rarityTier: 11
+      weight: 0.00968
+    - rarityTier: 12
+      weight: 0.00107648
+  - level: 4
+    requiredResearchPoints: 150
+    durationSeconds: 3600
+    rarityWeights:
+    - rarityTier: 1
+      weight: 506147.2
+    - rarityTier: 2
+      weight: 351232
+    - rarityTier: 3
+      weight: 152529.92
+    - rarityTier: 4
+      weight: 45278.207
+    - rarityTier: 5
+      weight: 5835.2256
+    - rarityTier: 6
+      weight: 737.28
+    - rarityTier: 7
+      weight: 91.592064
+    - rarityTier: 8
+      weight: 12.459008
+    - rarityTier: 9
+      weight: 1.5059072
+    - rarityTier: 10
+      weight: 0.17997824
+    - rarityTier: 11
+      weight: 0.021296
+    - rarityTier: 12
+      weight: 0.0024974337
+  - level: 5
+    requiredResearchPoints: 350
+    durationSeconds: 10800
+    rarityWeights:
+    - rarityTier: 1
+      weight: 465655.44
+    - rarityTier: 2
+      weight: 393379.84
+    - rarityTier: 3
+      weight: 189137.1
+    - rarityTier: 4
+      weight: 61578.363
+    - rarityTier: 5
+      weight: 8636.134
+    - rarityTier: 6
+      weight: 1179.648
+    - rarityTier: 7
+      weight: 157.53835
+    - rarityTier: 8
+      weight: 22.924574
+    - rarityTier: 9
+      weight: 2.9515781
+    - rarityTier: 10
+      weight: 0.37435475
+    - rarityTier: 11
+      weight: 0.0468512
+    - rarityTier: 12
+      weight: 0.005794046
+  - level: 6
+    requiredResearchPoints: 800
+    durationSeconds: 18000
+    rarityWeights:
+    - rarityTier: 1
+      weight: 428403
+    - rarityTier: 2
+      weight: 440585.4
+    - rarityTier: 3
+      weight: 234530
+    - rarityTier: 4
+      weight: 83746.57
+    - rarityTier: 5
+      weight: 12781.479
+    - rarityTier: 6
+      weight: 1887.4368
+    - rarityTier: 7
+      weight: 270.96597
+    - rarityTier: 8
+      weight: 42.181217
+    - rarityTier: 9
+      weight: 5.7850933
+    - rarityTier: 10
+      weight: 0.77865785
+    - rarityTier: 11
+      weight: 0.10307264
+    - rarityTier: 12
+      weight: 0.013442187
+  - level: 7
+    requiredResearchPoints: 1800
+    durationSeconds: 28800
+    rarityWeights:
+    - rarityTier: 1
+      weight: 394130.75
+    - rarityTier: 2
+      weight: 493455.66
+    - rarityTier: 3
+      weight: 290817.22
+    - rarityTier: 4
+      weight: 113895.34
+    - rarityTier: 5
+      weight: 18916.588
+    - rarityTier: 6
+      weight: 3019.899
+    - rarityTier: 7
+      weight: 466.06146
+    - rarityTier: 8
+      weight: 77.61344
+    - rarityTier: 9
+      weight: 11.338782
+    - rarityTier: 10
+      weight: 1.6196084
+    - rarityTier: 11
+      weight: 0.2267598
+    - rarityTier: 12
+      weight: 0.031185873
+  - level: 8
+    requiredResearchPoints: 4000
+    durationSeconds: 54000
+    rarityWeights:
+    - rarityTier: 1
+      weight: 362600.28
+    - rarityTier: 2
+      weight: 552670.4
+    - rarityTier: 3
+      weight: 360613.34
+    - rarityTier: 4
+      weight: 154897.66
+    - rarityTier: 5
+      weight: 27996.549
+    - rarityTier: 6
+      weight: 4831.8384
+    - rarityTier: 7
+      weight: 801.62573
+    - rarityTier: 8
+      weight: 142.80873
+    - rarityTier: 9
+      weight: 22.224014
+    - rarityTier: 10
+      weight: 3.3687854
+    - rarityTier: 11
+      weight: 0.49887156
+    - rarityTier: 12
+      weight: 0.072351225
+  - level: 9
+    requiredResearchPoints: 9000
+    durationSeconds: 86400
+    rarityWeights:
+    - rarityTier: 1
+      weight: 333592.28
+    - rarityTier: 2
+      weight: 618990.8
+    - rarityTier: 3
+      weight: 447160.53
+    - rarityTier: 4
+      weight: 210660.83
+    - rarityTier: 5
+      weight: 41434.895
+    - rarityTier: 6
+      weight: 7730.941
+    - rarityTier: 7
+      weight: 1378.7963
+    - rarityTier: 8
+      weight: 262.76807
+    - rarityTier: 9
+      weight: 43.559067
+    - rarityTier: 10
+      weight: 7.0070734
+    - rarityTier: 11
+      weight: 1.0975175
+    - rarityTier: 12
+      weight: 0.16785485
+  - level: 10
+    requiredResearchPoints: 20000
+    durationSeconds: 108000
+    rarityWeights:
+    - rarityTier: 1
+      weight: 306904.88
+    - rarityTier: 2
+      weight: 693269.7
+    - rarityTier: 3
+      weight: 554479.06
+    - rarityTier: 4
+      weight: 286498.72
+    - rarityTier: 5
+      weight: 61323.64
+    - rarityTier: 6
+      weight: 12369.506
+    - rarityTier: 7
+      weight: 2371.5295
+    - rarityTier: 8
+      weight: 483.49323
+    - rarityTier: 9
+      weight: 85.37577
+    - rarityTier: 10
+      weight: 14.574713
+    - rarityTier: 11
+      weight: 2.4145384
+    - rarityTier: 12
+      weight: 0.38942322
+  - level: 11
+    requiredResearchPoints: 45000
+    durationSeconds: 180000
+    rarityWeights:
+    - rarityTier: 1
+      weight: 282352.5
+    - rarityTier: 2
+      weight: 776462.06
+    - rarityTier: 3
+      weight: 687554.06
+    - rarityTier: 4
+      weight: 389638.25
+    - rarityTier: 5
+      weight: 90758.99
+    - rarityTier: 6
+      weight: 19791.209
+    - rarityTier: 7
+      weight: 4079.0308
+    - rarityTier: 8
+      weight: 889.62756
+    - rarityTier: 9
+      weight: 167.33652
+    - rarityTier: 10
+      weight: 30.315403
+    - rarityTier: 11
+      weight: 5.3119845
+    - rarityTier: 12
+      weight: 0.90346193
+  - level: 12
+    requiredResearchPoints: 100000
+    durationSeconds: 288000
+    rarityWeights:
+    - rarityTier: 1
+      weight: 259764.3
+    - rarityTier: 2
+      weight: 869637.5
+    - rarityTier: 3
+      weight: 852567
+    - rarityTier: 4
+      weight: 529908
+    - rarityTier: 5
+      weight: 134323.31
+    - rarityTier: 6
+      weight: 31665.936
+    - rarityTier: 7
+      weight: 7015.9326
+    - rarityTier: 8
+      weight: 1636.9147
+    - rarityTier: 9
+      weight: 327.97955
+    - rarityTier: 10
+      weight: 63.056038
+    - rarityTier: 11
+      weight: 11.686366
+    - rarityTier: 12
+      weight: 2.0960317

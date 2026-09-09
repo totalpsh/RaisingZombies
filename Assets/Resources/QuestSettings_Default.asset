@@ -14,13 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   quests:
   - id: main_quest_01
-    type: 0
-    title: "스탯 가챠"
-    description: "스탯 가챠 누적 3회 진행"
+    type: 6
+    title: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30"
+    description: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30 \uB204\uC801 3\uD68C \uC9C4\uD589"
     target: 3
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -28,12 +30,14 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_02
     type: 1
-    title: "스테이지 클리어"
-    description: "스테이지 1 클리어"
+    title: "\uC2A4\uD14C\uC774\uC9C0 \uD074\uB9AC\uC5B4"
+    description: "\uC2A4\uD14C\uC774\uC9C0 1 \uD074\uB9AC\uC5B4"
     target: 1
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -41,25 +45,29 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_03
     type: 2
-    title: "적 처치"
-    description: "적 누적 3명 처치"
+    title: "\uC801 \uCC98\uCE58"
+    description: "\uC801 \uB204\uC801 3\uBA85 \uCC98\uCE58"
     target: 3
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
     popupImage: {fileID: 0}
     unlockReward: 0
   - id: main_quest_04
-    type: 0
-    title: "스탯 가챠"
-    description: "스탯 가챠 누적 6회 진행"
+    type: 6
+    title: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30"
+    description: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30 \uB204\uC801 6\uD68C \uC9C4\uD589"
     target: 6
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -67,12 +75,14 @@ MonoBehaviour:
     unlockReward: 1
   - id: main_quest_05
     type: 3
-    title: "재화 강화"
-    description: "초당 재화 Lv.3 달성"
+    title: "\uC7AC\uD654 \uAC15\uD654"
+    description: "\uCD08\uB2F9 \uC7AC\uD654 Lv.3 \uB2EC\uC131"
     target: 3
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -80,12 +90,14 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_06
     type: 1
-    title: "스테이지 클리어"
-    description: "스테이지 2 클리어"
+    title: "\uC2A4\uD14C\uC774\uC9C0 \uD074\uB9AC\uC5B4"
+    description: "\uC2A4\uD14C\uC774\uC9C0 2 \uD074\uB9AC\uC5B4"
     target: 1
     targetStage: 2
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -93,25 +105,29 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_07
     type: 2
-    title: "적 처치"
-    description: "적 누적 10명 처치"
+    title: "\uC801 \uCC98\uCE58"
+    description: "\uC801 \uB204\uC801 10\uBA85 \uCC98\uCE58"
     target: 10
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
     popupImage: {fileID: 0}
     unlockReward: 0
   - id: main_quest_08
-    type: 0
-    title: "스탯 가챠"
-    description: "스탯 가챠 누적 10회 진행"
+    type: 6
+    title: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30"
+    description: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30 \uB204\uC801 10\uD68C \uC9C4\uD589"
     target: 10
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -119,12 +135,14 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_09
     type: 3
-    title: "재화 강화"
-    description: "초당 재화 Lv.5 달성"
+    title: "\uC7AC\uD654 \uAC15\uD654"
+    description: "\uCD08\uB2F9 \uC7AC\uD654 Lv.5 \uB2EC\uC131"
     target: 5
     targetStage: 1
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -132,12 +150,14 @@ MonoBehaviour:
     unlockReward: 0
   - id: main_quest_10
     type: 1
-    title: "스테이지 클리어"
-    description: "스테이지 3 클리어"
+    title: "\uC2A4\uD14C\uC774\uC9C0 \uD074\uB9AC\uC5B4"
+    description: "\uC2A4\uD14C\uC774\uC9C0 3 \uD074\uB9AC\uC5B4"
     target: 1
     targetStage: 3
     targetUpgrade: 0
     targetStat: 0
+    productionUpgradeIndex: 0
+    targetRarityTier: 1
     rewardType: 1
     rewardAmount: 100
     rewardIcon: {fileID: 21300000, guid: 1bb8ec6bf148444fb98938d58c464084, type: 3}
@@ -145,40 +165,45 @@ MonoBehaviour:
     unlockReward: 2
   infiniteRules:
   - type: 1
-    title: "스테이지 클리어"
+    title: "\uC2A4\uD14C\uC774\uC9C0 \uD074\uB9AC\uC5B4"
     baseTarget: 5
     targetIncreasePerCycle: 2
     targetUpgrade: 0
     targetStat: 0
     productionUpgradeIndex: 0
-    descriptionFormat: "스테이지 {0} 클리어"
+    targetRarityTier: 1
+    descriptionFormat: "\uC2A4\uD14C\uC774\uC9C0 {0} \uD074\uB9AC\uC5B4"
     popupImage: {fileID: 0}
-  - type: 0
-    title: "스탯 가챠"
+  - type: 6
+    title: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30"
     baseTarget: 15
     targetIncreasePerCycle: 10
     targetUpgrade: 0
     targetStat: 0
     productionUpgradeIndex: 0
-    descriptionFormat: "스탯 가챠 누적 {0}회 진행"
+    targetRarityTier: 1
+    descriptionFormat: "\uC2E0\uCCB4 \uC7A5\uBE44 \uBF51\uAE30 \uB204\uC801 {0}\uD68C
+      \uC9C4\uD589"
     popupImage: {fileID: 0}
   - type: 2
-    title: "적 처치"
+    title: "\uC801 \uCC98\uCE58"
     baseTarget: 30
     targetIncreasePerCycle: 25
     targetUpgrade: 0
     targetStat: 0
     productionUpgradeIndex: 0
-    descriptionFormat: "적 누적 {0}명 처치"
+    targetRarityTier: 1
+    descriptionFormat: "\uC801 \uB204\uC801 {0}\uBA85 \uCC98\uCE58"
     popupImage: {fileID: 0}
   - type: 3
-    title: "재화 강화"
+    title: "\uC7AC\uD654 \uAC15\uD654"
     baseTarget: 10
     targetIncreasePerCycle: 5
     targetUpgrade: 0
     targetStat: 0
     productionUpgradeIndex: 0
-    descriptionFormat: "초당 재화 Lv.{0} 달성"
+    targetRarityTier: 1
+    descriptionFormat: "\uCD08\uB2F9 \uC7AC\uD654 Lv.{0} \uB2EC\uC131"
     popupImage: {fileID: 0}
   infiniteBaseReward: 50
   rewardIncreasePerCycle: 5
