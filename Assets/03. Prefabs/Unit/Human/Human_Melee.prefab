@@ -338,7 +338,6 @@ GameObject:
   - component: {fileID: 974294955510299920}
   - component: {fileID: 7946149785694103159}
   - component: {fileID: 8261953951638224331}
-  - component: {fileID: -1658330524248805767}
   - component: {fileID: 3689403238102029928}
   - component: {fileID: 343715756972624768}
   - component: {fileID: 5057599588838848191}
@@ -429,37 +428,13 @@ MonoBehaviour:
   anim: {fileID: 3061552685371092474}
   targeting: {fileID: 343715756972624768}
   movement: {fileID: 3689403238102029928}
+  combat: {fileID: 5057599588838848191}
   unitCollider: {fileID: 7946149785694103159}
   data: {fileID: 11400000, guid: 3b07f7129dd006641924f2f22ef68367, type: 2}
-  combat: {fileID: 5057599588838848191}
-  useHit: 1
   useHitSlow: 0
   hitSpeedRate: 0.6
   hitSlowTime: 0.15
-  combatYBounds: {x: -1.5, y: 1.5}
-  slotTolerance: 0.05
-  slotLeeway: 0.15
-  forwardStopDistance: 0.15
-  targetSearchWidth: 3
-  targetSearchHeight: 6
   healthBar: {fileID: 6188570026437520334}
---- !u!114 &-1658330524248805767
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8825992096614875004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
-  slotCount: 5
-  radius: 0.8
-  angleStep: 40
-  shape: 0
-  yGap: 0.4
 --- !u!114 &3689403238102029928
 MonoBehaviour:
   m_ObjectHideFlags: 0

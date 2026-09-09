@@ -2,9 +2,6 @@ using UnityEngine;
 
 public class UnitMovement : MonoBehaviour
 {
-    [SerializeField, Min(0f)]
-    private float arrivalTolerance = 0.05f;
-
     private UnitController _owner;
     private UnitAnimation _animation;
     private BattleArea _battleArea;
@@ -56,21 +53,6 @@ public class UnitMovement : MonoBehaviour
             Mathf.Max(0f, speed) * Time.deltaTime);
 
         unitRoot.position = ClampPosition(nextPosition);
-    }
-
-    public bool HasReached(Vector3 destination)
-    {
-        if (_owner == null)
-            return false;
-
-        Vector3 currentPosition =
-            _owner.transform.position;
-
-        destination.z = currentPosition.z;
-
-        return (currentPosition - destination)
-            .sqrMagnitude <=
-            arrivalTolerance * arrivalTolerance;
     }
 
     private Vector3 ClampPosition(Vector3 position)

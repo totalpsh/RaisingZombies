@@ -1,15 +1,7 @@
 using UnityEngine;
 
-public enum UnitCombatType
-{
-    Melee,
-    Ranged
-}
-
 public abstract class UnitAction : MonoBehaviour
 {
-    public abstract UnitCombatType CombatType { get; }
-
     public virtual bool CanTarget(
         UnitController owner,
         ICombatTarget target)

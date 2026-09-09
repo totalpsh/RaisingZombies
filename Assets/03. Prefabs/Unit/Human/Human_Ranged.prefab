@@ -239,7 +239,6 @@ MonoBehaviour:
   projectileKey: HumanProjectile
   firePoint: {fileID: 7919616608588250673}
   projectileSpeed: 8
-  projectileLifetime: 5
 --- !u!1 &7376198329561607314
 GameObject:
   m_ObjectHideFlags: 0
@@ -373,10 +372,10 @@ GameObject:
   - component: {fileID: 974294955510299920}
   - component: {fileID: 7946149785694103159}
   - component: {fileID: 8261953951638224331}
-  - component: {fileID: -4324631424263990496}
   - component: {fileID: 6151570643739038749}
   - component: {fileID: 5442476470630298288}
   - component: {fileID: 1805337167176146454}
+  - component: {fileID: 75399717376320760}
   m_Layer: 7
   m_Name: Human_Ranged
   m_TagString: Untagged
@@ -465,37 +464,13 @@ MonoBehaviour:
   anim: {fileID: 3061552685371092474}
   targeting: {fileID: 1805337167176146454}
   movement: {fileID: 6151570643739038749}
+  combat: {fileID: 5442476470630298288}
   unitCollider: {fileID: 7946149785694103159}
   data: {fileID: 11400000, guid: 72ea607eb23881443a7b65585efae315, type: 2}
-  combat: {fileID: 5442476470630298288}
-  useHit: 1
   useHitSlow: 0
   hitSpeedRate: 0.6
   hitSlowTime: 0.15
-  combatYBounds: {x: -1.5, y: 1.5}
-  slotTolerance: 0.05
-  slotLeeway: 0.15
-  forwardStopDistance: 0.15
-  targetSearchWidth: 3
-  targetSearchHeight: 6
   healthBar: {fileID: 5791631725281444510}
---- !u!114 &-4324631424263990496
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8825992096614875004}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aeee6a0ca0e824d458373545b1712d57, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CombatSlots
-  slotCount: 5
-  radius: 0.8
-  angleStep: 40
-  shape: 0
-  yGap: 0.4
 --- !u!114 &6151570643739038749
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -533,6 +508,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitTargeting
   frontLineTolerance: 0.5
+--- !u!114 &75399717376320760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8825992096614875004}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f0138c507bfb13418d673737ea1de69, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RangedAttackAction
+  projectileKey: HumanProjectile
+  firePoint: {fileID: 7919616608588250673}
+  projectileSpeed: 8
 --- !u!1001 &8006359385419225962
 PrefabInstance:
   m_ObjectHideFlags: 0

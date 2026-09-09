@@ -2,9 +2,6 @@ using UnityEngine;
 
 public class MeleeAttackAction : UnitAction
 {
-    public override UnitCombatType CombatType =>
-        UnitCombatType.Melee;
-
     public override void Execute(
         UnitController owner,
         ICombatTarget target,

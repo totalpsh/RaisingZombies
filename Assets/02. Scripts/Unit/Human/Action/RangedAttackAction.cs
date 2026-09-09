@@ -3,9 +3,6 @@ using UnityEngine;
 
 public class RangedAttackAction : UnitAction
 {
-    public override UnitCombatType CombatType =>
-        UnitCombatType.Ranged;
-
     [SerializeField] private string projectileKey;
     [SerializeField] private Transform firePoint;
     [SerializeField, Min(0.01f)] private float projectileSpeed = 8f;
