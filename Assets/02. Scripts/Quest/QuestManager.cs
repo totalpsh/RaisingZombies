@@ -11,6 +11,8 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
     private UpgradeManager _upgrade; // 현재 강화·재화 원본
     private StageManager _stage; // 현재 씬의 스테이지 원본
     private IProductionUpgradeProgressSource _production; // 실제 생산 강화가 제공할 선택적 원본
+    private BodyEquipmentManager _bodyEquipment; // 신체 Draw, 장착, 파기와 연구 진행 원본
+    private CurrencyWalletManager _wallet; // 신체 뽑기권 보상 지급 원본
     private SaveManager _save; // 기존 통합 저장 서비스
     private bool _ready; // 저장 등록 완료 여부
     private bool _claiming; // 연타와 이벤트 재진입을 막는 수령 잠금
@@ -47,10 +49,14 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         _save.SaveLoaded += RefreshProgress;
         _save.SaveReset += RefreshProgress;
         UpgradeManager.AvailabilityChanged += BindUpgrade;
+        BodyEquipmentManager.AvailabilityChanged += BindBodyEquipment;
+        CurrencyWalletManager.AvailabilityChanged += BindWallet;
         StageManager.ActiveInstanceChanged += BindStage;
         UnitController.AnyDied += HandleUnitDied;
         SceneManager.sceneLoaded += HandleSceneLoaded;
         BindUpgrade(UpgradeManager.HasInstance ? UpgradeManager.Instance : null);
+        BindBodyEquipment(BodyEquipmentManager.HasInstance ? BodyEquipmentManager.Instance : null);
+        BindWallet(CurrencyWalletManager.HasInstance ? CurrencyWalletManager.Instance : null);
         BindStage(StageManager.ActiveInstance);
     }
 
@@ -68,6 +74,21 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         _upgrade = manager;
         if (_upgrade != null) { _upgrade.stateChanged -= RefreshProgress; _upgrade.stateChanged += RefreshProgress; }
         RefreshProgress();
+    }
+
+    // 신체 장비 원본이 재생성되면 이전 이벤트를 해제하고 새 진행도를 읽습니다.
+    private void BindBodyEquipment(BodyEquipmentManager manager)
+    {
+        if (_bodyEquipment != null) _bodyEquipment.StateChanged -= RefreshProgress;
+        _bodyEquipment = manager;
+        if (_bodyEquipment != null) { _bodyEquipment.StateChanged -= RefreshProgress; _bodyEquipment.StateChanged += RefreshProgress; }
+        RefreshProgress();
+    }
+
+    // 타입형 지갑이 재생성되면 Quest 보상 지급 원본을 교체합니다.
+    private void BindWallet(CurrencyWalletManager manager)
+    {
+        _wallet = manager;
     }
 
     // 기존 StageChanged 이벤트를 중복 없이 연결합니다.
@@ -95,6 +116,15 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
 
     // 생산 강화가 변경됐을 때 해당 시스템이 호출할 이벤트 기반 갱신 진입점입니다.
     public void NotifyProductionProgressChanged() { RefreshProgress(); }
+
+    // Dungeon 시스템이 실제 클리어 한 건을 같은 Quest 원본에 기록할 Hook입니다.
+    public void NotifyDungeonCleared()
+    {
+        if (!_ready || _save == null || _save.IsRestoring) return;
+        if (_state.dungeonClearCount < long.MaxValue) _state.dungeonClearCount++;
+        _save.MarkDirty();
+        RefreshProgress();
+    }
 
     // Stage 원본이 다음 번호로 변경되면 클리어 상태를 갱신합니다.
     private void HandleStageChanged(int stageNumber) { RefreshProgress(); }
@@ -129,19 +159,31 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         if (quest == null) return 0;
         long progress = quest.type switch // 같은 진행도를 퀘스트 저장에 복제하지 않는 원본 조회
         {
-            QuestType.StatGachaCount => _upgrade == null ? 0 : _upgrade.TotalDrawCount,
+            QuestType.StatGachaCount => _bodyEquipment == null ? 0 : _bodyEquipment.TotalBodyDrawCount,
             QuestType.StageClear => _stage != null && _stage.CurrentStageNumber > quest.targetStage ? 1 : 0,
             QuestType.EnemyKillCount => _state.enemyKillCount,
             QuestType.CurrencyUpgradeLevel => _upgrade == null ? 0 : _upgrade.GetCurrencyUpgradeSnapshot(quest.targetUpgrade).CurrentLevel,
-            QuestType.StatResearchLevel => _upgrade == null ? 0 : _upgrade.GetStatSnapshot(quest.targetStat).ResearchLevel,
+            QuestType.StatResearchLevel => _bodyEquipment == null ? 0 : _bodyEquipment.ResearchLevel,
             QuestType.ProductionUpgradeLevel => _production == null ? 0 : _production.GetProductionUpgradeLevel(quest.productionUpgradeIndex),
+            QuestType.BodyDrawCount => _bodyEquipment == null ? 0 : _bodyEquipment.TotalBodyDrawCount,
+            QuestType.EquipmentEquipCount => _bodyEquipment == null ? 0 : _bodyEquipment.TotalEquipCount,
+            QuestType.EquipmentDismantleCount => _bodyEquipment == null ? 0 : _bodyEquipment.TotalDismantleCount,
+            QuestType.DrawResearchLevel => _bodyEquipment == null ? 0 : _bodyEquipment.ResearchLevel,
+            QuestType.MinimumRarityObtained => _bodyEquipment == null ? 0 : _bodyEquipment.HighestRarityTier,
+            QuestType.DungeonClearCount => _state.dungeonClearCount,
             _ => 0
         };
         return Math.Max(0L, progress);
     }
 
-    // 스테이지 클리어는 지정 스테이지 완료 여부 하나로 표시합니다.
-    public long GetTarget(QuestDefinition quest) { return quest != null && quest.type == QuestType.StageClear ? 1 : Math.Max(0, quest?.target ?? 0); }
+    // 스테이지와 최소 레어도 조건은 전용 목표값을 사용하고 나머지는 공통 target을 사용합니다.
+    public long GetTarget(QuestDefinition quest)
+    {
+        if (quest == null) return 0L;
+        if (quest.type == QuestType.StageClear) return 1L;
+        if (quest.type == QuestType.MinimumRarityObtained) return Mathf.Clamp(quest.targetRarityTier, 1, 12);
+        return Math.Max(0, quest.target);
+    }
 
     // 상세 팝업에 계산식 복제 없이 현재 원본 상태를 설명합니다.
     public string GetRelatedProgressText(QuestDefinition quest)
@@ -151,11 +193,17 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         return quest.type switch
         {
             QuestType.StageClear => $"현재 스테이지: {(_stage == null ? 0 : _stage.CurrentStageNumber)}\n목표: 스테이지 {quest.targetStage} 클리어",
-            QuestType.StatGachaCount => $"현재 누적 뽑기: {raw}\n목표: {quest.target}회",
+            QuestType.StatGachaCount => $"현재 누적 신체 뽑기: {raw}\n목표: {quest.target}회",
             QuestType.EnemyKillCount => $"현재 누적 처치: {raw}\n목표: {quest.target}명",
             QuestType.CurrencyUpgradeLevel => BuildCurrencyUpgradeInfo(quest, raw),
-            QuestType.StatResearchLevel => $"현재 연구 레벨: Lv.{raw}\n목표: Lv.{quest.target}",
+            QuestType.StatResearchLevel => $"현재 뽑기 연구: Lv.{raw}\n목표: Lv.{quest.target}",
             QuestType.ProductionUpgradeLevel => _production == null ? "생산 강화 레벨 원본이 아직 연결되지 않았습니다." : $"현재 생산 강화 레벨: Lv.{raw}\n목표: Lv.{quest.target}",
+            QuestType.BodyDrawCount => $"현재 누적 신체 뽑기: {raw}\n목표: {quest.target}회",
+            QuestType.EquipmentEquipCount => $"현재 누적 장착: {raw}\n목표: {quest.target}회",
+            QuestType.EquipmentDismantleCount => $"현재 누적 파기: {raw}\n목표: {quest.target}회",
+            QuestType.DrawResearchLevel => $"현재 뽑기 연구: Lv.{raw}\n목표: Lv.{quest.target}",
+            QuestType.MinimumRarityObtained => $"현재 최고 획득 Tier: {raw}\n목표: Tier {quest.targetRarityTier}",
+            QuestType.DungeonClearCount => $"현재 Dungeon 클리어: {raw}\n목표: {quest.target}회",
             _ => $"현재: {raw} / {GetTarget(quest)}"
         };
     }
@@ -171,9 +219,11 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
     // Main UI, 목록, 상세 팝업이 함께 사용하는 유일한 보상 수령 함수입니다.
     public bool TryClaimCurrentQuest()
     {
-        if (!_ready || _claiming || _save == null || _save.IsRestoring || _upgrade == null || _state.currentQuestIndex == int.MaxValue) return false;
+        if (!_ready || _claiming || _save == null || _save.IsRestoring || _state.currentQuestIndex == int.MaxValue) return false;
         QuestDefinition quest = CurrentQuest; // 수령 직전에 다시 확인할 현재 정의
         if (quest == null || CurrentStatus != QuestStatus.Claimable) return false;
+        if (quest.rewardType == QuestRewardType.Currency && _upgrade == null) return false;
+        if (quest.rewardType == QuestRewardType.BodyDrawTicket && _wallet == null) return false;
         _claiming = true;
         try
         {
@@ -181,6 +231,7 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
             if (quest.unlockReward == QuestUnlockType.CurrencyUpgrade) _state.currencyUpgradeUnlocked = true;
             if (quest.unlockReward == QuestUnlockType.ProductionUpgrade) _state.productionUpgradeUnlocked = true;
             if (quest.rewardType == QuestRewardType.Currency) _upgrade.AddCurrency(quest.rewardAmount);
+            if (quest.rewardType == QuestRewardType.BodyDrawTicket && _wallet != null) _wallet.AddCurrency(GameCurrencyType.BodyDrawTicket, quest.rewardAmount);
             _save.MarkDirty();
             if (!_save.SaveGame()) Debug.LogWarning("[QuestManager] 보상 수령 저장에 실패했습니다. 현재 메모리 상태는 유지하며 자동 저장에서 재시도합니다.", this);
         }
@@ -207,6 +258,7 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
         restored.version = CurrentSaveVersion;
         restored.currentQuestIndex = Math.Max(0, restored.currentQuestIndex);
         restored.enemyKillCount = Math.Max(0L, restored.enemyKillCount);
+        restored.dungeonClearCount = Math.Max(0L, restored.dungeonClearCount);
         _state = restored;
         Changed?.Invoke();
     }
@@ -218,8 +270,11 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
     protected override void OnDestroy()
     {
         if (_upgrade != null) _upgrade.stateChanged -= RefreshProgress;
+        if (_bodyEquipment != null) _bodyEquipment.StateChanged -= RefreshProgress;
         if (_stage != null) _stage.StageChanged -= HandleStageChanged;
         UpgradeManager.AvailabilityChanged -= BindUpgrade;
+        BodyEquipmentManager.AvailabilityChanged -= BindBodyEquipment;
+        CurrencyWalletManager.AvailabilityChanged -= BindWallet;
         StageManager.ActiveInstanceChanged -= BindStage;
         UnitController.AnyDied -= HandleUnitDied;
         SceneManager.sceneLoaded -= HandleSceneLoaded;

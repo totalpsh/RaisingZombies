@@ -6,10 +6,24 @@ using UnityEngine;
 public enum QuestStatus { InProgress, Claimable, Claimed }
 
 // 실제 게임 원본으로 판정할 순차 퀘스트 조건입니다.
-public enum QuestType { StatGachaCount, StageClear, EnemyKillCount, CurrencyUpgradeLevel, StatResearchLevel, ProductionUpgradeLevel }
+public enum QuestType
+{
+    StatGachaCount, // 이전 저장과 Asset 호환을 위해 남긴 폐기 조건
+    StageClear,
+    EnemyKillCount,
+    CurrencyUpgradeLevel,
+    StatResearchLevel, // 이전 저장과 Asset 호환을 위해 남긴 폐기 조건
+    ProductionUpgradeLevel,
+    BodyDrawCount,
+    EquipmentEquipCount,
+    EquipmentDismantleCount,
+    DrawResearchLevel,
+    MinimumRarityObtained,
+    DungeonClearCount
+}
 
 // 현재 게임에 존재하는 재화만 보상으로 사용합니다.
-public enum QuestRewardType { None, Currency }
+public enum QuestRewardType { None, Currency, BodyDrawTicket }
 
 // 퀘스트 보상 수령 시 접근을 허용할 강화 화면입니다.
 public enum QuestUnlockType { None, CurrencyUpgrade, ProductionUpgrade }
@@ -27,6 +41,7 @@ public sealed class QuestDefinition
     public CurrencyUpgradeType targetUpgrade; // 목표 재화 강화 종류
     public UpgradeStatType targetStat; // 목표 스탯 연구 종류
     [Min(0)] public int productionUpgradeIndex; // 외부 생산 강화 원본에서 읽을 항목 인덱스
+    [Range(1, 12)] public int targetRarityTier = 1; // 특정 레어도 이상 획득 조건의 목표 Tier
     public QuestRewardType rewardType = QuestRewardType.Currency; // 기존 재화 지급 여부
     [Min(0)] public int rewardAmount = 100; // 직접 수령할 재화
     public Sprite rewardIcon; // 현재 보상에 표시할 이미지
@@ -45,6 +60,7 @@ public sealed class InfiniteQuestRule
     public CurrencyUpgradeType targetUpgrade; // 재화 강화 규칙의 목표 종류
     public UpgradeStatType targetStat; // 연구 강화 규칙의 목표 종류
     [Min(0)] public int productionUpgradeIndex; // 생산 강화 원본의 목표 항목
+    [Range(1, 12)] public int targetRarityTier = 1; // 반복 레어도 획득 조건의 목표 Tier
     [TextArea] public string descriptionFormat = "목표 {0} 달성"; // {0}에 계산된 목표를 넣을 문구
     public Sprite popupImage; // 이 조건 종류가 공유할 안내 이미지
 }
@@ -75,7 +91,7 @@ public sealed class QuestSettings : ScriptableObject
         {
             id = $"infinite_{(long)questIndex + 1}", type = rule.type, title = rule.title, description = FormatDescription(rule.descriptionFormat, target),
             target = target, targetStage = rule.type == QuestType.StageClear ? target : 1,
-            targetUpgrade = rule.targetUpgrade, targetStat = rule.targetStat, productionUpgradeIndex = rule.productionUpgradeIndex,
+            targetUpgrade = rule.targetUpgrade, targetStat = rule.targetStat, productionUpgradeIndex = rule.productionUpgradeIndex, targetRarityTier = rule.targetRarityTier,
             rewardType = QuestRewardType.Currency,
             rewardAmount = SaturateToInt((long)infiniteBaseReward + cycle * rewardIncreasePerCycle),
             rewardIcon = infiniteRewardIcon, popupImage = rule.popupImage, unlockReward = QuestUnlockType.None
@@ -103,13 +119,13 @@ public sealed class QuestSettings : ScriptableObject
         foreach (QuestDefinition quest in quests) // 검사할 수동 정의
         {
             if (quest == null || string.IsNullOrWhiteSpace(quest.id) || !ids.Add(quest.id) || quest.target < 1 ||
-                quest.targetStage < 1 || quest.rewardAmount < 0 || !IsValidEnum(quest))
+                quest.targetStage < 1 || quest.targetRarityTier < 1 || quest.targetRarityTier > 12 || quest.rewardAmount < 0 || !IsValidEnum(quest))
             { error = "수동 퀘스트 ID 중복/누락, 목표 또는 보상 설정을 확인하세요."; return false; }
             if (string.IsNullOrWhiteSpace(quest.title)) { error = $"수동 퀘스트 '{quest.id}'의 제목이 비어 있습니다."; return false; }
         }
         foreach (InfiniteQuestRule rule in infiniteRules) // 검사할 반복 규칙
         {
-            if (rule == null || rule.baseTarget < 1 || rule.targetIncreasePerCycle < 0 || !Enum.IsDefined(typeof(QuestType), rule.type))
+            if (rule == null || rule.baseTarget < 1 || rule.targetIncreasePerCycle < 0 || rule.targetRarityTier < 1 || rule.targetRarityTier > 12 || !Enum.IsDefined(typeof(QuestType), rule.type))
             { error = "반복 규칙의 조건 종류와 목표 증가량을 확인하세요."; return false; }
             if (string.IsNullOrWhiteSpace(rule.title)) { error = $"반복 퀘스트 규칙 '{rule.type}'의 제목이 비어 있습니다."; return false; }
         }
