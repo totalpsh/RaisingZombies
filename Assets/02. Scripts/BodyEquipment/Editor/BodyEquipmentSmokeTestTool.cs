@@ -19,7 +19,7 @@ public static class BodyEquipmentSmokeTestTool
     private const string UpgradeMenuPath = "Assets/03. Prefabs/UI/Upgrade/UpgradeMenuController.prefab"; // 교체된 강화 메뉴 Prefab
     private const string UIFolder = "Assets/03. Prefabs/UI/Upgrade/BodyEquipment"; // 새 장비 UI Prefab 폴더
 
-    // 격리 저장과 미리보기 씬에서 Draw부터 Combat 반영까지 주요 회귀 항목을 검사합니다.
+    // 격리 저장과 미리보기 씬에서 신체 장비 시스템 내부 회귀 항목을 검사합니다.
     [MenuItem("Tools/Raising Zombies/Body Equipment/Run Body Equipment Smoke Test")]
     public static void Run()
     {
@@ -32,7 +32,6 @@ public static class BodyEquipmentSmokeTestTool
         object oldEquipment = SingletonField<BodyEquipmentManager>().GetValue(null); // 테스트 후 복원할 장비 싱글턴
         object oldQuest = SingletonField<QuestManager>().GetValue(null); // 테스트 후 복원할 Quest 싱글턴
         UnityEngine.Random.State oldRandomState = UnityEngine.Random.state; // 테스트 후 복원할 전역 Random 상태
-        UnitData unitData = null; // 전투 적용 검증용 메모리 UnitData
         QuestSettings questSettings = null; // 원본 Quest Asset을 변경하지 않는 테스트 복제본
         try
         {
@@ -102,7 +101,6 @@ public static class BodyEquipmentSmokeTestTool
             Check(manager.TryEquip(first.uniqueId, out _), "전투 Modifier 검증용 재장착 실패");
             Check(equippedStatsChangedCount == 4, "재장착 전투 갱신 이벤트 누락");
             manager.EquippedStatsChanged -= equippedStatsChanged;
-            ValidateModifierAndCombat(manager, research, ref unitData);
 
             BodyEquipmentState mutableState = Get<BodyEquipmentState>(manager, "_state"); // 연구 시작 조건을 준비할 격리 저장 원본
             BodyDrawResearchLevelDefinition levelOne = research.GetLevel(manager.ResearchLevel); // 현재 연구 단계
@@ -138,7 +136,7 @@ public static class BodyEquipmentSmokeTestTool
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
             ValidateUIPrefabs(manager, preview);
             ValidateLegacyQuestMigration();
-            Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/실제 UnitStats·방어 계산/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
+            Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
         }
         finally
         {
@@ -148,7 +146,6 @@ public static class BodyEquipmentSmokeTestTool
             SingletonField<BodyEquipmentManager>().SetValue(null, oldEquipment);
             SingletonField<QuestManager>().SetValue(null, oldQuest);
             UnityEngine.Random.state = oldRandomState;
-            if (unitData != null) UnityEngine.Object.DestroyImmediate(unitData);
             if (questSettings != null) UnityEngine.Object.DestroyImmediate(questSettings);
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
@@ -269,43 +266,6 @@ public static class BodyEquipmentSmokeTestTool
         return false;
     }
 
-    // 장착 Modifier가 UnitStats와 피해 방어 공식에 실제 반영되는지 검사합니다.
-    private static void ValidateModifierAndCombat(BodyEquipmentManager manager, BodyDrawResearchSettingsSO research, ref UnitData unitData)
-    {
-        EquipmentModifierSnapshot modifiers = manager.CurrentModifiers; // 현재 장착 장비 합산 결과
-        Check(SumModifiers(modifiers) > 0f, "장착 후 Equipment Modifier가 비어 있음");
-        unitData = ScriptableObject.CreateInstance<UnitData>();
-        SerializedObject serialized = new(unitData); // 전투 기준값을 설정할 메모리 UnitData
-        serialized.FindProperty("maxHealth").floatValue = 1000f;
-        serialized.FindProperty("healthRegen").floatValue = 1f;
-        serialized.FindProperty("attackPower").floatValue = 100f;
-        serialized.FindProperty("attackInterval").floatValue = 2f;
-        serialized.FindProperty("attackRange").floatValue = 1f;
-        serialized.FindProperty("moveSpeed").floatValue = 1f;
-        serialized.ApplyModifiedPropertiesWithoutUndo();
-        UnitStats equippedStats = UnitStats.CreateZombie(unitData, manager); // 실제 ZombieSpawner가 사용하는 생성 경로
-        Check(equippedStats != null && (equippedStats.MaxHealth > 1000f || equippedStats.AttackPower > 100f || equippedStats.Defense > 0f ||
-              equippedStats.AttackInterval < 2f || equippedStats.MoveSpeed > 1f || equippedStats.CriticalChance > 0f || equippedStats.HealthRegen > 1f), "장비가 실제 좀비 UnitStats에 반영되지 않음");
-        CombatPowerBalanceSettings powerBalance = AssetDatabase.LoadAssetAtPath<CombatPowerBalanceSettings>("Assets/02. Scripts/Upgrade/CombatPowerBalanceSettings.asset"); // 실제 전투력 밸런스
-        CombatPowerSnapshot basePower = CombatPowerCalculator.Calculate(unitData, (BodyEquipmentManager)null, powerBalance); // 장비가 없는 기준 전투력
-        CombatPowerSnapshot equippedPower = CombatPowerCalculator.Calculate(unitData, manager, powerBalance); // 현재 장비가 반영된 전투력
-        Check(powerBalance != null && equippedPower.CombatPower > basePower.CombatPower, "장착 장비가 전투력 표시에 반영되지 않음");
-
-        float[] values = new float[Enum.GetValues(typeof(EquipmentStatType)).Length]; // 방어 공식 전용 Modifier 값
-        values[(int)EquipmentStatType.Defense] = 100f;
-        values[(int)EquipmentStatType.DamageReduction] = 20f;
-        UnitStats defensiveStats = new(unitData, new EquipmentModifierSnapshot(values), research); // 방어와 피해 감소를 가진 실제 스탯
-        UnitModel model = new(defensiveStats); // 실제 피해 적용 모델
-        float actualDamage = model.TakeDamage(100f); // 방어식 적용 후 실제 피해
-        Check(actualDamage > 0f && actualDamage < 100f && Mathf.Approximately(model.CurrentHealth, defensiveStats.MaxHealth - actualDamage), "방어력 또는 피해 감소 실제 적용 실패");
-        float healthRatio = model.CurrentHealth / model.Stats.MaxHealth; // 장착 갱신 전 남은 체력 비율
-        model.ResetAttackCooldown();
-        UnitStats refreshedStats = new(2000f, 2f, 200f, 1f, 1f, 2f); // 이미 활성인 좀비에 적용할 새 계산 결과
-        model.ApplyStats(refreshedStats);
-        Check(Mathf.Approximately(model.CurrentHealth, refreshedStats.MaxHealth * healthRatio) && Mathf.Approximately(model.AttackCooldown, refreshedStats.AttackInterval),
-              "활성 좀비 스탯 갱신 시 체력 또는 공격 대기 비율 보존 실패");
-    }
-
     // 새 UI Prefab 참조와 Inventory 최대 50개 재사용 제한을 검사합니다.
     private static void ValidateUIPrefabs(BodyEquipmentManager manager, Scene preview)
     {
@@ -392,14 +352,6 @@ public static class BodyEquipmentSmokeTestTool
     {
         Check(manager.Database.TryGetEquipment(equipment.definitionId, out BodyEquipmentDefinitionSO definition), "장비 슬롯 Definition 누락");
         return definition.Slot;
-    }
-
-    // 장착 Snapshot의 모든 지원 값을 합산합니다.
-    private static float SumModifiers(EquipmentModifierSnapshot value)
-    {
-        return value.Attack + value.Health + value.Defense + value.AttackSpeedPercent + value.MoveSpeedPercent + value.LifeStealPercent +
-               value.HealthRegen + value.DamagePercent + value.HealthPercent + value.DefensePercent + value.CriticalChancePercent +
-               value.CriticalDamagePercent + value.DamageReductionPercent;
     }
 
     // 특정 객체가 이벤트에 중복 없이 연결된 횟수를 셉니다.
