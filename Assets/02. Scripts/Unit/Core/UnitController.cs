@@ -95,10 +95,13 @@ public class UnitController : MonoBehaviour, ICombatTarget
             model,
             anim);
 
+        float targetY = battleArea.RegisterUnit(this);
+
         movement.Initialize(
             this,
             anim,
-            battleArea);
+            battleArea,
+            targetY);
 
         targeting.Initialize(
             this,
@@ -107,8 +110,6 @@ public class UnitController : MonoBehaviour, ICombatTarget
         healthBar.SetHealth(
             model.CurrentHealth,
             model.Stats.MaxHealth);
-
-        battleArea.RegisterUnit(this);
 
         _isInitialized = true;
         unitCollider.enabled = true;
