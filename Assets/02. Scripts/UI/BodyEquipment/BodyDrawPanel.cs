@@ -60,6 +60,11 @@ public sealed class BodyDrawPanel : MonoBehaviour
         RemoveButtonListener(backButton, GoBack);
     }
 
+    private void Update()
+    {
+        
+    }
+
     // Ticket, 연구 레벨, 인벤토리와 Draw 가능 상태를 이벤트 시점에만 갱신합니다.
     public void Refresh()
     {
@@ -156,7 +161,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
         button.onClick.RemoveListener(action);
         button.onClick.AddListener(action);
     }
-
+    
     // 등록한 버튼 Listener를 제거합니다.
     private static void RemoveButtonListener(Button button, UnityEngine.Events.UnityAction action) { if (button != null) button.onClick.RemoveListener(action); }
 
