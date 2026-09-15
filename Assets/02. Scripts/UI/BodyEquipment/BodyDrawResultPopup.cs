@@ -22,16 +22,19 @@ public sealed class BodyDrawResultPopup : BaseUI
     private BodyEquipmentManager _manager; // 결과 장비의 실제 Inventory 원본
     private string _pendingDismantleId = string.Empty; // 확인을 기다리는 결과 장비 ID
     private static Task<BodyDrawResultPopup> _openingTask; // 중복 비동기 생성 방지 작업
+    private System.Action<string> _selectionRequested; // 10회 결과에서 선택한 장비 비교 요청
 
     // Draw 결과를 기존 UIManager 팝업으로 엽니다.
-    public static async Task<BodyDrawResultPopup> ShowAsync(IReadOnlyList<BodyDrawResult> results)
+    public static async Task<BodyDrawResultPopup> ShowAsync(IReadOnlyList<BodyDrawResult> results, System.Action<string> selectionRequested = null)
     {
         if (!UIManager.HasInstance) return null;
         if (_openingTask != null) return await _openingTask;
         try
         {
             _openingTask = UIManager.Instance.OpenUI<BodyDrawResultPopup>(results, UILayer.PopUp);
-            return await _openingTask;
+            BodyDrawResultPopup popup = await _openingTask; // 이미 생성되었거나 풀에서 꺼낸 결과 화면
+            if (popup != null) popup._selectionRequested = selectionRequested;
+            return popup;
         }
         finally { _openingTask = null; }
     }
@@ -62,6 +65,7 @@ public sealed class BodyDrawResultPopup : BaseUI
         RemoveButtonListener(confirmDismantleButton, ConfirmDismantle);
         RemoveButtonListener(cancelDismantleButton, CancelDismantle);
         _pendingDismantleId = string.Empty;
+        _selectionRequested = null;
     }
 
     // 전달받은 복제 결과에서 Inventory의 안정적인 ID만 보관합니다.
@@ -88,7 +92,7 @@ public sealed class BodyDrawResultPopup : BaseUI
         for (int index = 0; index < _resultIds.Count; index++)
         {
             if (_manager.GetEquipment(_resultIds[index]) == null) continue;
-            _items[visibleCount].Bind(_manager, _resultIds[index], RequestDismantle);
+            _items[visibleCount].Bind(_manager, _resultIds[index], RequestDismantle, SelectResult);
             visibleCount++;
         }
         for (int index = visibleCount; index < _items.Count; index++) _items[index].gameObject.SetActive(false);
@@ -110,6 +114,15 @@ public sealed class BodyDrawResultPopup : BaseUI
         _pendingDismantleId = instanceId;
         SetText(confirmationText, $"{rarity.DisplayName} {definition.DisplayName}을 파기하고\n연구 포인트 {rarity.DismantleResearchPoint}을 받겠습니까?");
         SetActive(confirmationRoot, true);
+    }
+
+    // 선택한 10회 결과의 비교를 위해 목록을 닫고 루트 내부 팝업을 요청합니다.
+    private void SelectResult(string instanceId)
+    {
+        System.Action<string> callback = _selectionRequested; // 닫기 전에 보관할 비교 요청
+        if (callback == null) return;
+        Close();
+        callback(instanceId);
     }
 
     // 확인한 결과 장비를 Manager의 안전 조건으로 파기합니다.

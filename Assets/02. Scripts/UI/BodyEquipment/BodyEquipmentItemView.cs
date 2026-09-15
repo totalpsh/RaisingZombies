@@ -19,9 +19,11 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
     [SerializeField] private Button equipButton; // 현재 장비를 슬롯에 장착한다
     [SerializeField] private Button dismantleButton; // 부모 팝업에 파기 확인을 요청한다
     [SerializeField] private Button lockButton; // 장비 잠금을 전환한다
+    [SerializeField] private TMP_Text equipButtonText; // 결과 목록에서는 버튼을 비교 동작으로 안내한다
     private BodyEquipmentManager _manager; // 장비 동작의 실제 원본
     private string _instanceId = string.Empty; // 현재 카드에 바인딩된 장비 ID
     private Action<string> _dismantleRequested; // 부모 팝업의 파기 확인 Callback
+    private Action<string> _comparisonRequested; // 10회 결과 목록의 선택 비교 Callback
 
     // 버튼 Listener를 한 번만 연결합니다.
     private void Awake()
@@ -38,14 +40,16 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
         RemoveButtonListener(dismantleButton, HandleDismantle);
         RemoveButtonListener(lockButton, HandleLock);
         _dismantleRequested = null;
+        _comparisonRequested = null;
     }
 
     // 장비 ID와 동작 Callback을 현재 카드에 연결합니다.
-    public void Bind(BodyEquipmentManager manager, string instanceId, Action<string> dismantleRequested)
+    public void Bind(BodyEquipmentManager manager, string instanceId, Action<string> dismantleRequested, Action<string> comparisonRequested = null)
     {
         _manager = manager;
         _instanceId = instanceId ?? string.Empty;
         _dismantleRequested = dismantleRequested;
+        _comparisonRequested = comparisonRequested;
         Refresh();
     }
 
@@ -67,6 +71,7 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
         SetText(stateText, equipped ? "장착 중" : equipment.isLocked ? "잠금" : "보관 중");
         SetText(comparisonText, BodyEquipmentUIFormatter.FormatComparison(_manager, equipment));
         SetText(lockButtonText, equipment.isLocked ? "잠금 해제" : "잠금");
+        SetText(equipButtonText, _comparisonRequested == null ? "장착" : "비교");
         if (rarityFrame != null)
         {
             rarityFrame.color = rarity.UiColor;
@@ -77,7 +82,7 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
             equipmentIcon.sprite = definition.Icon;
             equipmentIcon.enabled = definition.Icon != null;
         }
-        if (equipButton != null) equipButton.interactable = !equipped;
+        if (equipButton != null) equipButton.interactable = _comparisonRequested != null || !equipped;
         if (dismantleButton != null) dismantleButton.interactable = !equipped && !equipment.isLocked;
         gameObject.SetActive(true);
     }
@@ -85,6 +90,7 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
     // 현재 장비를 같은 슬롯의 기존 장비와 교체 장착합니다.
     private void HandleEquip()
     {
+        if (_comparisonRequested != null) { _comparisonRequested(_instanceId); return; }
         if (_manager != null) _manager.TryEquip(_instanceId, out _);
     }
 
