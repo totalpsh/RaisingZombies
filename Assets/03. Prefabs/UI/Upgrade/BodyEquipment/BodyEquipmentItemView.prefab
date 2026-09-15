@@ -1029,6 +1029,7 @@ MonoBehaviour:
   equipButton: {fileID: 8891218039810537231}
   dismantleButton: {fileID: 6336349147985337772}
   lockButton: {fileID: 6072653510521153625}
+  equipButtonText: {fileID: 7182013702391167286}
 --- !u!1 &4387636526501807433
 GameObject:
   m_ObjectHideFlags: 0

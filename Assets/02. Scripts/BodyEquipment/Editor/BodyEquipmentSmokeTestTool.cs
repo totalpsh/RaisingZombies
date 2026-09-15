@@ -314,6 +314,24 @@ public static class BodyEquipmentSmokeTestTool
         Check(drawPanel != null && Get<Button>(drawPanel, "drawOneButton") != null && Get<Button>(drawPanel, "drawTenButton") != null &&
               Get<Button>(drawPanel, "researchButton") != null && Get<Button>(drawPanel, "probabilityButton") != null && Get<Button>(drawPanel, "inventoryButton") != null,
               "UpgradeMenu 신체 장비 화면 또는 버튼 참조 누락");
+        BodyEquipmentSlotView[] slotViews = Get<BodyEquipmentSlotView[]>(drawPanel, "equippedSlots"); // 실제 메인 화면에 고정된 8개 슬롯
+        Check(slotViews != null && slotViews.Length == 8, "메인 신체 화면의 8개 장착 슬롯 참조 누락");
+        HashSet<BodyEquipmentSlot> connectedSlots = new(); // enum 중복 및 누락 검사
+        foreach (BodyEquipmentSlotView slotView in slotViews)
+            Check(slotView != null && connectedSlots.Add(slotView.SlotType) && Get<Button>(slotView, "slotButton") != null &&
+                  Get<GameObject>(slotView, "emptyObject") != null && Get<Image>(slotView, "equipmentIcon") != null &&
+                  Get<Image>(slotView, "rarityFrame") != null, "장착 슬롯 종류 중복 또는 UI 참조 누락");
+        Check(connectedSlots.Count == 8 && Get<BodyEquipmentInfoView>(drawPanel, "centerResultView") != null &&
+              Get<GameObject>(drawPanel, "centerResultRoot") != null, "중앙 뽑기 결과 연결 누락");
+        BodyEquipmentDetailPopup detailPopup = Get<BodyEquipmentDetailPopup>(drawPanel, "detailPopup"); // 슬롯 클릭용 상세 팝업
+        BodyEquipmentComparePopup comparePopup = Get<BodyEquipmentComparePopup>(drawPanel, "comparePopup"); // 새 장비 비교 팝업
+        Check(detailPopup != null && comparePopup != null && Get<BodyEquipmentInfoView>(detailPopup, "equipmentView") != null &&
+              Get<BodyEquipmentInfoView>(comparePopup, "currentView") != null && Get<BodyEquipmentInfoView>(comparePopup, "newView") != null &&
+              Get<Button>(comparePopup, "equipButton") != null && Get<Button>(comparePopup, "dismantleButton") != null &&
+              Get<GameObject>(comparePopup, "confirmationRoot") != null, "상세/비교 팝업 필수 참조 누락");
+        Check(detailPopup.transform.IsChildOf(menuAsset.transform) && comparePopup.transform.IsChildOf(menuAsset.transform) &&
+              detailPopup.transform.root == menuAsset.transform && comparePopup.transform.root == menuAsset.transform,
+              "신체 장비 팝업이 UpgradeMenuController 루트 밖에 있음");
         GameObject menuInstance = (GameObject)PrefabUtility.InstantiatePrefab(menuAsset, preview); // 버튼 중복 실행을 검사할 메뉴 인스턴스
         BodyDrawPanel drawInstance = menuInstance.GetComponentInChildren<BodyDrawPanel>(true); // 인스턴스의 새 Draw 화면
         drawInstance.gameObject.SetActive(true);

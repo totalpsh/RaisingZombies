@@ -28,12 +28,17 @@ public sealed class BodyDrawResultPopup : BaseUI
     public static async Task<BodyDrawResultPopup> ShowAsync(IReadOnlyList<BodyDrawResult> results, System.Action<string> selectionRequested = null)
     {
         if (!UIManager.HasInstance) return null;
-        if (_openingTask != null) return await _openingTask;
+        if (_openingTask != null)
+        {
+            BodyDrawResultPopup opening = await _openingTask; // 진행 중인 동일 결과 팝업
+            if (opening != null) { opening._selectionRequested = selectionRequested; opening.Refresh(); }
+            return opening;
+        }
         try
         {
             _openingTask = UIManager.Instance.OpenUI<BodyDrawResultPopup>(results, UILayer.PopUp);
             BodyDrawResultPopup popup = await _openingTask; // 이미 생성되었거나 풀에서 꺼낸 결과 화면
-            if (popup != null) popup._selectionRequested = selectionRequested;
+            if (popup != null) { popup._selectionRequested = selectionRequested; popup.Refresh(); }
             return popup;
         }
         finally { _openingTask = null; }
