@@ -3,10 +3,6 @@ using UnityEngine;
 
 public class UnitTargeting : MonoBehaviour
 {
-    [SerializeField, Min(0f)]
-    private float frontLineTolerance = 0.5f;
-
-    private readonly List<UnitController> _unitCandidates = new();
     private readonly List<StructureController> _structureCandidates = new();
 
     private UnitController _owner;
@@ -19,7 +15,6 @@ public class UnitTargeting : MonoBehaviour
         _owner = owner;
         _battleArea = battleArea;
 
-        _unitCandidates.Clear();
         _structureCandidates.Clear();
     }
 
@@ -43,94 +38,40 @@ public class UnitTargeting : MonoBehaviour
     private UnitController FindUnitTarget(
         IReadOnlyList<UnitController> enemies)
     {
-        _unitCandidates.Clear();
+        UnitController selected = null;
+        float nearestX = float.MaxValue;
 
         foreach (UnitController enemy in enemies)
         {
             if (!IsValidUnit(enemy))
                 continue;
 
-            if (GetForwardDistance(enemy) < 0f)
+            float xDistance =
+                GetForwardDistance(enemy);
+
+            if (xDistance < 0f)
                 continue;
 
-            _unitCandidates.Add(enemy);
-        }
-
-        if (_unitCandidates.Count == 0)
-            return null;
-
-        _unitCandidates.Sort(
-            CompareUnitCandidatesByX);
-
-        float nearestX =
-            GetForwardDistance(_unitCandidates[0]);
-
-        int groupEnd = 1;
-
-        while (groupEnd < _unitCandidates.Count)
-        {
-            float candidateX =
-                GetForwardDistance(
-                    _unitCandidates[groupEnd]);
-
-            if (candidateX >
-                nearestX + frontLineTolerance)
+            if (selected != null &&
+                xDistance > nearestX)
             {
-                break;
+                continue;
             }
 
-            groupEnd++;
+            if (selected == null ||
+                xDistance < nearestX ||
+                Mathf.Approximately(
+                    xDistance,
+                    nearestX) &&
+                enemy.GetInstanceID() <
+                selected.GetInstanceID())
+            {
+                selected = enemy;
+                nearestX = xDistance;
+            }
         }
 
-        _unitCandidates.Sort(
-            0,
-            groupEnd,
-            Comparer<UnitController>.Create(
-                CompareWithinFrontLine));
-
-        return _unitCandidates[0];
-    }
-
-    private int CompareUnitCandidatesByX(
-        UnitController first,
-        UnitController second)
-    {
-        int xComparison = GetForwardDistance(first)
-            .CompareTo(GetForwardDistance(second));
-
-        if (xComparison != 0)
-            return xComparison;
-
-        return first.GetInstanceID()
-            .CompareTo(second.GetInstanceID());
-    }
-
-    private int CompareWithinFrontLine(
-        UnitController first,
-        UnitController second)
-    {
-        float firstYDistance = Mathf.Abs(
-            first.transform.position.y -
-            _owner.transform.position.y);
-
-        float secondYDistance = Mathf.Abs(
-            second.transform.position.y -
-            _owner.transform.position.y);
-
-        int yComparison =
-            firstYDistance.CompareTo(secondYDistance);
-
-        if (yComparison != 0)
-            return yComparison;
-
-        int xComparison = GetForwardDistance(first)
-            .CompareTo(GetForwardDistance(second));
-
-        if (xComparison != 0)
-            return xComparison;
-
-        return first.GetInstanceID()
-            .CompareTo(second.GetInstanceID());
+        return selected;
     }
 
     private StructureController FindStructureTarget()

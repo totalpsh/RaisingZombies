@@ -13,19 +13,12 @@ public class UnitController : MonoBehaviour, ICombatTarget
     [SerializeField] private Collider2D unitCollider;
     [SerializeField] private UnitData data;
 
-    [SerializeField] private bool useHitSlow;
-    [SerializeField, Range(0.1f, 1f)]
-    private float hitSpeedRate = 0.6f;
-    [SerializeField, Min(0f)]
-    private float hitSlowTime = 0.15f;
-
     [Header("UI")]
     [SerializeField] private UnitHealthBar healthBar;
 
     private bool _isInitialized;
     private UnitModel model;
     private ICombatTarget _target;
-    private float _slowEndTime;
     private BattleArea _battleArea;
 
     public UnitData Data => data;
@@ -87,7 +80,6 @@ public class UnitController : MonoBehaviour, ICombatTarget
         _battleArea = battleArea;
 
         _target = null;
-        _slowEndTime = 0f;
 
         combat.Initialize(
             this,
@@ -95,17 +87,16 @@ public class UnitController : MonoBehaviour, ICombatTarget
             model,
             anim);
 
-        float targetY = battleArea.RegisterUnit(this);
-
         movement.Initialize(
             this,
             anim,
-            battleArea,
-            targetY);
+            battleArea);
 
         targeting.Initialize(
             this,
             battleArea);
+
+        battleArea.RegisterUnit(this);
 
         healthBar.SetHealth(
             model.CurrentHealth,
@@ -183,7 +174,8 @@ public class UnitController : MonoBehaviour, ICombatTarget
         if (!IsValidTarget(_target))
         {
             ClearTarget();
-            movement.MoveForward(GetMoveSpeed());
+            movement.MoveForward(
+                model.Stats.MoveSpeed);
             return;
         }
 
@@ -195,7 +187,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
 
         movement.MoveTo(
             _target.TargetTransform.position,
-            GetMoveSpeed());
+            model.Stats.MoveSpeed);
     }
 
     public void TakeDamage(float damage)
@@ -215,23 +207,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
             return;
         }
 
-        ApplyHitSlow();
         anim.PlayHit();
-    }
-
-    public void ApplyHitSlow()
-    {
-        if (useHitSlow)
-            _slowEndTime =
-                Time.time + hitSlowTime;
-    }
-
-    private float GetMoveSpeed()
-    {
-        return Time.time < _slowEndTime
-            ? model.Stats.MoveSpeed *
-              hitSpeedRate
-            : model.Stats.MoveSpeed;
     }
 
     private void ClearTarget()

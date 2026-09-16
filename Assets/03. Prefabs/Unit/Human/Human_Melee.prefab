@@ -447,6 +447,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb585d728f80c504ca0f66bfbf2e5262, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnitMovement
+  ySpreadSpeedRatio: 0.1
 --- !u!114 &343715756972624768
 MonoBehaviour:
   m_ObjectHideFlags: 0

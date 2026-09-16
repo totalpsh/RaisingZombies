@@ -8,12 +8,8 @@ public class BattleArea : MonoBehaviour
     [SerializeField] private Vector2 minBounds;
     [SerializeField] private Vector2 maxBounds;
 
-    [Header("Y축 분산")]
-    [SerializeField, Min(1)] private int yBandCount = 5;
-    
     private readonly List<UnitController> _zombies = new();
     private readonly List<UnitController> _humans = new();
-    private readonly Dictionary<UnitController, int> _unitBands = new();
     
     private readonly List<StructureController> _zombieStructures = new();
     private readonly List<StructureController> _humanStructures = new();
@@ -24,23 +20,15 @@ public class BattleArea : MonoBehaviour
     private ReadOnlyCollection<StructureController> _zombieStructureView;
     private ReadOnlyCollection<StructureController> _humanStructureView;
     
-    public float RegisterUnit(UnitController unit)
+    public void RegisterUnit(UnitController unit)
     {
         if (unit == null)
-            return GetBattleCenterY();
-
-        if (_unitBands.TryGetValue(unit, out int assignedBand))
-            return GetBandCenterY(assignedBand);
+            return;
 
         List<UnitController> units = GetUnits(unit.Team);
 
         if (!units.Contains(unit))
             units.Add(unit);
-
-        int bandIndex = SelectBand(unit.Team);
-        _unitBands.Add(unit, bandIndex);
-
-        return GetBandCenterY(bandIndex);
     }
     
     public void UnregisterUnit(UnitController unit)
@@ -49,67 +37,6 @@ public class BattleArea : MonoBehaviour
             return;
 
         GetUnits(unit.Team).Remove(unit);
-        _unitBands.Remove(unit);
-    }
-
-    private int SelectBand(UnitTeam team)
-    {
-        int bandCount = Mathf.Max(1, yBandCount);
-        int[] occupancy = new int[bandCount];
-
-        foreach (KeyValuePair<UnitController, int> assignment in _unitBands)
-        {
-            UnitController assignedUnit = assignment.Key;
-
-            if (assignedUnit == null ||
-                assignedUnit.Team != team ||
-                assignment.Value < 0 ||
-                assignment.Value >= bandCount)
-            {
-                continue;
-            }
-
-            occupancy[assignment.Value]++;
-        }
-
-        int selectedBand = 0;
-
-        for (int bandIndex = 1; bandIndex < bandCount; bandIndex++)
-        {
-            if (occupancy[bandIndex] < occupancy[selectedBand] ||
-                occupancy[bandIndex] == occupancy[selectedBand] &&
-                IsCloserToCenter(bandIndex, selectedBand, bandCount))
-            {
-                selectedBand = bandIndex;
-            }
-        }
-
-        return selectedBand;
-    }
-
-    private static bool IsCloserToCenter(
-        int candidate,
-        int current,
-        int bandCount)
-    {
-        float centerIndex = (bandCount - 1) * 0.5f;
-        float candidateDistance = Mathf.Abs(candidate - centerIndex);
-        float currentDistance = Mathf.Abs(current - centerIndex);
-
-        return candidateDistance < currentDistance;
-    }
-
-    private float GetBandCenterY(int bandIndex)
-    {
-        int bandCount = Mathf.Max(1, yBandCount);
-        float bandHeight = (maxBounds.y - minBounds.y) / bandCount;
-
-        return minBounds.y + bandHeight * (bandIndex + 0.5f);
-    }
-
-    private float GetBattleCenterY()
-    {
-        return (minBounds.y + maxBounds.y) * 0.5f;
     }
 
     public IReadOnlyList<UnitController> GetEnemyUnits(UnitTeam team)
