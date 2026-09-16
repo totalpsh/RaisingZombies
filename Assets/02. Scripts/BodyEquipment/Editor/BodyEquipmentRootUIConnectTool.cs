@@ -54,7 +54,8 @@ public static class BodyEquipmentRootUIConnectTool
             center.gameObject.SetActive(false);
 
             BodyEquipmentDetailPopup detail = EnsureDetailPopup(popupLayer); // 장착 슬롯 클릭용 단일 장비 팝업
-            BodyEquipmentComparePopup compare = EnsureComparePopup(popupLayer); // Draw 직후 같은 슬롯 장비 비교 팝업
+            BodyEquipmentComparePopup compare = ConnectDesignedItemDetail(statRoot.transform); // 사용자가 만든 ItemDetail 비교 화면
+            if (compare == null) compare = EnsureComparePopup(popupLayer); // ItemDetail이 없을 때만 최소 비교 화면을 사용한다
             SerializedObject fields = new(panel); // 기존 Panel에 새 루트 내부 참조 연결
             SerializedProperty slotProperty = fields.FindProperty("equippedSlots"); // 8개 장착 View 배열
             slotProperty.arraySize = views.Length;
@@ -70,6 +71,101 @@ public static class BodyEquipmentRootUIConnectTool
             Debug.Log("[BodyEquipmentUI] 기존 8개 슬롯과 중앙 결과·상세·비교 팝업을 UpgradeMenuController 루트 내부에 연결했습니다. 기존 배치 값은 유지했습니다.");
         }
         finally { PrefabUtility.UnloadPrefabContents(contents); }
+    }
+
+    // ItemDetail의 Popup_1과 Popup_2를 현재 장비와 새 장비 비교 View로 연결한다.
+    private static BodyEquipmentComparePopup ConnectDesignedItemDetail(Transform statRoot)
+    {
+        Transform itemDetail = Descendant(statRoot, "ItemDetail"); // 사용자가 만든 실제 비교 화면
+        Transform currentRoot = itemDetail == null ? null : DirectChild(itemDetail, "Popup_1"); // 현재 장착 장비 영역
+        Transform newRoot = itemDetail == null ? null : DirectChild(itemDetail, "Popup_2"); // 새로 뽑은 장비 영역
+        if (currentRoot == null || newRoot == null) return null;
+        BodyEquipmentInfoView currentView = ConnectDesignedInfoView(currentRoot, false); // 현재 장비는 비교 아이콘을 사용하지 않는다
+        BodyEquipmentInfoView newView = ConnectDesignedInfoView(newRoot, true); // 새 장비만 증감 아이콘을 표시한다
+        Button equip = FindButton(itemDetail, "EquipButton"); // 새 장비 장착 버튼
+        Button dismantle = FindButton(itemDetail, "DismantleButton"); // 새 장비 파괴 버튼
+        Button close = FindButton(itemDetail, "CloseButton"); // 디자인에 존재할 경우 사용할 닫기 버튼
+        BodyEquipmentComparePopup popup = itemDetail.GetComponent<BodyEquipmentComparePopup>() ?? itemDetail.gameObject.AddComponent<BodyEquipmentComparePopup>(); // 기존 ItemDetail 동작 Controller
+        SerializedObject fields = new(popup); // ItemDetail 내부 참조 연결
+        Set(fields, "currentView", currentView);
+        Set(fields, "newView", newView);
+        Set(fields, "differenceText", null);
+        Set(fields, "messageText", null);
+        Set(fields, "equipButton", equip);
+        Set(fields, "dismantleButton", dismantle);
+        Set(fields, "closeButton", close);
+        Set(fields, "confirmationRoot", null);
+        Set(fields, "confirmationText", null);
+        Set(fields, "confirmDismantleButton", null);
+        Set(fields, "cancelDismantleButton", null);
+        fields.ApplyModifiedPropertiesWithoutUndo();
+        itemDetail.gameObject.SetActive(false);
+        return popup;
+    }
+
+    // Popup 내부의 기존 이름, 아이콘, 레어도와 고정 Stat Object를 공통 View에 연결한다.
+    private static BodyEquipmentInfoView ConnectDesignedInfoView(Transform popupRoot, bool comparisonSide)
+    {
+        Transform itemSlot = DirectChild(popupRoot, "ItemSlot"); // 기존 장비 아이콘 영역
+        Transform groupOne = DirectChild(popupRoot, "Group_1"); // 기존 이름과 레어도 영역
+        Transform statGroup = DirectChild(popupRoot, "Group_3"); // 고정 Stat Object 영역
+        Image icon = ComponentAt<Image>(itemSlot, "Icon"); // 장비 Definition 아이콘
+        Image rarityFrame = ComponentAt<Image>(popupRoot, "PopupBackGlow"); // 기존 레어도 강조 배경
+        TMP_Text equipmentName = ComponentAt<TMP_Text>(groupOne, "Text_ItemName"); // 기존 장비 이름 Text
+        TMP_Text rarity = ComponentAt<TMP_Text>(groupOne, "Text_Grade"); // 기존 레어도 Text
+        BodyEquipmentStatRowView[] rows = ConnectDesignedStatRows(statGroup, comparisonSide); // 기존 Attack/Defense/HP/Critical 행
+        BodyEquipmentInfoView view = popupRoot.GetComponent<BodyEquipmentInfoView>() ?? popupRoot.gameObject.AddComponent<BodyEquipmentInfoView>(); // Popup 한쪽의 공통 정보 View
+        SerializedObject fields = new(view); // 기존 디자인 참조만 연결한다
+        Set(fields, "equipmentIcon", icon);
+        Set(fields, "slotIcon", null);
+        Set(fields, "rarityFrame", rarityFrame);
+        SerializedProperty applySprite = fields.FindProperty("applyRarityFrameSprite"); // 기존 Glow Sprite 보존 설정
+        if (applySprite != null) applySprite.boolValue = false;
+        Set(fields, "powerValueText", null);
+        Set(fields, "equipmentNameText", equipmentName);
+        Set(fields, "rarityText", rarity);
+        Set(fields, "mainStatText", null);
+        Set(fields, "subStatsText", null);
+        Set(fields, "emptyText", null);
+        SerializedProperty rowProperty = fields.FindProperty("statRows"); // 재사용할 고정 스탯 행 배열
+        rowProperty.arraySize = rows.Length;
+        for (int index = 0; index < rows.Length; index++) rowProperty.GetArrayElementAtIndex(index).objectReferenceValue = rows[index];
+        fields.ApplyModifiedPropertiesWithoutUndo();
+        return view;
+    }
+
+    // 디자인에 존재하고 실제 장비 시스템이 지원하는 고정 Stat Object만 연결한다.
+    private static BodyEquipmentStatRowView[] ConnectDesignedStatRows(Transform group, bool comparisonSide)
+    {
+        if (group == null) return Array.Empty<BodyEquipmentStatRowView>();
+        (string name, EquipmentStatType type)[] mappings = // 디자인 이름과 실제 Stat enum 대응
+        {
+            ("Attack", EquipmentStatType.Attack), ("Defense", EquipmentStatType.Defense),
+            ("HP", EquipmentStatType.Health), ("Critical", EquipmentStatType.CriticalChance)
+        };
+        BodyEquipmentStatRowView[] rows = new BodyEquipmentStatRowView[mappings.Length]; // Instantiate 없이 재사용할 네 개 행
+        for (int index = 0; index < mappings.Length; index++)
+        {
+            Transform rowRoot = DirectChild(group, mappings[index].name); // 기존 디자인의 Stat Object
+            if (rowRoot == null) continue;
+            TMP_Text nameText = ComponentAt<TMP_Text>(rowRoot, "StatNameText_1") ?? ComponentAt<TMP_Text>(rowRoot, "Text_1"); // 기존 StatName Text
+            TMP_Text valueText = ComponentAt<TMP_Text>(rowRoot, "StatValueText_2") ?? ComponentAt<TMP_Text>(rowRoot, "Text_2"); // 기존 StatValue Text
+            GameObject up = DirectChild(rowRoot, "UpIcon")?.gameObject; // 상승 아이콘
+            GameObject down = DirectChild(rowRoot, "DownIcon")?.gameObject; // 하락 아이콘
+            BodyEquipmentStatRowView row = rowRoot.GetComponent<BodyEquipmentStatRowView>() ?? rowRoot.gameObject.AddComponent<BodyEquipmentStatRowView>(); // 고정 행 View
+            SerializedObject fields = new(row); // Stat 종류와 기존 UI 참조 연결
+            fields.FindProperty("statType").enumValueIndex = (int)mappings[index].type;
+            Set(fields, "statNameText", nameText);
+            Set(fields, "statValueText", valueText);
+            Set(fields, "upIcon", comparisonSide ? up : null);
+            Set(fields, "downIcon", comparisonSide ? down : null);
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            if (!comparisonSide) { if (up != null) up.SetActive(false); if (down != null) down.SetActive(false); }
+            rows[index] = row;
+        }
+        Transform unsupportedDodge = DirectChild(group, "Dodge"); // 현재 장비 Stat enum에 없는 디자인 전용 행
+        if (unsupportedDodge != null) unsupportedDodge.gameObject.SetActive(false);
+        return rows;
     }
 
     // 기존 슬롯의 Item 영역을 클릭 대상으로 쓰고 Empty 아이콘을 유지한다.
@@ -310,6 +406,33 @@ public static class BodyEquipmentRootUIConnectTool
         for (int index = 0; index < parent.childCount; index++)
             if (parent.GetChild(index).name == name) return parent.GetChild(index);
         return null;
+    }
+
+    // Editor 연결 시에만 전체 자식을 재귀 순회해 사용자가 만든 이름의 오브젝트를 찾는다.
+    private static Transform Descendant(Transform parent, string name)
+    {
+        if (parent == null) return null;
+        if (parent.name == name) return parent;
+        for (int index = 0; index < parent.childCount; index++)
+        {
+            Transform result = Descendant(parent.GetChild(index), name); // 현재 자식 아래의 검색 결과
+            if (result != null) return result;
+        }
+        return null;
+    }
+
+    // 지정 이름의 자식에서 필요한 UI 컴포넌트를 가져온다.
+    private static T ComponentAt<T>(Transform parent, string name) where T : Component
+    {
+        Transform child = DirectChild(parent, name); // 현재 디자인의 직접 자식
+        return child == null ? null : child.GetComponent<T>();
+    }
+
+    // ItemDetail 내부에서 이름이 일치하는 기존 버튼만 찾는다.
+    private static Button FindButton(Transform parent, string name)
+    {
+        Transform target = Descendant(parent, name); // 중첩 Prefab을 포함한 버튼 오브젝트
+        return target == null ? null : target.GetComponent<Button>();
     }
 
     // 프리팹 안에 자식 RectTransform이 없을 때만 추가한다.

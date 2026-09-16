@@ -28,8 +28,8 @@ public sealed class BodyEquipmentComparePopup : MonoBehaviour
         if (!BodyEquipmentUIFormatter.TryGetDefinitions(manager, equipment, out BodyEquipmentDefinitionSO definition, out _)) return;
         _newEquipmentId = instanceId;
         BodyEquipmentInstance current = manager.GetEquipped(definition.Slot); // 같은 부위의 현재 장착 장비
-        currentView?.Bind(manager, current);
-        newView?.Bind(manager, equipment);
+        currentView?.Bind(manager, current, null, false);
+        newView?.Bind(manager, equipment, current, true);
         if (differenceText != null) differenceText.text = BodyEquipmentUIFormatter.FormatComparison(manager, equipment);
         if (messageText != null) messageText.text = string.Empty;
         if (equipButton != null) equipButton.interactable = !manager.IsEquipped(instanceId);
@@ -70,6 +70,12 @@ public sealed class BodyEquipmentComparePopup : MonoBehaviour
     {
         BodyEquipmentInstance equipment = _manager == null ? null : _manager.GetEquipment(_newEquipmentId); // 파기 요청한 새 장비
         if (!BodyEquipmentUIFormatter.TryGetDefinitions(_manager, equipment, out BodyEquipmentDefinitionSO definition, out BodyRarityDefinitionSO rarity) || equipment.isLocked || _manager.IsEquipped(_newEquipmentId)) return;
+        if (confirmationRoot == null)
+        {
+            if (_manager.TryDismantle(_newEquipmentId, out _)) Close();
+            else if (messageText != null) messageText.text = "장착 중이거나 잠긴 장비는 파기할 수 없습니다.";
+            return;
+        }
         if (confirmationText != null) confirmationText.text = $"{rarity.DisplayName} {definition.DisplayName}을 파기하고\n연구 포인트 {rarity.DismantleResearchPoint}을 받겠습니까?";
         if (confirmationRoot != null) confirmationRoot.SetActive(true);
     }
