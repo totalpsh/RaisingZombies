@@ -54,7 +54,7 @@ public static class BodyEquipmentRootUIConnectTool
             center.gameObject.SetActive(false);
 
             BodyEquipmentDetailPopup detail = EnsureDetailPopup(popupLayer); // 장착 슬롯 클릭용 단일 장비 팝업
-            BodyEquipmentComparePopup compare = ConnectDesignedItemDetail(statRoot.transform); // 사용자가 만든 ItemDetail 비교 화면
+            BodyEquipmentComparePopup compare = ConnectDesignedItemDetail(contents.transform); // UpgradeMenuController 아래 사용자가 만든 ItemDetail 비교 화면
             if (compare == null) compare = EnsureComparePopup(popupLayer); // ItemDetail이 없을 때만 최소 비교 화면을 사용한다
             SerializedObject fields = new(panel); // 기존 Panel에 새 루트 내부 참조 연결
             SerializedProperty slotProperty = fields.FindProperty("equippedSlots"); // 8개 장착 View 배열
@@ -82,10 +82,22 @@ public static class BodyEquipmentRootUIConnectTool
         if (currentRoot == null || newRoot == null) return null;
         BodyEquipmentInfoView currentView = ConnectDesignedInfoView(currentRoot, false); // 현재 장비는 비교 아이콘을 사용하지 않는다
         BodyEquipmentInfoView newView = ConnectDesignedInfoView(newRoot, true); // 새 장비만 증감 아이콘을 표시한다
+        Transform popupLayer = Descendant(statRoot, "BodyEquipmentPopupLayer"); // UpgradeMenuController 안의 기존 모달 레이어
+        Transform host = popupLayer == null ? null : DirectChild(popupLayer, "EquipmentComparePopup"); // ItemDetail을 포함하는 바깥 모달 Root
+        if (host == null) host = itemDetail;
+        Transform designedButtons = DirectChild(newRoot, "Group_Buttons"); // 사용자가 만든 새 장비 버튼 자리
+        MoveExistingButtons(host, designedButtons); // 이전 최소 팝업 버튼을 새 디자인 위치에서 재사용한다
         Button equip = FindButton(itemDetail, "EquipButton"); // 새 장비 장착 버튼
         Button dismantle = FindButton(itemDetail, "DismantleButton"); // 새 장비 파괴 버튼
-        Button close = FindButton(itemDetail, "CloseButton"); // 디자인에 존재할 경우 사용할 닫기 버튼
-        BodyEquipmentComparePopup popup = itemDetail.GetComponent<BodyEquipmentComparePopup>() ?? itemDetail.gameObject.AddComponent<BodyEquipmentComparePopup>(); // 기존 ItemDetail 동작 Controller
+        Button close = FindButton(itemDetail, "CloseButton"); // 새 장비 보관 및 닫기 버튼
+        Transform comparePanel = DirectChild(host, "ComparePanel"); // 기존 확인 UI를 보유한 패널
+        Transform confirmation = comparePanel == null ? null : DirectChild(comparePanel, "DismantleConfirmation"); // 기존 파기 확인 영역
+        TMP_Text confirmationText = confirmation == null ? null : ComponentAt<TMP_Text>(confirmation, "ConfirmationText"); // 파기 대상 안내
+        Button confirmDismantle = confirmation == null ? null : FindButton(confirmation, "ConfirmButton"); // 기존 파기 확인 버튼
+        Button cancelDismantle = confirmation == null ? null : FindButton(confirmation, "CancelButton"); // 기존 파기 취소 버튼
+        BodyEquipmentComparePopup unused = itemDetail.GetComponent<BodyEquipmentComparePopup>(); // 이전 연결 시 ItemDetail에 추가된 중복 Controller
+        if (unused != null && host != itemDetail) UnityEngine.Object.DestroyImmediate(unused, true);
+        BodyEquipmentComparePopup popup = host.GetComponent<BodyEquipmentComparePopup>() ?? host.gameObject.AddComponent<BodyEquipmentComparePopup>(); // 기존 바깥 팝업 Root의 Controller
         SerializedObject fields = new(popup); // ItemDetail 내부 참조 연결
         Set(fields, "currentView", currentView);
         Set(fields, "newView", newView);
@@ -94,13 +106,27 @@ public static class BodyEquipmentRootUIConnectTool
         Set(fields, "equipButton", equip);
         Set(fields, "dismantleButton", dismantle);
         Set(fields, "closeButton", close);
-        Set(fields, "confirmationRoot", null);
-        Set(fields, "confirmationText", null);
-        Set(fields, "confirmDismantleButton", null);
-        Set(fields, "cancelDismantleButton", null);
+        Set(fields, "confirmationRoot", confirmation == null ? null : confirmation.gameObject);
+        Set(fields, "confirmationText", confirmationText);
+        Set(fields, "confirmDismantleButton", confirmDismantle);
+        Set(fields, "cancelDismantleButton", cancelDismantle);
         fields.ApplyModifiedPropertiesWithoutUndo();
-        itemDetail.gameObject.SetActive(false);
+        itemDetail.gameObject.SetActive(true);
+        host.gameObject.SetActive(false);
         return popup;
+    }
+
+    // 기존 최소 팝업의 버튼을 ItemDetail의 새 장비 버튼 영역으로 옮겨 중복 생성을 막는다.
+    private static void MoveExistingButtons(Transform host, Transform target)
+    {
+        if (host == null || target == null || FindButton(target, "EquipButton") != null) return;
+        Transform panel = DirectChild(host, "ComparePanel"); // 이전 최소 비교 패널
+        Transform actions = panel == null ? null : DirectChild(panel, "Actions"); // 기존 장착/파기/닫기 버튼 부모
+        if (actions == null) return;
+        Transform[] buttons = new Transform[actions.childCount]; // 부모 변경 전에 보관할 기존 버튼
+        for (int index = 0; index < buttons.Length; index++) buttons[index] = actions.GetChild(index);
+        for (int index = 0; index < buttons.Length; index++) buttons[index].SetParent(target, false);
+        actions.gameObject.SetActive(false);
     }
 
     // Popup 내부의 기존 이름, 아이콘, 레어도와 고정 Stat Object를 공통 View에 연결한다.
@@ -417,6 +443,18 @@ public static class BodyEquipmentRootUIConnectTool
         {
             Transform result = Descendant(parent.GetChild(index), name); // 현재 자식 아래의 검색 결과
             if (result != null) return result;
+        }
+        return null;
+    }
+
+    // 현재 Transform부터 위로 올라가 지정 이름의 모달 Root를 찾는다.
+    private static Transform Ancestor(Transform child, string name)
+    {
+        Transform current = child; // 검사할 현재 부모 단계
+        while (current != null)
+        {
+            if (current.name == name) return current;
+            current = current.parent;
         }
         return null;
     }

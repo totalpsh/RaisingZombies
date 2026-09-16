@@ -20,11 +20,24 @@ public static class BodyEquipmentUIFormatter
     {
         if (manager == null || roll == null || manager.Database == null ||
             !manager.Database.TryGetStat(roll.statType, out EquipmentStatDefinitionSO stat)) return "-";
-        string value; // Inspector에서 지정한 수치 형식을 적용한 결과
-        try { value = string.Format(stat.UiFormat, roll.value); }
-        catch (FormatException) { value = roll.value.ToString("0.##"); }
-        if (stat.ValueKind == EquipmentStatValueKind.Percent && !value.Contains("%", StringComparison.Ordinal)) value += "%";
-        return $"{stat.DisplayName} {value}";
+        return $"{stat.DisplayName} {FormatStatValue(stat, roll.value)}";
+    }
+
+    // 고정 Stat Row의 값 칸에 표시명 없이 Inspector 형식의 수치만 반환합니다.
+    public static string FormatStatValue(BodyEquipmentManager manager, EquipmentStatType statType, float value)
+    {
+        if (manager == null || manager.Database == null || !manager.Database.TryGetStat(statType, out EquipmentStatDefinitionSO stat)) return "-";
+        return FormatStatValue(stat, value);
+    }
+
+    // Stat Definition의 Flat 또는 Percent 형식을 실제 수치에 적용합니다.
+    private static string FormatStatValue(EquipmentStatDefinitionSO stat, float rawValue)
+    {
+        string formatted; // Inspector에서 지정한 수치 형식을 적용한 결과
+        try { formatted = string.Format(stat.UiFormat, rawValue); }
+        catch (FormatException) { formatted = rawValue.ToString("0.##"); }
+        if (stat.ValueKind == EquipmentStatValueKind.Percent && !formatted.Contains("%", StringComparison.Ordinal)) formatted += "%";
+        return formatted;
     }
 
     // 보조 스탯을 줄 단위 목록으로 만듭니다.

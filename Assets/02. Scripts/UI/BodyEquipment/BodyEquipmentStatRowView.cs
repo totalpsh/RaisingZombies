@@ -19,7 +19,7 @@ public sealed class BodyEquipmentStatRowView : MonoBehaviour
         if (!hasValue) return;
         if (manager != null && manager.Database != null && manager.Database.TryGetStat(statType, out EquipmentStatDefinitionSO definition))
             SetText(statNameText, definition.DisplayName);
-        SetText(statValueText, BodyEquipmentUIFormatter.FormatStat(manager, new EquipmentStatRoll { statType = statType, value = value }));
+        SetText(statValueText, BodyEquipmentUIFormatter.FormatStatValue(manager, statType, value));
         bool canCompare = showComparison && hasComparisonTarget; // 현재 장비가 있을 때만 증감을 표시한다
         SetActive(upIcon, canCompare && value > comparisonValue);
         SetActive(downIcon, canCompare && value < comparisonValue);
