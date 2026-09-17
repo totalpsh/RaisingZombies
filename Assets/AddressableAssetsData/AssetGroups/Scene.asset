@@ -15,11 +15,21 @@ MonoBehaviour:
   m_GroupName: Scene
   m_GUID: 3c3bc2c12e07f6c4cbcb1d3f487bd6da
   m_SerializeEntries:
-  - m_GUID: e74011938a31b4842bfeae0789068474
-    m_Address: BattleScene
+  - m_GUID: 3726935999f3b764c9d8c40e04299db6
+    m_Address: HuntScene
     m_ReadOnly: 0
     m_SerializedLabels:
     - Scenes
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 57ef016d22f63dc4c8a220aa902495f7
+    m_Address: BossScene
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e74011938a31b4842bfeae0789068474
+    m_Address: BattleScene
+    m_ReadOnly: 0
+    m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 46f0a33da75605f49b78bca90df5e8de, type: 2}

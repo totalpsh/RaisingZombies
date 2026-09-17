@@ -1,12 +1,17 @@
-using System;
-using UnityEngine;
+using System.Threading.Tasks;
 
 public class BattleScene : BaseScene
 {
     public override SceneLoadState LoadState { get; }
 
-    private void Start()
+    public override async Task ScenePrepareAsync()
     {
-        _ = UIManager.Instance.ShowMainNavigationAsync();
+        await UIManager.Instance.ShowMainNavigationAsync();
+        await UIManager.Instance.OpenUI<DungeonButtonUI>();
+    }
+
+    public override void OnSceneExit()
+    {
+        UIManager.Instance.CloseUI<DungeonButtonUI>();
     }
 }

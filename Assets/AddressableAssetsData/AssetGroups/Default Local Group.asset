@@ -14,7 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: d3552ddd886034e4f95147d4883645da
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 48f11d9d59887684fb5b601108d3e77d
+    m_Address: DungeonButtonUI
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 89fb3ab590cc3a444a21bf0748b0446a
+    m_Address: ExitDungeonButtonUI
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 46f0a33da75605f49b78bca90df5e8de, type: 2}
   m_SchemaSet:

@@ -11,6 +11,12 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/01. Scenes/Battle.unity
     guid: e74011938a31b4842bfeae0789068474
+  - enabled: 0
+    path: Assets/01. Scenes/Boss.unity
+    guid: 57ef016d22f63dc4c8a220aa902495f7
+  - enabled: 0
+    path: Assets/01. Scenes/Hunt.unity
+    guid: 3726935999f3b764c9d8c40e04299db6
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 09a8b44b0fc5b8543b4c2cfef448c82e, type: 2}
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

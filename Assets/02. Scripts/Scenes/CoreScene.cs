@@ -48,8 +48,6 @@ public class CoreScene : BaseScene
     {
         // 콘텐츠 씬 로드
         _ = SceneLoadManager.Instance.LoadContentSceneAsync("BattleScene", false);
-
-        Debug.Log("Dsdfsdfd");
     }
 
     

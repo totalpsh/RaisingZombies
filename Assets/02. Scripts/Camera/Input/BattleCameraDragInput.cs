@@ -10,6 +10,11 @@ public class BattleCameraDragInput : MonoBehaviour, IPointerDownHandler, IDragHa
 
     private int _activePointerId = int.MinValue;
 
+    private void Start()
+    {
+        // this.SetAsFirstSibling();
+    }
+
     public void OnPointerDown(PointerEventData eventData)
     {
         if (_activePointerId != int.MinValue)
