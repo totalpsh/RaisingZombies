@@ -10,6 +10,34 @@ public class BattleArea : MonoBehaviour
 
     private readonly List<UnitController> _zombies = new();
     private readonly List<UnitController> _humans = new();
+    private readonly List<ICombatTarget> _additionalZombieTargets = new();
+    private readonly List<ICombatTarget> _additionalHumanTargets = new();
+    private ReadOnlyCollection<ICombatTarget> _additionalZombieView;
+    private ReadOnlyCollection<ICombatTarget> _additionalHumanView;
+
+    public void RegisterAdditionalTarget(ICombatTarget target)
+    {
+        if (target is not MonoBehaviour targetObject || targetObject == null)
+            return;
+
+        List<ICombatTarget> targets = target.Team == UnitTeam.Zombie
+            ? _additionalZombieTargets : _additionalHumanTargets;
+        if (!targets.Contains(target))
+            targets.Add(target);
+    }
+
+    public void UnregisterAdditionalTarget(ICombatTarget target)
+    {
+        _additionalZombieTargets.Remove(target);
+        _additionalHumanTargets.Remove(target);
+    }
+
+    public IReadOnlyList<ICombatTarget> GetAdditionalEnemyTargets(UnitTeam team)
+    {
+        return team == UnitTeam.Zombie
+            ? _additionalHumanView ??= _additionalHumanTargets.AsReadOnly()
+            : _additionalZombieView ??= _additionalZombieTargets.AsReadOnly();
+    }
     
     private readonly List<StructureController> _zombieStructures = new();
     private readonly List<StructureController> _humanStructures = new();

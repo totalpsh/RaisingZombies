@@ -66,25 +66,10 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
             if (ui != null)
                 ui.SetProgress(0f);
             
-            currentScene?.OnSceneExit();
-            currentScene = null;
+            if (ui != null)
+                ui.SetProgress(0.1f);
 
-            if (currentAddressableSceneHandle.HasValue)
-            {
-                if (ui != null)
-                {
-                    ui.SetText("한 걸음 내딛는 중...");
-                    ui.SetProgress(0.1f);
-                }
-                
-                var prevHandle = currentAddressableSceneHandle.Value;
-                await Addressables.UnloadSceneAsync(prevHandle).Task;
-                currentAddressableSceneHandle = null;
-
-                Scene core = SceneManager.GetSceneByName(CORE_SCENE_NAME);
-                if (core.IsValid())
-                    SceneManager.SetActiveScene(core);
-            }
+            await ExitAndUnloadContentSceneAsync();
             
             if (ui != null)
             {
@@ -273,22 +258,67 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
         
         isLoading = true;
         
-        currentScene?.OnSceneExit();
-        currentScene = null;
-
-        if (currentAddressableSceneHandle.HasValue)
+        try
         {
-            await Addressables.UnloadSceneAsync(currentAddressableSceneHandle.Value).Task;
-            currentAddressableSceneHandle = null;
+            await ExitAndUnloadContentSceneAsync();
         }
-        else
+        finally
         {
-            var op = SceneManager.UnloadSceneAsync(currentSceneName);
-            while (!op.isDone) await Task.Yield();
+            isLoading = false;
         }
+    }
 
-        currentSceneName = CORE_SCENE_NAME;
-        isLoading = false;
+    private async Task ExitAndUnloadContentSceneAsync()
+    {
+        Scene contentScene = currentAddressableSceneHandle.HasValue
+            ? currentAddressableSceneHandle.Value.Result.Scene
+            : currentScene != null
+                ? currentScene.gameObject.scene
+                : string.IsNullOrEmpty(currentSceneName)
+                    ? default
+                    : SceneManager.GetSceneByName(currentSceneName);
+
+        if (!contentScene.IsValid() || !contentScene.isLoaded || contentScene.name == CORE_SCENE_NAME)
+            return;
+
+        PoolManager poolManager = PoolManager.Instance;
+        if (poolManager != null)
+            poolManager.SetSpawningEnabled(false);
+
+        try
+        {
+            currentScene?.OnSceneExit();
+            currentScene = null;
+
+            foreach (GameObject root in contentScene.GetRootGameObjects())
+                root.SetActive(false);
+
+            if (poolManager != null)
+                poolManager.ClearAll(true);
+
+            if (currentAddressableSceneHandle.HasValue)
+            {
+                await Addressables.UnloadSceneAsync(currentAddressableSceneHandle.Value).Task;
+                currentAddressableSceneHandle = null;
+            }
+            else
+            {
+                AsyncOperation operation = SceneManager.UnloadSceneAsync(contentScene);
+                if (operation != null)
+                    while (!operation.isDone) await Task.Yield();
+            }
+
+            Scene core = SceneManager.GetSceneByName(CORE_SCENE_NAME);
+            if (core.IsValid() && core.isLoaded)
+                SceneManager.SetActiveScene(core);
+
+            currentSceneName = CORE_SCENE_NAME;
+        }
+        finally
+        {
+            if (poolManager != null)
+                poolManager.SetSpawningEnabled(true);
+        }
     }
 
 // 재시작 (현재 콘텐츠 재로딩)

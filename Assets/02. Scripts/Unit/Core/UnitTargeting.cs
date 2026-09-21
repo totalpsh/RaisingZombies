@@ -32,7 +32,41 @@ public class UnitTargeting : MonoBehaviour
         if (unitTarget != null)
             return unitTarget;
 
+        ICombatTarget additionalTarget = FindAdditionalTarget();
+        if (additionalTarget != null)
+            return additionalTarget;
+
         return FindStructureTarget();
+    }
+
+    private ICombatTarget FindAdditionalTarget()
+    {
+        ICombatTarget selected = null;
+        float nearestX = float.MaxValue;
+        int selectedId = int.MaxValue;
+
+        foreach (ICombatTarget target in _battleArea.GetAdditionalEnemyTargets(_owner.Team))
+        {
+            if (target is not MonoBehaviour targetObject || targetObject == null ||
+                !targetObject.gameObject.activeInHierarchy || target.IsDead ||
+                target.Team == _owner.Team || target.TargetTransform == null)
+                continue;
+
+            float distance = GetForwardDistance(target);
+            if (distance < 0f || (selected != null && distance > nearestX))
+                continue;
+
+            int targetId = targetObject.GetInstanceID();
+            if (selected == null || distance < nearestX ||
+                Mathf.Approximately(distance, nearestX) && targetId < selectedId)
+            {
+                selected = target;
+                nearestX = distance;
+                selectedId = targetId;
+            }
+        }
+
+        return selected;
     }
 
     private UnitController FindUnitTarget(

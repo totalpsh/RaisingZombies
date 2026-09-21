@@ -26,6 +26,13 @@ public class PoolManager : Singleton<PoolManager>
     
     private readonly Dictionary<string, GameObject> _prefabsCash = new(); // 프리팹 캐싱
     private readonly Dictionary<string, Task<GameObject>> _loadingTasks = new(); // 검사.
+    private int _generation;
+    private bool _spawningEnabled = true;
+
+    public void SetSpawningEnabled(bool enabled)
+    {
+        _spawningEnabled = enabled;
+    }
     
 
     protected override void Awake()
@@ -90,6 +97,8 @@ public class PoolManager : Singleton<PoolManager>
 
     public async Task<GameObject> GetAsync(string key)
     {
+        if (!_spawningEnabled) return null;
+        int generation = _generation;
         if (string.IsNullOrEmpty(key))
         {
             Debug.LogError($"{nameof(GetAsync)} called with a null key");
@@ -125,7 +134,8 @@ public class PoolManager : Singleton<PoolManager>
         // 이미 같은 키를 로드 중이면 기다리기
         if (_loadingTasks.TryGetValue(key, out var loadingTask))
         {
-            return await loadingTask;
+            GameObject loadedObj = await loadingTask;
+            return generation == _generation && _spawningEnabled ? loadedObj : null;
         }
 
         var task = LoadAndCreateAsync(key);
@@ -134,16 +144,20 @@ public class PoolManager : Singleton<PoolManager>
 
         try
         {
-            return await task;
+            GameObject loadedObj = await task;
+            return generation == _generation && _spawningEnabled ? loadedObj : null;
         }
         finally
         {
-            _loadingTasks.Remove(key);
+            if (_loadingTasks.TryGetValue(key, out var currentTask) && ReferenceEquals(currentTask, task))
+                _loadingTasks.Remove(key);
         }
     }
     
     public async Task<GameObject> GetAsync(string key, bool activateOnGet = true)
     {
+        if (!_spawningEnabled) return null;
+        int generation = _generation;
         if (string.IsNullOrEmpty(key))
         {
             Debug.LogError($"{nameof(GetAsync)} called with a null key");
@@ -184,6 +198,7 @@ public class PoolManager : Singleton<PoolManager>
         if (_loadingTasks.TryGetValue(key, out var loadingTask))
         {
             GameObject loadedObj = await loadingTask;
+            if (generation != _generation || !_spawningEnabled) return null;
             
             if (loadedObj != null && !activateOnGet) 
                 loadedObj.SetActive(false);
@@ -197,6 +212,7 @@ public class PoolManager : Singleton<PoolManager>
         try
         {
             GameObject loadedObj = await task;
+            if (generation != _generation || !_spawningEnabled) return null;
             
             if (loadedObj != null && !activateOnGet)
                 loadedObj.SetActive(false);
@@ -205,13 +221,17 @@ public class PoolManager : Singleton<PoolManager>
         }
         finally
         {
-            _loadingTasks.Remove(key);
+            if (_loadingTasks.TryGetValue(key, out var currentTask) && ReferenceEquals(currentTask, task))
+                _loadingTasks.Remove(key);
         }
     }
     
     private async Task<GameObject> LoadAndCreateAsync(string key)
     {
+        int generation = _generation;
         var prefab = await ResourceManager.Instance.LoadAsync<GameObject>(key);
+
+        if (this == null || generation != _generation || !_spawningEnabled) return null;
 
         if (prefab == null)
         {
@@ -231,6 +251,7 @@ public class PoolManager : Singleton<PoolManager>
     
     public GameObject Get(string key) // 동기 버전
     {
+        if (!_spawningEnabled) return null;
         if( string.IsNullOrEmpty(key) ) return null;
         
         if (_pool.TryGetValue(key, out var stack))
@@ -259,12 +280,15 @@ public class PoolManager : Singleton<PoolManager>
     
     public async Task<GameObject> PreLoadAsync(string key, int preLoadIndex)
     {
+        if (!_spawningEnabled) return null;
+        int generation = _generation;
         if (string.IsNullOrEmpty(key) || preLoadIndex <= 0)
             return null;
 
         if (!_prefabsCash.TryGetValue(key, out var prefab))
         {
             prefab = await ResourceManager.Instance.LoadAsync<GameObject>(key);
+            if (this == null || generation != _generation || !_spawningEnabled) return null;
             if (prefab == null) return null;
             
             _prefabsCash[key] = prefab;
@@ -311,12 +335,19 @@ public class PoolManager : Singleton<PoolManager>
 
     public void ClearAll(bool includeActive = false) // 씬 전환 시
     {
+        // Pending requests belong to the pool state that is being discarded.
+        _generation++;
+        _loadingTasks.Clear();
+
         if (includeActive)
         {
-            foreach (var obj in _instanceToKey.Keys)
+            foreach (var obj in new List<GameObject>(_instanceToKey.Keys))
             {
                 if(obj != null)
+                {
+                    obj.SetActive(false);
                     Destroy(obj);
+                }
             }
         }
         
@@ -327,7 +358,7 @@ public class PoolManager : Singleton<PoolManager>
             while (stack.Count > 0)
             {
                 var obj = stack.Pop();
-                if (obj == null) return;
+                if (obj == null) continue;
                 
                 Destroy(obj);
             }
@@ -336,7 +367,11 @@ public class PoolManager : Singleton<PoolManager>
 
         foreach (var root in _keyRoots.Values)
         {
-            if (root != null) Destroy(root.gameObject);
+            if (root != null)
+            {
+                root.gameObject.SetActive(false);
+                Destroy(root.gameObject);
+            }
         }
         _keyRoots.Clear();
         //인스턴스 추적 정보 제거
