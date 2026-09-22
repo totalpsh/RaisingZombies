@@ -24,6 +24,7 @@ public class SceneLoadManager : Singleton<SceneLoadManager>
     private const string CORE_SCENE_NAME = "Core";
 
     private bool isLoading; // 동일 씬을 로드 되는 것을 방지 차 읽어 놓는 것입니다.
+    public bool IsLoading => isLoading;
     private AsyncOperationHandle<SceneInstance>? currentAddressableSceneHandle = null;
 
     public BaseScene currentScene { get; private set; }
