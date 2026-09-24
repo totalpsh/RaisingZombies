@@ -63,8 +63,10 @@ public static class BodyEquipmentSmokeTestTool
             Check(save.RegisterProvider(manager), "Body Equipment Provider 등록 실패");
             Set(manager, "_ready", true);
 
-            Check(wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 10L, "새 저장의 기본 신체 뽑기권 오류");
-            Check(wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, 10L) && !manager.CanDraw(1), "뽑기권 부족 차단 실패");
+            Check(wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "새 저장의 기본 신체 뽑기권은 0이어야 합니다.");
+            Check(!wallet.CanAfford(GameCurrencyType.BodyDrawTicket, 1L) && !wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, 1L) && !manager.CanDraw(1), "뽑기권 부족 차단 실패");
+            Check(manager.GetDrawTicketCost(1) == 1 && manager.GetDrawTicketCost(10) == 10, "기본 1회 또는 10회 Ticket 비용 오류");
+            Check(!manager.TryDraw(1, out _) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "실패한 Draw가 Ticket을 소비했습니다.");
             Check(manager.AddBodyDrawTickets(1L), "공통 신체 뽑기권 1개 지급 API 실패");
             Check(wallet.AddCurrency(GameCurrencyType.PremiumCurrency, 7L) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 1L, "재화 타입 간 값 분리 실패");
             UnityEngine.Random.InitState(20260909);
@@ -134,6 +136,7 @@ public static class BodyEquipmentSmokeTestTool
                   wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == savedTickets, "Inventory, 장착, 연구 또는 Ticket 저장 복원 실패");
 
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
+            ValidateChallengeReward(wallet);
             ValidateUIPrefabs(manager, preview);
             ValidateLegacyQuestMigration();
             Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
@@ -150,6 +153,20 @@ public static class BodyEquipmentSmokeTestTool
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
         }
+    }
+
+    // 도전 던전 보상 데이터가 기존 지갑을 통해 티켓을 지급하는지 검사합니다.
+    private static void ValidateChallengeReward(CurrencyWalletManager wallet)
+    {
+        ChallengeDungeonRewardSO reward = ScriptableObject.CreateInstance<ChallengeDungeonRewardSO>(); // 원본 에셋을 건드리지 않는 임시 던전 보상
+        try
+        {
+            Set(reward, "amount", 4L);
+            Set(reward, "currencyType", GameCurrencyType.BodyDrawTicket);
+            long before = wallet.GetAmount(GameCurrencyType.BodyDrawTicket); // 보상 지급 전 실제 지갑 값
+            Check(reward.TryGrantClearReward(wallet) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == before + 4L, "던전 데이터 기반 Ticket 보상 지급 실패");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(reward); }
     }
 
     // Body Draw 누적 조건, Ticket 보상과 Dungeon Hook이 기존 Quest 원본에서 동작하는지 검사합니다.

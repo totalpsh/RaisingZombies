@@ -320,7 +320,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         reward = _pendingOfflineReward;
         if (!_hasPendingOfflineReward) return false;
         _hasPendingOfflineReward = false;
-        return reward.EarnedCurrency > 0;
+        return reward.EarnedCurrency > 0 || reward.EarnedBodyDrawTickets > 0L;
     }
 
     // 입력한 경과 초에 현재 상한과 효율을 적용한 오프라인 보상을 계산합니다.
@@ -331,7 +331,10 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         float efficiency = GetOfflineEfficiency(); // 현재 오프라인 효율
         double rawReward = GetCurrencyPerSecond() * appliedSeconds * efficiency; // 반올림 전 보상
         int earnedCurrency = ToSafeCurrency(Math.Floor(rawReward)); // 비정상 수치와 지갑 범위를 보호한 정수 보상
-        return new OfflineCurrencyReward(safeActualSeconds, appliedSeconds, efficiency, earnedCurrency);
+        long hourlyTickets = currencyUpgradeBalance == null ? 0L : Math.Max(0L, currencyUpgradeBalance.offlineBodyDrawTicketsPerHour); // Inspector에 정의된 시간당 티켓 수
+        double rawTickets = (double)hourlyTickets * appliedSeconds * efficiency / 3600d; // 기존 오프라인 시간 상한과 효율을 적용한 티켓 수
+        long earnedTickets = rawTickets <= 0d || double.IsNaN(rawTickets) ? 0L : rawTickets >= long.MaxValue ? long.MaxValue : (long)Math.Floor(rawTickets); // 지갑과 같은 long 범위
+        return new OfflineCurrencyReward(safeActualSeconds, appliedSeconds, efficiency, earnedCurrency, earnedTickets);
     }
 
     // 현재 가챠 1회를 실행하고 저장 전 결과를 만듭니다.
@@ -768,11 +771,15 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
             DateTimeStyles.RoundtripKind, out DateTime savedUtc); // UTC 파싱 성공 여부
         if (!parsed) return false;
         OfflineCurrencyReward reward = CalculateOfflineReward((nowUtc - savedUtc.ToUniversalTime()).TotalSeconds); // 이번 접속 보상
-        if (reward.EarnedCurrency <= 0) return false;
-        _state.currency = (int)Math.Min(int.MaxValue, (long)_state.currency + reward.EarnedCurrency);
-        _pendingOfflineReward = reward;
+        if (reward.EarnedCurrency <= 0 && reward.EarnedBodyDrawTickets <= 0L) return false;
+        long grantedTickets = 0L; // 기존 지갑 지급에 성공한 신체 뽑기권 수
+        if (reward.EarnedBodyDrawTickets > 0L && CurrencyWalletManager.EnsureInstance().AddCurrency(GameCurrencyType.BodyDrawTicket, reward.EarnedBodyDrawTickets))
+            grantedTickets = reward.EarnedBodyDrawTickets;
+        if (reward.EarnedCurrency > 0) _state.currency = (int)Math.Min(int.MaxValue, (long)_state.currency + reward.EarnedCurrency);
+        if (reward.EarnedCurrency <= 0 && grantedTickets <= 0L) return false;
+        _pendingOfflineReward = new OfflineCurrencyReward(reward.ActualSeconds, reward.AppliedSeconds, reward.Efficiency, reward.EarnedCurrency, grantedTickets);
         _hasPendingOfflineReward = true;
-        offlineRewardGranted?.Invoke(reward);
+        offlineRewardGranted?.Invoke(_pendingOfflineReward);
         return true;
     }
 

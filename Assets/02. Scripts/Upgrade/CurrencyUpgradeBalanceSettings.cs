@@ -42,6 +42,7 @@ public sealed class CurrencyUpgradeBalanceSettings : ScriptableObject
     [Min(0f)] public float baseOfflineMaxHours = 2f; // Inspector에서 설정하는 강화 전 최대 적립 시간
     [Range(0f, 1f)] public float baseOfflineEfficiency = 0.5f; // 강화 전 오프라인 적립 효율
     [Range(0f, 1f)] public float maximumOfflineEfficiency = 1f; // 오프라인 적립 효율 상한
+    [Min(0)] public long offlineBodyDrawTicketsPerHour; // 0이면 티켓을 지급하지 않는 시간당 오프라인 뽑기권 설정
     [SerializeField] private CurrencyUpgradeDefinition[] definitions = Array.Empty<CurrencyUpgradeDefinition>(); // 네 종류의 재화 강화 정의
 
     public IReadOnlyList<CurrencyUpgradeDefinition> Definitions => definitions;
@@ -99,6 +100,7 @@ public sealed class CurrencyUpgradeBalanceSettings : ScriptableObject
             errors.Add("오프라인 효율 상한은 0~1 범위여야 합니다.");
         if (maximumOfflineEfficiency < baseOfflineEfficiency)
             errors.Add("오프라인 효율 상한이 기본 효율보다 작습니다.");
+        if (offlineBodyDrawTicketsPerHour < 0L) errors.Add("시간당 오프라인 신체 뽑기권은 0 이상이어야 합니다.");
         CurrencyUpgradeDefinition efficiency = GetDefinition(CurrencyUpgradeType.OfflineEfficiency); // 효율 상한을 검사할 정의
         if (efficiency != null && !efficiency.unlimited && baseOfflineEfficiency + (double)efficiency.valuePerLevel * efficiency.maxLevel > maximumOfflineEfficiency + 0.0001d)
             errors.Add("최대 레벨의 오프라인 효율이 설정된 효율 상한을 초과합니다.");
@@ -176,13 +178,15 @@ public readonly struct OfflineCurrencyReward
     public readonly double AppliedSeconds; // 상한 적용 후 경과 초
     public readonly float Efficiency; // 적용 효율
     public readonly int EarnedCurrency; // 최종 획득 재화
+    public readonly long EarnedBodyDrawTickets; // 실제 지급된 신체 뽑기권
 
     // 계산된 오프라인 보상 결과를 생성합니다.
-    public OfflineCurrencyReward(double actualSeconds, double appliedSeconds, float efficiency, int earnedCurrency)
+    public OfflineCurrencyReward(double actualSeconds, double appliedSeconds, float efficiency, int earnedCurrency, long earnedBodyDrawTickets = 0L)
     {
         ActualSeconds = actualSeconds;
         AppliedSeconds = appliedSeconds;
         Efficiency = efficiency;
         EarnedCurrency = earnedCurrency;
+        EarnedBodyDrawTickets = earnedBodyDrawTickets;
     }
 }

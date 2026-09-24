@@ -14,7 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BodyRarityDefinitionSO
   tier: 3
   displayName: "\uD76C\uADC0"
-  uiColor: {r: 0.35000002, g: 1, b: 0.88299996, a: 1}
+  uiColor: {r: 0.3529412, g: 0.79637957, b: 0.9764706, a: 1}
+  backgroundColor: {r: 0.3529412, g: 0.7960785, b: 0.97647065, a: 0}
+  innerBorderColor: {r: 0.78301877, g: 0.93722546, b: 1, a: 0}
+  glowColor: {r: 0.3529412, g: 0.7960785, b: 0.97647065, a: 0}
   frameSprite: {fileID: 0}
   mainRollMin: 15
   mainRollMax: 50

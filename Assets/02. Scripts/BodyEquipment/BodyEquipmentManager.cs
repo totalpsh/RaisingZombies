@@ -91,7 +91,7 @@ public sealed class BodyEquipmentManager : Singleton<BodyEquipmentManager>, ISav
     {
         if (!_ready || _mutating || (count != 1 && count != 10) || _wallet == null) return false;
         int cost = GetDrawTicketCost(count); // 실제 Settings의 Ticket 비용
-        if (_wallet.GetAmount(GameCurrencyType.BodyDrawTicket) < cost) return false;
+        if (!_wallet.CanAfford(GameCurrencyType.BodyDrawTicket, cost)) return false;
         if (!HasInventorySpace(count)) return false;
         return HasDrawableDefinitions() && GetCurrentResearchDefinition() != null;
     }
@@ -112,22 +112,24 @@ public sealed class BodyEquipmentManager : Singleton<BodyEquipmentManager>, ISav
         try
         {
             int cost = GetDrawTicketCost(count); // 이번 Draw에 한 번만 소비할 Ticket 수
-            if (!_wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, cost)) return false;
-            List<BodyDrawResult> created = new(count); // UI와 Quest에 전달할 이번 결과
+            List<BodyEquipmentInstance> prepared = new(count); // 티켓 소비 전에 유효성을 확인할 모든 장비
+            List<BodyDrawResult> created = new(count); // 소비 전에 복제까지 끝낸 UI와 Quest 결과
+            HashSet<string> preparedIds = new(StringComparer.Ordinal); // 이번 묶음 안에서 중복 ID를 막는다
             for (int index = 0; index < count; index++)
             {
-                BodyEquipmentInstance equipment = CreateRandomEquipment(); // Inventory에 추가할 실제 랜덤 장비
-                if (equipment == null)
-                {
-                    _wallet.AddCurrency(GameCurrencyType.BodyDrawTicket, cost);
-                    RollbackCreatedEquipment(created);
-                    return false;
-                }
+                BodyEquipmentInstance equipment = CreateRandomEquipment(); // 아직 소유 목록에 추가하지 않은 장비
+                if (equipment == null || string.IsNullOrWhiteSpace(equipment.uniqueId) || _inventoryById.ContainsKey(equipment.uniqueId) || !preparedIds.Add(equipment.uniqueId)) return false;
+                prepared.Add(equipment);
+                created.Add(new BodyDrawResult(equipment.Clone()));
+            }
+            if (!_wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, cost)) return false;
+            for (int index = 0; index < count; index++)
+            {
+                BodyEquipmentInstance equipment = prepared[index]; // 검증을 마친 이번 장비
                 _state.inventory.Add(equipment);
                 _inventoryById.Add(equipment.uniqueId, equipment);
                 IncrementSaturated(ref _state.totalBodyDrawCount);
                 _state.highestRarityTier = Mathf.Max(_state.highestRarityTier, equipment.rarityTier);
-                created.Add(new BodyDrawResult(equipment.Clone()));
             }
             results = created;
             SaveNow();
@@ -501,19 +503,6 @@ public sealed class BodyEquipmentManager : Singleton<BodyEquipmentManager>, ISav
         equipment = GetEquipment(instanceId);
         definition = null;
         return equipment != null && database != null && database.TryGetEquipment(equipment.definitionId, out definition);
-    }
-
-    // 실패한 Draw에서 이미 만든 장비를 Inventory 캐시와 목록에서 제거합니다.
-    private void RollbackCreatedEquipment(List<BodyDrawResult> created)
-    {
-        foreach (BodyDrawResult result in created) // 이번 실패 전에 생성된 장비
-        {
-            if (result.Equipment == null) continue;
-            BodyEquipmentInstance stored = GetEquipment(result.Equipment.uniqueId); // 제거할 실제 Inventory 원본
-            if (stored != null) _state.inventory.Remove(stored);
-            _inventoryById.Remove(result.Equipment.uniqueId);
-            if (_state.totalBodyDrawCount > 0L) _state.totalBodyDrawCount--;
-        }
     }
 
     // 현재 장착 원본으로 최종 Modifier Snapshot을 다시 만듭니다.

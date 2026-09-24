@@ -15,6 +15,9 @@ MonoBehaviour:
   tier: 11
   displayName: "\uCD08\uC6D4"
   uiColor: {r: 1, g: 0.6230002, b: 0.35000002, a: 1}
+  backgroundColor: {r: 1, g: 0.62352943, b: 0.34901962, a: 0}
+  innerBorderColor: {r: 1, g: 0.7654012, b: 0.5943395, a: 0}
+  glowColor: {r: 1, g: 0.62352943, b: 0.34901962, a: 0}
   frameSprite: {fileID: 0}
   mainRollMin: 1300
   mainRollMax: 2500
