@@ -326,22 +326,26 @@ public static class BodyEquipmentSmokeTestTool
         BodyEquipmentDetailPopup detailPopup = Get<BodyEquipmentDetailPopup>(drawPanel, "detailPopup"); // 슬롯 클릭용 상세 팝업
         BodyEquipmentComparePopup comparePopup = Get<BodyEquipmentComparePopup>(drawPanel, "comparePopup"); // 새 장비 비교 팝업
         Check(detailPopup != null && comparePopup != null && Get<BodyEquipmentInfoView>(detailPopup, "equipmentView") != null &&
-              Get<BodyEquipmentInfoView>(comparePopup, "currentView") != null && Get<BodyEquipmentInfoView>(comparePopup, "newView") != null &&
-              Get<Button>(comparePopup, "equipButton") != null && Get<Button>(comparePopup, "dismantleButton") != null,
+              Get<BodyEquipmentInfoView>(comparePopup, "currentView") != null && Get<BodyEquipmentInfoView>(comparePopup, "newView") != null,
               "상세/비교 팝업 필수 참조 누락");
         BodyEquipmentInfoView currentInfo = Get<BodyEquipmentInfoView>(comparePopup, "currentView"); // Popup_1 현재 장비 정보 View
         BodyEquipmentInfoView newInfo = Get<BodyEquipmentInfoView>(comparePopup, "newView"); // Popup_2 새 장비 정보 View
-        Check(Get<BodyEquipmentStatRowView[]>(currentInfo, "statRows").Length == 4 &&
-              Get<BodyEquipmentStatRowView[]>(newInfo, "statRows").Length == 4,
-              "ItemDetail의 Attack/Defense/HP/Critical 고정 행 연결 누락");
+        Check(newInfo.GetComponentsInChildren<Button>(true).Length >= 2, "Popup_2의 파괴/장착 버튼 누락");
+        Check(Get<BodyEquipmentStatRowView[]>(currentInfo, "statRows").Length == 5 &&
+              Get<BodyEquipmentStatRowView[]>(newInfo, "statRows").Length == 5,
+              "ItemDetail의 Main과 최대 4개 Sub Stat 행 연결 누락");
         Check(detailPopup.transform.IsChildOf(menuAsset.transform) && comparePopup.transform.IsChildOf(menuAsset.transform) &&
               detailPopup.transform.root == menuAsset.transform && comparePopup.transform.root == menuAsset.transform,
               "신체 장비 팝업이 UpgradeMenuController 루트 밖에 있음");
         GameObject menuInstance = (GameObject)PrefabUtility.InstantiatePrefab(menuAsset, preview); // 버튼 중복 실행을 검사할 메뉴 인스턴스
         BodyDrawPanel drawInstance = menuInstance.GetComponentInChildren<BodyDrawPanel>(true); // 인스턴스의 새 Draw 화면
+        BodyEquipmentComparePopup compareInstance = Get<BodyEquipmentComparePopup>(drawInstance, "comparePopup"); // 중첩 버튼 참조를 복구할 실제 비교 팝업
         drawInstance.gameObject.SetActive(true);
         Call(drawInstance, "OnEnable");
         Call(drawInstance, "OnEnable");
+        Call(compareInstance, "OnEnable");
+        Check(Get<Button>(compareInstance, "equipButton") != null && Get<Button>(compareInstance, "dismantleButton") != null,
+              "Popup_2 중첩 Prefab의 장착/파괴 버튼 참조 복구 실패");
         ValidateItemDetailComparison(manager, drawInstance);
         long drawCountBefore = manager.TotalBodyDrawCount; // 버튼 한 번 전 누적 Draw 수
         Get<Button>(drawInstance, "drawOneButton").onClick.Invoke();
@@ -388,7 +392,8 @@ public static class BodyEquipmentSmokeTestTool
         next.subStats = new List<EquipmentStatRoll>
         {
             new() { statType = EquipmentStatType.Defense, value = 8f },
-            new() { statType = EquipmentStatType.CriticalChance, value = 5f }
+            new() { statType = EquipmentStatType.CriticalChance, value = 5f },
+            new() { statType = EquipmentStatType.AttackSpeed, value = 7.2f }
         };
         currentView.Bind(manager, current, null, false);
         newView.Bind(manager, next, current, true);
@@ -396,18 +401,25 @@ public static class BodyEquipmentSmokeTestTool
         BodyEquipmentStatRowView defense = FindStatRow(newView, EquipmentStatType.Defense); // 새 장비에만 있는 행
         BodyEquipmentStatRowView health = FindStatRow(newView, EquipmentStatType.Health); // 새 장비에서 사라지는 행
         BodyEquipmentStatRowView critical = FindStatRow(newView, EquipmentStatType.CriticalChance); // 동일 Percent 행
+        BodyEquipmentStatRowView attackSpeed = FindStatRow(newView, EquipmentStatType.AttackSpeed); // 디자인 이름과 무관한 실제 Roll 행
         Check(Get<GameObject>(attack, "upIcon").activeSelf && !Get<GameObject>(attack, "downIcon").activeSelf, "Attack 상승 아이콘 오류");
         Check(Get<GameObject>(defense, "upIcon").activeSelf && !Get<GameObject>(defense, "downIcon").activeSelf, "새 장비에만 있는 Defense 상승 표시 오류");
         Check(health.gameObject.activeSelf && !Get<GameObject>(health, "upIcon").activeSelf && Get<GameObject>(health, "downIcon").activeSelf,
               "기존 장비에만 있는 HP 손실 표시 오류");
         Check(!Get<GameObject>(critical, "upIcon").activeSelf && !Get<GameObject>(critical, "downIcon").activeSelf &&
               Get<TMP_Text>(critical, "statValueText").text.Contains("%"), "동일 Percent Stat 표시 오류");
+        Check(Get<GameObject>(attackSpeed, "upIcon").activeSelf && Get<TMP_Text>(attackSpeed, "statValueText").text.Contains("%"),
+              "다섯 번째 재사용 행의 공격속도 Roll 또는 상승 표시 오류");
+        newView.Bind(manager, next, null, true);
+        attack = FindStatRow(newView, EquipmentStatType.Attack);
+        Check(!Get<GameObject>(attack, "upIcon").activeSelf && !Get<GameObject>(attack, "downIcon").activeSelf,
+              "현재 장비가 없을 때 비교 아이콘이 표시됨");
     }
 
-    // 공통 InfoView에서 지정 StatType의 고정 행을 반환한다.
+    // 공통 InfoView에서 지정 StatType을 현재 표시 중인 재사용 행을 반환한다.
     private static BodyEquipmentStatRowView FindStatRow(BodyEquipmentInfoView view, EquipmentStatType type)
     {
-        BodyEquipmentStatRowView[] rows = Get<BodyEquipmentStatRowView[]>(view, "statRows"); // ItemDetail에 연결된 고정 행
+        BodyEquipmentStatRowView[] rows = Get<BodyEquipmentStatRowView[]>(view, "statRows"); // ItemDetail에 연결된 재사용 행
         foreach (BodyEquipmentStatRowView row in rows)
             if (row != null && row.StatType == type) return row;
         throw new InvalidOperationException($"ItemDetail에 {type} Stat Row가 없습니다.");

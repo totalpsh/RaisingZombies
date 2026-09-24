@@ -7,6 +7,9 @@ public sealed class BodyRarityDefinitionSO : ScriptableObject
     [SerializeField, Range(1, 12)] private int tier = 1; // 1부터 시작하는 레어도 단계
     [SerializeField] private string displayName = string.Empty; // UI에 표시할 레어도 이름
     [SerializeField] private Color uiColor = Color.white; // 카드와 확률 UI에 적용할 색
+    [SerializeField] private Color backgroundColor = Color.clear; // 투명 검정이면 기존 레어도 강조색을 사용하는 배경색
+    [SerializeField] private Color innerBorderColor = Color.clear; // 투명 검정이면 기존 레어도 강조색을 사용하는 안쪽 테두리색
+    [SerializeField] private Color glowColor = Color.clear; // 투명 검정이면 기존 레어도 강조색을 사용하는 글로우색
     [SerializeField] private Sprite frameSprite; // 장비 카드에 사용할 선택적 프레임 이미지
     [SerializeField, Min(0f)] private float mainRollMin = 1f; // Main Stat 기준 Roll 최소값
     [SerializeField, Min(0f)] private float mainRollMax = 10f; // Main Stat 기준 Roll 최대값
@@ -18,6 +21,10 @@ public sealed class BodyRarityDefinitionSO : ScriptableObject
     public int Tier => tier; // 확률표와 저장에서 사용할 단계
     public string DisplayName => displayName; // UI 표시 이름
     public Color UiColor => uiColor; // UI 강조 색
+
+    public Color BackgroundColor => backgroundColor == Color.clear ? uiColor : backgroundColor; // 미설정이면 기존 강조색을 사용하는 배경 색
+    public Color InnerBorderColor => innerBorderColor == Color.clear ? uiColor : innerBorderColor; // 미설정이면 기존 강조색을 사용하는 안쪽 테두리 색
+    public Color GlowColor => glowColor == Color.clear ? uiColor : glowColor; // 미설정이면 기존 강조색을 사용하는 글로우 색
     public Sprite FrameSprite => frameSprite; // 장비 카드 프레임
     public float MainRollMin => Mathf.Max(0f, mainRollMin); // 안전한 Main Roll 최소값
     public float MainRollMax => Mathf.Max(MainRollMin, mainRollMax); // 최소값보다 작지 않은 Main Roll 최대값

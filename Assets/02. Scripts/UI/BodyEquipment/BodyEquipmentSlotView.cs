@@ -11,6 +11,8 @@ public sealed class BodyEquipmentSlotView : MonoBehaviour
     [SerializeField] private GameObject emptyObject; // 기존 슬롯의 빈 장비 표시
     [SerializeField] private Button slotButton; // 장착 장비 상세 팝업을 여는 버튼
     private BodyEquipmentManager _manager; // 장착 상태의 단일 원본
+    private BodyRarityVisual _rarityVisual; // 같은 오브젝트에 선택적으로 추가한 레어도 색상 컴포넌트
+    private bool _rarityVisualResolved; // 컴포넌트 검색을 한 번만 수행했는지 여부
     private Action<string> _detailRequested; // 패널에 상세 정보 표시를 요청한다
 
     public BodyEquipmentSlot SlotType => slotType; // 순서에 의존하지 않는 슬롯 식별값
@@ -26,6 +28,11 @@ public sealed class BodyEquipmentSlotView : MonoBehaviour
     // 저장된 현재 장착 장비와 빈 슬롯을 화면에 반영한다.
     public void Refresh()
     {
+        if (!_rarityVisualResolved)
+        {
+            _rarityVisual = GetComponent<BodyRarityVisual>();
+            _rarityVisualResolved = true;
+        }
         BodyEquipmentInstance equipment = _manager == null ? null : _manager.GetEquipped(slotType); // 해당 부위에 실제 장착된 장비
         bool valid = BodyEquipmentUIFormatter.TryGetDefinitions(_manager, equipment, out BodyEquipmentDefinitionSO definition, out BodyRarityDefinitionSO rarity); // 원형과 레어도 조회 결과
         if (emptyObject != null) emptyObject.SetActive(!valid);
@@ -36,10 +43,11 @@ public sealed class BodyEquipmentSlotView : MonoBehaviour
         }
         if (rarityFrame != null)
         {
-            rarityFrame.color = valid ? rarity.UiColor : Color.clear;
+            if (_rarityVisual == null) rarityFrame.color = valid ? rarity.UiColor : Color.clear;
             if (valid && rarity.FrameSprite != null) rarityFrame.sprite = rarity.FrameSprite;
             rarityFrame.enabled = valid;
         }
+        if (_rarityVisual != null) _rarityVisual.SetRarity(valid ? rarity : null);
         if (slotButton != null) slotButton.interactable = valid;
     }
 

@@ -21,6 +21,8 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
     [SerializeField] private Button lockButton; // 장비 잠금을 전환한다
     [SerializeField] private TMP_Text equipButtonText; // 결과 목록에서는 버튼을 비교 동작으로 안내한다
     private BodyEquipmentManager _manager; // 장비 동작의 실제 원본
+    private BodyRarityVisual _rarityVisual; // 같은 오브젝트에 선택적으로 추가한 레어도 색상 컴포넌트
+    private bool _rarityVisualResolved; // 컴포넌트 검색을 한 번만 수행했는지 여부
     private string _instanceId = string.Empty; // 현재 카드에 바인딩된 장비 ID
     private Action<string> _dismantleRequested; // 부모 팝업의 파기 확인 Callback
     private Action<string> _comparisonRequested; // 10회 결과 목록의 선택 비교 Callback
@@ -56,9 +58,15 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
     // 현재 인벤토리 원본으로 카드 전체를 갱신합니다.
     public void Refresh()
     {
+        if (!_rarityVisualResolved)
+        {
+            _rarityVisual = GetComponent<BodyRarityVisual>();
+            _rarityVisualResolved = true;
+        }
         BodyEquipmentInstance equipment = _manager == null ? null : _manager.GetEquipment(_instanceId); // 카드에 표시할 실제 장비
         if (!BodyEquipmentUIFormatter.TryGetDefinitions(_manager, equipment, out BodyEquipmentDefinitionSO definition, out BodyRarityDefinitionSO rarity))
         {
+            if (_rarityVisual != null) _rarityVisual.SetRarity(null);
             gameObject.SetActive(false);
             return;
         }
@@ -74,9 +82,10 @@ public sealed class BodyEquipmentItemView : MonoBehaviour
         SetText(equipButtonText, _comparisonRequested == null ? "장착" : "비교");
         if (rarityFrame != null)
         {
-            rarityFrame.color = rarity.UiColor;
+            if (_rarityVisual == null) rarityFrame.color = rarity.UiColor;
             if (rarity.FrameSprite != null) rarityFrame.sprite = rarity.FrameSprite;
         }
+        if (_rarityVisual != null) _rarityVisual.SetRarity(rarity);
         if (equipmentIcon != null)
         {
             equipmentIcon.sprite = definition.Icon;

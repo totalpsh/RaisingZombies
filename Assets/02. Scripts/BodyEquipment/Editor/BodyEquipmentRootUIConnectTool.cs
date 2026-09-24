@@ -87,9 +87,12 @@ public static class BodyEquipmentRootUIConnectTool
         if (host == null) host = itemDetail;
         Transform designedButtons = DirectChild(newRoot, "Group_Buttons"); // 사용자가 만든 새 장비 버튼 자리
         MoveExistingButtons(host, designedButtons); // 이전 최소 팝업 버튼을 새 디자인 위치에서 재사용한다
+        Button[] designedActionButtons = designedButtons == null ? Array.Empty<Button>() : designedButtons.GetComponentsInChildren<Button>(true); // 중첩 Prefab의 파괴, 장착 버튼
         Button equip = FindButton(itemDetail, "EquipButton"); // 새 장비 장착 버튼
         Button dismantle = FindButton(itemDetail, "DismantleButton"); // 새 장비 파괴 버튼
         Button close = FindButton(itemDetail, "CloseButton"); // 새 장비 보관 및 닫기 버튼
+        if (dismantle == null && designedActionButtons.Length >= 1) dismantle = designedActionButtons[0];
+        if (equip == null && designedActionButtons.Length >= 2) equip = designedActionButtons[1];
         Transform comparePanel = DirectChild(host, "ComparePanel"); // 기존 확인 UI를 보유한 패널
         Transform confirmation = comparePanel == null ? null : DirectChild(comparePanel, "DismantleConfirmation"); // 기존 파기 확인 영역
         TMP_Text confirmationText = confirmation == null ? null : ComponentAt<TMP_Text>(confirmation, "ConfirmationText"); // 파기 대상 안내
@@ -153,23 +156,24 @@ public static class BodyEquipmentRootUIConnectTool
         Set(fields, "mainStatText", null);
         Set(fields, "subStatsText", null);
         Set(fields, "emptyText", null);
-        SerializedProperty rowProperty = fields.FindProperty("statRows"); // 재사용할 고정 스탯 행 배열
+        SerializedProperty rowProperty = fields.FindProperty("statRows"); // 실제 Main과 Sub를 표시할 재사용 행 배열
         rowProperty.arraySize = rows.Length;
         for (int index = 0; index < rows.Length; index++) rowProperty.GetArrayElementAtIndex(index).objectReferenceValue = rows[index];
         fields.ApplyModifiedPropertiesWithoutUndo();
         return view;
     }
 
-    // 디자인에 존재하고 실제 장비 시스템이 지원하는 고정 Stat Object만 연결한다.
+    // 디자인의 다섯 행을 실제 Main과 최대 네 개 Sub Stat 표시용으로 연결한다.
     private static BodyEquipmentStatRowView[] ConnectDesignedStatRows(Transform group, bool comparisonSide)
     {
         if (group == null) return Array.Empty<BodyEquipmentStatRowView>();
-        (string name, EquipmentStatType type)[] mappings = // 디자인 이름과 실제 Stat enum 대응
+        (string name, EquipmentStatType type)[] mappings = // 편집 상태에서 보일 기본 이름과 실제 표시 행 대응
         {
             ("Attack", EquipmentStatType.Attack), ("Defense", EquipmentStatType.Defense),
-            ("HP", EquipmentStatType.Health), ("Critical", EquipmentStatType.CriticalChance)
+            ("HP", EquipmentStatType.Health), ("Critical", EquipmentStatType.CriticalChance),
+            ("Dodge", EquipmentStatType.Attack)
         };
-        BodyEquipmentStatRowView[] rows = new BodyEquipmentStatRowView[mappings.Length]; // Instantiate 없이 재사용할 네 개 행
+        BodyEquipmentStatRowView[] rows = new BodyEquipmentStatRowView[mappings.Length]; // Instantiate 없이 재사용할 다섯 개 행
         for (int index = 0; index < mappings.Length; index++)
         {
             Transform rowRoot = DirectChild(group, mappings[index].name); // 기존 디자인의 Stat Object
@@ -178,7 +182,7 @@ public static class BodyEquipmentRootUIConnectTool
             TMP_Text valueText = ComponentAt<TMP_Text>(rowRoot, "StatValueText_2") ?? ComponentAt<TMP_Text>(rowRoot, "Text_2"); // 기존 StatValue Text
             GameObject up = DirectChild(rowRoot, "UpIcon")?.gameObject; // 상승 아이콘
             GameObject down = DirectChild(rowRoot, "DownIcon")?.gameObject; // 하락 아이콘
-            BodyEquipmentStatRowView row = rowRoot.GetComponent<BodyEquipmentStatRowView>() ?? rowRoot.gameObject.AddComponent<BodyEquipmentStatRowView>(); // 고정 행 View
+            BodyEquipmentStatRowView row = rowRoot.GetComponent<BodyEquipmentStatRowView>() ?? rowRoot.gameObject.AddComponent<BodyEquipmentStatRowView>(); // 실제 Roll을 표시할 재사용 행 View
             SerializedObject fields = new(row); // Stat 종류와 기존 UI 참조 연결
             fields.FindProperty("statType").enumValueIndex = (int)mappings[index].type;
             Set(fields, "statNameText", nameText);
@@ -189,8 +193,6 @@ public static class BodyEquipmentRootUIConnectTool
             if (!comparisonSide) { if (up != null) up.SetActive(false); if (down != null) down.SetActive(false); }
             rows[index] = row;
         }
-        Transform unsupportedDodge = DirectChild(group, "Dodge"); // 현재 장비 Stat enum에 없는 디자인 전용 행
-        if (unsupportedDodge != null) unsupportedDodge.gameObject.SetActive(false);
         return rows;
     }
 

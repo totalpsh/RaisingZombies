@@ -41,11 +41,22 @@ public sealed class BodyEquipmentComparePopup : MonoBehaviour
     // 모든 동작 버튼을 중복 없이 연결한다.
     private void OnEnable()
     {
+        ResolveActionButtons();
         AddListener(equipButton, Equip);
         AddListener(dismantleButton, RequestDismantle);
         AddListener(closeButton, Close);
         AddListener(confirmDismantleButton, ConfirmDismantle);
         AddListener(cancelDismantleButton, CancelDismantle);
+    }
+
+    // 새 디자인의 Popup_2 버튼 두 개가 중첩 Prefab이면 자식 순서로 참조를 복구한다.
+    private void ResolveActionButtons()
+    {
+        if ((equipButton != null && dismantleButton != null) || newView == null) return;
+        Button[] actionButtons = newView.GetComponentsInChildren<Button>(true); // Group_Buttons의 파괴, 장착 순서
+        if (actionButtons.Length < 2) return;
+        if (dismantleButton == null) dismantleButton = actionButtons[0];
+        if (equipButton == null) equipButton = actionButtons[1];
     }
 
     // 비활성 상태의 버튼 Listener를 정리한다.

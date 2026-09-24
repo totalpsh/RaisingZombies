@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,7 +16,11 @@ public sealed class BodyEquipmentInfoView : MonoBehaviour
     [SerializeField] private TMP_Text mainStatText; // 주 스탯 한 줄
     [SerializeField] private TMP_Text subStatsText; // 실제로 뽑힌 보조 스탯만 표시
     [SerializeField] private TMP_Text emptyText; // 장착 장비가 없는 상태 안내
-    [SerializeField] private BodyEquipmentStatRowView[] statRows; // ItemDetail에 미리 배치된 고정 스탯 행
+    [SerializeField] private BodyEquipmentStatRowView[] statRows; // ItemDetail에 미리 배치된 재사용 스탯 행
+    private BodyRarityVisual _rarityVisual; // 같은 오브젝트에 선택적으로 추가한 레어도 색상 컴포넌트
+    private bool _rarityVisualResolved; // 컴포넌트 검색을 한 번만 수행했는지 여부
+    private readonly List<EquipmentStatRoll> _displayRolls = new(5); // Main과 Sub를 실제 표시 순서로 재사용한다
+    private readonly HashSet<EquipmentStatType> _displayedTypes = new(); // 같은 StatType의 중복 행을 막는다
 
     // 같은 Formatter와 Definition으로 장비 정보를 갱신한다.
     public void Bind(BodyEquipmentManager manager, BodyEquipmentInstance equipment)
@@ -26,6 +31,11 @@ public sealed class BodyEquipmentInfoView : MonoBehaviour
     // 현재 장비와 비교 대상의 실제 Roll을 고정 Stat Object에 반영한다.
     public void Bind(BodyEquipmentManager manager, BodyEquipmentInstance equipment, BodyEquipmentInstance comparisonTarget, bool showComparison)
     {
+        if (!_rarityVisualResolved)
+        {
+            _rarityVisual = GetComponent<BodyRarityVisual>();
+            _rarityVisualResolved = true;
+        }
         bool valid = BodyEquipmentUIFormatter.TryGetDefinitions(manager, equipment, out BodyEquipmentDefinitionSO definition, out BodyRarityDefinitionSO rarity); // 표시 가능한 장비인지 여부
         if (equipmentIcon != null)
         {
@@ -39,10 +49,11 @@ public sealed class BodyEquipmentInfoView : MonoBehaviour
         }
         if (rarityFrame != null)
         {
-            rarityFrame.color = valid ? rarity.UiColor : Color.clear;
+            if (_rarityVisual == null) rarityFrame.color = valid ? rarity.UiColor : Color.clear;
             if (valid && applyRarityFrameSprite && rarity.FrameSprite != null) rarityFrame.sprite = rarity.FrameSprite;
             rarityFrame.enabled = valid;
         }
+        if (_rarityVisual != null) _rarityVisual.SetRarity(valid ? rarity : null);
         SetText(equipmentNameText, valid ? $"{definition.DisplayName} · {definition.SlotDisplayName}" : string.Empty);
         SetText(rarityText, valid ? rarity.DisplayName : string.Empty);
         SetText(mainStatText, valid ? BodyEquipmentUIFormatter.FormatStat(manager, equipment.mainStat) : string.Empty);
@@ -52,20 +63,53 @@ public sealed class BodyEquipmentInfoView : MonoBehaviour
         RefreshStatRows(manager, valid ? equipment : null, comparisonTarget, showComparison);
     }
 
-    // Main과 Sub Roll을 합쳐 각 고정 행에 실제 수치와 비교 아이콘을 표시한다.
+    // Main과 Sub Roll을 기존 행에 순서대로 표시하고 같은 StatType끼리 비교한다.
     private void RefreshStatRows(BodyEquipmentManager manager, BodyEquipmentInstance equipment, BodyEquipmentInstance comparisonTarget, bool showComparison)
     {
         if (statRows == null) return;
         bool hasTarget = comparisonTarget != null; // 비교할 현재 장비가 존재하는지 여부
+        CollectDisplayRolls(equipment);
+        if (showComparison && hasTarget) AppendMissingComparisonRolls(comparisonTarget);
         for (int index = 0; index < statRows.Length; index++)
         {
-            BodyEquipmentStatRowView row = statRows[index]; // 현재 ItemDetail의 고정 스탯 행
+            BodyEquipmentStatRowView row = statRows[index]; // 현재 ItemDetail의 재사용 스탯 행
             if (row == null) continue;
-            bool hasValue = TryGetStatValue(equipment, row.StatType, out float value); // 표시 장비의 실제 합산 Roll
-            bool targetHasValue = TryGetStatValue(comparisonTarget, row.StatType, out float targetValue); // 현재 장비의 같은 Stat Roll
-            bool showLostStat = showComparison && hasTarget && targetHasValue; // 새 장비에서 사라지는 기존 옵션도 0으로 비교한다
-            row.Bind(manager, hasValue || showLostStat, value, showComparison, hasTarget, targetHasValue ? targetValue : 0f);
+            if (index >= _displayRolls.Count)
+            {
+                row.Clear();
+                continue;
+            }
+            EquipmentStatType statType = _displayRolls[index].statType; // 이 행에 표시할 실제 Roll 종류
+            TryGetStatValue(equipment, statType, out float value);
+            bool targetHasValue = TryGetStatValue(comparisonTarget, statType, out float targetValue); // 현재 장비의 같은 Stat Roll
+            row.Bind(manager, statType, value, showComparison, hasTarget, targetHasValue ? targetValue : 0f);
         }
+    }
+
+    // 장비의 Main과 Sub Roll을 중복 없이 실제 순서로 수집한다.
+    private void CollectDisplayRolls(BodyEquipmentInstance equipment)
+    {
+        _displayRolls.Clear();
+        _displayedTypes.Clear();
+        AddDisplayRoll(equipment?.mainStat);
+        if (equipment?.subStats == null) return;
+        for (int index = 0; index < equipment.subStats.Count; index++) AddDisplayRoll(equipment.subStats[index]);
+    }
+
+    // 새 장비에 없는 현재 장비 옵션을 남은 행에 0 수치로 추가한다.
+    private void AppendMissingComparisonRolls(BodyEquipmentInstance comparisonTarget)
+    {
+        AddDisplayRoll(comparisonTarget?.mainStat);
+        if (comparisonTarget?.subStats == null) return;
+        for (int index = 0; index < comparisonTarget.subStats.Count && _displayRolls.Count < statRows.Length; index++)
+            AddDisplayRoll(comparisonTarget.subStats[index]);
+    }
+
+    // 유효하고 아직 표시하지 않은 Roll만 행 목록에 추가한다.
+    private void AddDisplayRoll(EquipmentStatRoll roll)
+    {
+        if (roll == null || _displayRolls.Count >= statRows.Length || !_displayedTypes.Add(roll.statType)) return;
+        _displayRolls.Add(roll);
     }
 
     // 장비 한 개에서 같은 StatType의 Main과 Sub 수치를 합산한다.

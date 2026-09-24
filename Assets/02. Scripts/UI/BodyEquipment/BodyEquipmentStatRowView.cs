@@ -4,7 +4,7 @@ using UnityEngine;
 // ItemDetail에 이미 배치된 스탯 한 줄을 실제 장비 Roll에 연결한다.
 public sealed class BodyEquipmentStatRowView : MonoBehaviour
 {
-    [SerializeField] private EquipmentStatType statType; // 이 고정 행이 표시할 실제 스탯 종류
+    [SerializeField] private EquipmentStatType statType; // 현재 행에 표시 중인 실제 스탯 종류
     [SerializeField] private TMP_Text statNameText; // Stat Definition의 표시 이름
     [SerializeField] private TMP_Text statValueText; // Flat 또는 Percent 형식의 실제 수치
     [SerializeField] private GameObject upIcon; // 새 장비 수치가 더 높을 때 표시한다
@@ -13,10 +13,10 @@ public sealed class BodyEquipmentStatRowView : MonoBehaviour
     public EquipmentStatType StatType => statType; // 비교할 스탯 종류
 
     // 실제 장비에 존재하는 수치와 비교 결과를 기존 행에 반영한다.
-    public void Bind(BodyEquipmentManager manager, bool hasValue, float value, bool showComparison, bool hasComparisonTarget, float comparisonValue)
+    public void Bind(BodyEquipmentManager manager, EquipmentStatType displayStatType, float value, bool showComparison, bool hasComparisonTarget, float comparisonValue)
     {
-        gameObject.SetActive(hasValue);
-        if (!hasValue) return;
+        statType = displayStatType;
+        gameObject.SetActive(true);
         if (manager != null && manager.Database != null && manager.Database.TryGetStat(statType, out EquipmentStatDefinitionSO definition))
             SetText(statNameText, definition.DisplayName);
         SetText(statValueText, BodyEquipmentUIFormatter.FormatStatValue(manager, statType, value));
