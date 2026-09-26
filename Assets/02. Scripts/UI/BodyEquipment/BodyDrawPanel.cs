@@ -18,7 +18,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
     [SerializeField] private Button drawTenButton; // 장비를 10회 뽑는다
     [SerializeField] private Button researchButton; // 뽑기 연구 팝업을 연다
     [SerializeField] private Button probabilityButton; // 실제 레어도 확률 팝업을 연다
-    [SerializeField] private Button inventoryButton; // 장비 인벤토리 팝업을 연다
+    [SerializeField] private Button inventoryButton; // 이전 프리팹의 인벤토리 버튼은 숨겨 호환 참조만 유지한다
     [SerializeField] private Button backButton; // 기존 강화 종류 선택 화면으로 돌아간다
     [SerializeField] private BodyEquipmentSlotView[] equippedSlots; // 기존 화면에 항상 보이는 8개 장착 슬롯
     [SerializeField] private BodyEquipmentInfoView centerResultView; // 중앙에 마지막 획득 장비를 간단히 보여준다
@@ -43,7 +43,8 @@ public sealed class BodyDrawPanel : MonoBehaviour
         AddButtonListener(drawTenButton, DrawTen);
         AddButtonListener(researchButton, OpenResearch);
         AddButtonListener(probabilityButton, OpenProbability);
-        AddButtonListener(inventoryButton, OpenInventory);
+        if (inventoryButton != null) inventoryButton.gameObject.SetActive(false);
+        if (inventoryCountText != null) inventoryCountText.gameObject.SetActive(false);
         AddButtonListener(backButton, GoBack);
         if (equippedSlots != null)
             foreach (BodyEquipmentSlotView slot in equippedSlots) if (slot != null) slot.Bind(_manager, OpenDetail);
@@ -64,7 +65,6 @@ public sealed class BodyDrawPanel : MonoBehaviour
         RemoveButtonListener(drawTenButton, DrawTen);
         RemoveButtonListener(researchButton, OpenResearch);
         RemoveButtonListener(probabilityButton, OpenProbability);
-        RemoveButtonListener(inventoryButton, OpenInventory);
         RemoveButtonListener(backButton, GoBack);
         if (comparePopup != null) comparePopup.Close();
         if (detailPopup != null) detailPopup.Close();
@@ -86,6 +86,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
         if (drawTenButton != null) drawTenButton.interactable = _manager.CanDraw(10);
         if (equippedSlots != null)
             foreach (BodyEquipmentSlotView slot in equippedSlots) if (slot != null) slot.Refresh();
+        if (detailPopup != null && detailPopup.gameObject.activeSelf) detailPopup.RefreshEquipped(_manager);
     }
 
     // 1회 뽑기를 실행합니다.
@@ -138,10 +139,12 @@ public sealed class BodyDrawPanel : MonoBehaviour
     }
 
     // 현재 장착 슬롯을 누르면 그 장비 하나의 상세 팝업을 엽니다.
-    private void OpenDetail(string instanceId)
+    private void OpenDetail(BodyEquipmentSlot slotType)
     {
+        BodyEquipmentInstance equipment = _manager == null ? null : _manager.GetEquipped(slotType); // 클릭 시점의 장착 원본
+        if (equipment == null) return;
         if (comparePopup != null) comparePopup.Close();
-        if (detailPopup != null) detailPopup.Open(_manager, instanceId);
+        if (detailPopup != null) detailPopup.Open(_manager, equipment);
     }
 
     // 결과 ID가 아직 Inventory에 있을 때만 같은 부위의 현재 장비와 비교합니다.
@@ -168,13 +171,6 @@ public sealed class BodyDrawPanel : MonoBehaviour
     private async void OpenProbability()
     {
         try { await BodyRarityProbabilityPopup.ShowAsync(); }
-        catch (System.Exception exception) { Debug.LogException(exception, this); }
-    }
-
-    // 전체 보관 장비 관리 팝업을 열고, 장착 슬롯은 이 화면에 계속 표시합니다.
-    private async void OpenInventory()
-    {
-        try { await BodyInventoryPopup.ShowAsync(); }
         catch (System.Exception exception) { Debug.LogException(exception, this); }
     }
 

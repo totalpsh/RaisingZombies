@@ -42,11 +42,31 @@ public sealed class BodyEquipmentComparePopup : MonoBehaviour
     private void OnEnable()
     {
         ResolveActionButtons();
+        EnsureClickTarget(equipButton);
+        EnsureClickTarget(dismantleButton);
+        EnsureClickTarget(closeButton);
+        EnsureClickTarget(confirmDismantleButton);
+        EnsureClickTarget(cancelDismantleButton);
         AddListener(equipButton, Equip);
         AddListener(dismantleButton, RequestDismantle);
         AddListener(closeButton, Close);
         AddListener(confirmDismantleButton, ConfirmDismantle);
         AddListener(cancelDismantleButton, CancelDismantle);
+    }
+
+    // Graphic 없는 기존 버튼에는 디자인을 바꾸지 않는 투명 클릭 영역만 보완한다.
+    private static void EnsureClickTarget(Button button)
+    {
+        if (button == null) return;
+        Graphic graphic = button.GetComponent<Graphic>(); // 버튼 루트에서 클릭을 받는 기존 Graphic
+        if (graphic == null)
+        {
+            Image clickTarget = button.gameObject.AddComponent<Image>(); // 기존 버튼 크기를 그대로 사용하는 투명 입력 영역
+            clickTarget.color = Color.clear;
+            graphic = clickTarget;
+        }
+        graphic.raycastTarget = true;
+        if (button.targetGraphic == null) button.targetGraphic = graphic;
     }
 
     // 새 디자인의 Popup_2 버튼 두 개가 중첩 Prefab이면 자식 순서로 참조를 복구한다.

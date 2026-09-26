@@ -138,6 +138,7 @@ public static class BodyEquipmentSmokeTestTool
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
             ValidateChallengeReward(save, wallet, manager);
             Check(manager.AddBodyDrawTickets(10L), "기존 UI 회귀 테스트용 Ticket 지급 실패");
+            ValidateEquippedSlotInteraction(manager);
             ValidateUIPrefabs(manager, preview);
             ValidateLegacyQuestMigration();
             Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
@@ -153,6 +154,69 @@ public static class BodyEquipmentSmokeTestTool
             if (questSettings != null) UnityEngine.Object.DestroyImmediate(questSettings);
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
+        }
+    }
+
+    // 실제 프리팹 복제본에서 장착 슬롯 클릭과 단일 상세 팝업 재사용을 검사한다.
+    private static void ValidateEquippedSlotInteraction(BodyEquipmentManager manager)
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(UpgradeMenuPath); // 사용자 프리팹을 변경하지 않는 복제본
+        BodyDrawPanel panel = root.GetComponentInChildren<BodyDrawPanel>(true); // 기존 신체 장비 화면
+        try
+        {
+            Call(panel, "OnEnable");
+            Call(panel, "OnEnable");
+            BodyEquipmentDetailPopup popup = Get<BodyEquipmentDetailPopup>(panel, "detailPopup"); // 재사용할 단일 상세 팝업
+            Check(popup != null, "장착 상세 팝업 참조 누락");
+            foreach (BodyEquipmentSlotView slot in Get<BodyEquipmentSlotView[]>(panel, "equippedSlots"))
+            {
+                popup.Close();
+                Call(slot, "OnEnable");
+                Call(slot, "OnEnable");
+                BodyEquipmentInstance equipment = manager.GetEquipped(slot.SlotType); // 실제 장착 여부
+                Check(Get<GameObject>(slot, "equippedObject") != null &&
+                      Get<GameObject>(slot, "equippedObject").activeSelf == (equipment != null), "장착 슬롯 Item 활성 상태 오류");
+                Call(slot, "OpenDetail");
+                Check(popup.gameObject.activeSelf == (equipment != null), "빈 슬롯 또는 장착 슬롯 상세 표시 오류");
+                if (equipment != null)
+                {
+                    Check(Get<BodyEquipmentSlot>(popup, "_displayedSlot") == slot.SlotType, "상세 팝업 장착 부위 불일치");
+                    panel.Refresh();
+                    Call(popup, "OnEnable");
+                    Call(popup, "OnEnable");
+                    Get<Button>(popup, "closeButton").onClick.Invoke();
+                    Check(!popup.gameObject.activeSelf, "상세 팝업 닫기 실패");
+                    Call(slot, "OpenDetail");
+                    Check(popup.gameObject.activeSelf, "상세 팝업 재열기 실패");
+                }
+            }
+            Check(CountListeners(manager, "StateChanged", panel) == 1, "장착 UI 이벤트 중복 등록");
+            Button legacyButton = Get<Button>(panel, "inventoryButton"); // 호환성을 위해 남긴 이전 버튼
+            Check(legacyButton == null || !legacyButton.gameObject.activeSelf, "이전 인벤토리 버튼이 활성 상태입니다.");
+            BodyEquipmentComparePopup compare = Get<BodyEquipmentComparePopup>(panel, "comparePopup"); // 기존 뽑기 결과 비교 창
+            foreach (BodyEquipmentInstance item in manager.Inventory)
+            {
+                if (manager.IsEquipped(item.uniqueId) || item.isLocked) continue;
+                compare.Open(manager, item.uniqueId);
+                Call(compare, "OnEnable");
+                Call(compare, "OnEnable");
+                Button dismantle = Get<Button>(compare, "dismantleButton"); // 명시적으로 연결한 새 장비 파기 버튼
+                Button cancel = Get<Button>(compare, "cancelDismantleButton"); // 기존 확인 영역의 취소 버튼
+                Check(dismantle != null && dismantle.GetComponent<Graphic>().raycastTarget &&
+                      cancel != null && cancel.GetComponent<Graphic>().raycastTarget, "파기 또는 취소 클릭 Graphic 누락");
+                dismantle.onClick.Invoke();
+                Check(Get<GameObject>(compare, "confirmationRoot").activeSelf, "파기 확인 창 열기 실패");
+                cancel.onClick.Invoke();
+                Check(!Get<GameObject>(compare, "confirmationRoot").activeSelf && manager.GetEquipment(item.uniqueId) != null, "파기 취소 후 장비 보존 실패");
+                compare.Close();
+                break;
+            }
+            Debug.Log("[EquippedSlotInteraction] PASS: 실제 슬롯/빈 슬롯/단일 팝업/닫기·재열기/이벤트 중복 방지");
+        }
+        finally
+        {
+            if (panel != null) Call(panel, "OnDisable");
+            PrefabUtility.UnloadPrefabContents(root);
         }
     }
 

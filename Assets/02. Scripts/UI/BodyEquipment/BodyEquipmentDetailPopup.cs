@@ -8,15 +8,33 @@ public sealed class BodyEquipmentDetailPopup : MonoBehaviour
     [SerializeField] private BodyEquipmentInfoView equipmentView; // 상세 정보를 표시하는 공통 View
     [SerializeField] private TMP_Text stateText; // 현재 장착 중인 장비임을 알린다
     [SerializeField] private Button closeButton; // 상세 창을 닫는다
+    private BodyEquipmentSlot _displayedSlot; // 열려 있는 장착 부위의 변경을 반영한다
 
-    // Inventory의 ID로 클릭한 장착 장비를 다시 조회해 연다.
+    // 기존 ID 호출도 장착된 장비의 정보 표시로만 제한한다.
     public void Open(BodyEquipmentManager manager, string instanceId)
     {
-        BodyEquipmentInstance equipment = manager == null ? null : manager.GetEquipment(instanceId); // 열 때의 실제 소유 장비
-        if (equipment == null) return;
+        Open(manager, manager == null ? null : manager.GetEquipment(instanceId));
+    }
+
+    // 부모가 전달한 실제 장착 장비 하나를 같은 팝업에 표시한다.
+    public void Open(BodyEquipmentManager manager, BodyEquipmentInstance equipment)
+    {
+        if (manager == null || equipment == null || !manager.IsEquipped(equipment.uniqueId) ||
+            !manager.Database.TryGetEquipment(equipment.definitionId, out BodyEquipmentDefinitionSO definition))
+        {
+            Close();
+            return;
+        }
+        _displayedSlot = definition.Slot;
         equipmentView?.Bind(manager, equipment);
-        if (stateText != null) stateText.text = manager.IsEquipped(instanceId) ? "장착 중" : "보관 중";
+        if (stateText != null) stateText.text = "장착 중";
         gameObject.SetActive(true);
+    }
+
+    // 부모의 StateChanged 갱신에서 현재 부위의 최신 장착 장비를 다시 표시한다.
+    public void RefreshEquipped(BodyEquipmentManager manager)
+    {
+        Open(manager, manager == null ? null : manager.GetEquipped(_displayedSlot));
     }
 
     // 버튼 Listener를 중복 없이 연결한다.
