@@ -23,6 +23,7 @@ public sealed class MainNavigationController : MonoBehaviour
     [SerializeField] private GameObject upgradeRoot; // 기존 업그레이드 UI가 들어가는 Root
     [SerializeField] private GameObject battleRoot; // 전투 탭의 Placeholder Root
     [SerializeField] private GameObject challengeRoot; // 도전 탭의 Placeholder Root
+    [SerializeField] private ChallengeDungeonClearBridge challengeClearBridge; // 항상 활성인 루트에 있는 도전 클리어 보상 진입점
     [SerializeField] private GameObject shopRoot; // 상점 탭의 Placeholder Root
 
     [Header("하단 네비게이션 버튼")]
@@ -38,6 +39,7 @@ public sealed class MainNavigationController : MonoBehaviour
     private bool listenersRegistered; // 버튼 Listener 중복 등록 방지 상태
 
     public MainUITab CurrentTab => currentTab; // 외부 시스템이 확인할 현재 메인 탭
+    public ChallengeDungeonClearBridge ChallengeClearBridge => challengeClearBridge; // 던전 담당자가 참조할 도전 보상 브리지
 
     // 프리팹 참조를 확인하고 기존 Upgrade UI를 Upgrade Root에 연결합니다.
     public async Task InitializeAsync(UIManager uiManager)

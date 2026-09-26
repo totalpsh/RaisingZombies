@@ -136,7 +136,8 @@ public static class BodyEquipmentSmokeTestTool
                   wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == savedTickets, "Inventory, 장착, 연구 또는 Ticket 저장 복원 실패");
 
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
-            ValidateChallengeReward(wallet);
+            ValidateChallengeReward(save, wallet, manager);
+            Check(manager.AddBodyDrawTickets(10L), "기존 UI 회귀 테스트용 Ticket 지급 실패");
             ValidateUIPrefabs(manager, preview);
             ValidateLegacyQuestMigration();
             Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
@@ -155,18 +156,65 @@ public static class BodyEquipmentSmokeTestTool
         }
     }
 
-    // 도전 던전 보상 데이터가 기존 지갑을 통해 티켓을 지급하는지 검사합니다.
-    private static void ValidateChallengeReward(CurrencyWalletManager wallet)
+    // 던전별 보상, 중복 방지, 퀘스트 진행과 즉시 저장을 같은 진입점에서 검사합니다.
+    private static void ValidateChallengeReward(SaveManager save, CurrencyWalletManager wallet, BodyEquipmentManager manager)
     {
-        ChallengeDungeonRewardSO reward = ScriptableObject.CreateInstance<ChallengeDungeonRewardSO>(); // 원본 에셋을 건드리지 않는 임시 던전 보상
+        GameObject navigation = PrefabUtility.LoadPrefabContents("Assets/03. Prefabs/UI/Common/MainNavigationController.prefab"); // 실제 연결된 프리팹의 격리 미리보기
+        GameObject upgrade = PrefabUtility.LoadPrefabContents(UpgradeMenuPath); // 실제 티켓 표시와 버튼을 검증할 격리 미리보기
+        BodyDrawPanel drawPanel = upgrade.GetComponentInChildren<BodyDrawPanel>(true); // 실제 신체 뽑기 UI
         try
         {
-            Set(reward, "amount", 4L);
-            Set(reward, "currencyType", GameCurrencyType.BodyDrawTicket);
-            long before = wallet.GetAmount(GameCurrencyType.BodyDrawTicket); // 보상 지급 전 실제 지갑 값
-            Check(reward.TryGrantClearReward(wallet) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == before + 4L, "던전 데이터 기반 Ticket 보상 지급 실패");
+            ChallengeDungeonClearBridge bridge = navigation.GetComponent<ChallengeDungeonClearBridge>(); // 활성 루트에 연결된 실제 보상 브리지
+            Check(bridge != null && navigation.activeSelf && navigation.GetComponent<MainNavigationController>().ChallengeClearBridge == bridge, "활성 네비게이션 루트의 Bridge 연결 누락");
+            Set(bridge, "_save", save);
+            Check(save.RegisterProvider(bridge), "Challenge Clear Provider 등록 실패");
+            Set(bridge, "_ready", true);
+            ChallengeDungeonRewardView[] views = navigation.GetComponentsInChildren<ChallengeDungeonRewardView>(true); // 실제 두 보상 카드
+            Check(views.Length == 2, "Challenge 보상 카드 수 오류");
+            foreach (ChallengeDungeonRewardView view in views)
+            {
+                string id = Get<string>(view, "dungeonId"); // 카드에 연결한 던전 ID
+                Check(bridge.TryGetReward(id, out ChallengeDungeonRewardSO reward) && Get<ChallengeDungeonClearBridge>(view, "clearBridge") == bridge, "Challenge UI와 지급 보상 원본 불일치");
+                Call(view, "OnEnable");
+                TMP_Text amountText = Get<TMP_Text>(view, "rewardAmountText"); // 전용 보상 수량 TMP
+                Check(amountText != null && amountText.name == "RewardValueText" && amountText.text == reward.Amount.ToString(), "전용 보상 텍스트 값 또는 연결 오류");
+                Check(Get<Image>(view, "rewardIcon").sprite == reward.Icon && reward.Icon != null, "티켓 보상 아이콘 연결 오류");
+                Check(reward.Amount == (id == "body_challenge_01" ? 1L : 2L), "초기 던전 보상 수량 오류");
+            }
+            wallet.ResetSaveData();
+            Call(drawPanel, "OnEnable");
+            Call(drawPanel, "OnEnable");
+            TMP_Text ticketText = Get<TMP_Text>(drawPanel, "ticketText"); // 기존 신체 뽑기권 표시
+            QuestManager quests = QuestManager.Instance; // 이미 준비된 기존 퀘스트 원본
+            long questBefore = ((QuestState)quests.CaptureSaveData()).dungeonClearCount; // 클리어 전 퀘스트 진행도
+            Check(!bridge.TryProcessDungeonClear("unknown", "run_1"), "알 수 없는 던전을 처리했습니다.");
+            Check(bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && ticketText.text == "1", "1 Ticket 클리어 또는 즉시 UI 갱신 실패");
+            Check(!bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && ticketText.text == "1", "같은 실행에 중복 보상을 지급했습니다.");
+            Check(bridge.TryProcessDungeonClear("body_challenge_02", "run_2") && ticketText.text == "3", "2 Ticket 클리어 또는 합산 오류");
+            Check(((QuestState)quests.CaptureSaveData()).dungeonClearCount == questBefore + 2L, "Dungeon Quest 중복 진행 오류");
+            Check(save.HasProviderData(bridge.SaveKey), "Challenge Clear 처리 결과가 즉시 저장되지 않았습니다.");
+            Check(CountListeners(wallet, "CurrencyChanged", drawPanel) == 1 && CountListeners(manager, "StateChanged", drawPanel) == 1, "Body Draw Listener 중복 등록");
+            Check(Get<TMP_Text>(drawPanel, "singleCostText").text == "1" && Get<TMP_Text>(drawPanel, "tenCostText").text == "10", "Body Draw 비용 표시 오류");
+            Check(Get<Button>(drawPanel, "drawOneButton").interactable && !Get<Button>(drawPanel, "drawTenButton").interactable, "현재 지갑 기준 버튼 상태 오류");
+            Check(manager.TryDraw(1, out IReadOnlyList<BodyDrawResult> one) && one.Count == 1 && ticketText.text == "2", "Challenge Ticket으로 1회 장비 뽑기 실패");
+            for (int index = 0; index < 4; index++) Check(bridge.TryProcessDungeonClear("body_challenge_02", "ten_run_" + index), "10회 테스트를 위한 별도 클리어 실패");
+            Check(ticketText.text == "10" && Get<Button>(drawPanel, "drawTenButton").interactable, "10 Ticket UI 또는 버튼 상태 오류");
+            Check(manager.TryDraw(10, out IReadOnlyList<BodyDrawResult> ten) && ten.Count == 10 && ticketText.text == "0", "Challenge Ticket으로 10회 장비 뽑기 실패");
+            bridge.ResetSaveData();
+            Check(save.LoadGame() && !bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "재로드 후 중복 방지 또는 지갑 복원 실패");
+            ChallengeDungeonRewardBinding[] bindings = Get<ChallengeDungeonRewardBinding[]>(bridge, "dungeonRewards"); // 테스트 복제본의 보상표
+            Set(bridge, "dungeonRewards", new[] { bindings[0], bindings[1], new ChallengeDungeonRewardBinding { dungeonId = "missing_reward" } });
+            Call(bridge, "BuildRewardLookup");
+            Check(!bridge.TryProcessDungeonClear("missing_reward", "run_3") && ticketText.text == "0", "누락 보상 안전 차단 실패");
+            Check(CountListeners(wallet, "CurrencyChanged", drawPanel) == 1, "저장 복원 후 Listener 중복 등록");
+            Debug.Log("[ChallengeRewardFlow] PASS: 실제 카드 1/2 Ticket, 동일 SO/아이콘, 중복/무효/누락 차단, Quest, 저장 복원, 즉시 UI, 1회/10회 장비 뽑기");
         }
-        finally { UnityEngine.Object.DestroyImmediate(reward); }
+        finally
+        {
+            if (drawPanel != null) Call(drawPanel, "OnDisable");
+            PrefabUtility.UnloadPrefabContents(upgrade);
+            PrefabUtility.UnloadPrefabContents(navigation);
+        }
     }
 
     // Body Draw 누적 조건, Ticket 보상과 Dungeon Hook이 기존 Quest 원본에서 동작하는지 검사합니다.

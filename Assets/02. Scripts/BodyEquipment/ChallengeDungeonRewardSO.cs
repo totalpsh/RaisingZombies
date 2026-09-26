@@ -12,12 +12,9 @@ public sealed class ChallengeDungeonRewardSO : ScriptableObject
     public long Amount => amount < 0L ? 0L : amount; // 음수가 아닌 보상 수량
     public Sprite Icon => icon; // 보상 UI에 사용할 이미지
 
-    // 실제 던전 클리어가 확정된 뒤 기존 지갑 경로로 보상을 한 번 지급한다.
+    // 클리어 브리지가 중복 여부를 확인한 뒤 기존 지갑 경로로 보상을 지급한다.
     public bool TryGrantClearReward(CurrencyWalletManager wallet)
     {
-        if (wallet == null || Amount <= 0L || !wallet.AddCurrency(currencyType, Amount)) return false;
-        if (!SaveManager.EnsureInstance().SaveGame())
-            Debug.LogWarning("[ChallengeDungeonReward] 지급된 보상을 즉시 저장하지 못했습니다. 자동 저장에서 재시도합니다.", this);
-        return true;
+        return wallet != null && Amount > 0L && wallet.AddCurrency(currencyType, Amount);
     }
 }
