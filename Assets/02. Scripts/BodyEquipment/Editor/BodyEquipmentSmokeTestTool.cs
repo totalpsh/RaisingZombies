@@ -23,6 +23,19 @@ public static class BodyEquipmentSmokeTestTool
     [MenuItem("Tools/Raising Zombies/Body Equipment/Run Body Equipment Smoke Test")]
     public static void Run()
     {
+        RunTests(false);
+    }
+
+    // 다른 UI 참조 검증과 분리해 현재 좀비 최종 스탯 회귀만 실행한다.
+    [MenuItem("Tools/Raising Zombies/Body Equipment/Run Current Zombie Stats Smoke Test")]
+    public static void RunCurrentZombieStats()
+    {
+        RunTests(true);
+    }
+
+    // 같은 격리 저장 준비를 재사용하고 요청한 검증 범위만 실행한다.
+    private static void RunTests(bool statsOnly) // 스탯 검증 후 다른 UI 검증을 생략할지 여부
+    {
         Check(!EditorApplication.isPlayingOrWillChangePlaymode, "플레이 종료 후 실행하세요.");
         string directory = Path.Combine(Path.GetTempPath(), "RaisingZombiesBodyEquipmentSmoke_" + Guid.NewGuid().ToString("N")); // 사용자 저장과 분리된 임시 위치
         SaveFileService files = new(directory); // 격리 JSON 파일 서비스
@@ -135,6 +148,8 @@ public static class BodyEquipmentSmokeTestTool
             Check(manager.InventoryCount == savedCount && manager.ResearchLevel == savedLevel && manager.GetEquipment(savedEquippedId) != null &&
                   wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == savedTickets, "Inventory, 장착, 연구 또는 Ticket 저장 복원 실패");
 
+            ValidateCurrentZombieStats(save, manager, preview);
+            if (statsOnly) return;
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
             ValidateChallengeReward(save, wallet, manager);
             Check(manager.AddBodyDrawTickets(10L), "기존 UI 회귀 테스트용 Ticket 지급 실패");
@@ -154,6 +169,69 @@ public static class BodyEquipmentSmokeTestTool
             if (questSettings != null) UnityEngine.Object.DestroyImmediate(questSettings);
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
+        }
+    }
+
+    // 구 저장 누적값 차단과 장착 교체 및 저장 복원 후 공통 최종 스탯을 검사한다.
+    private static void ValidateCurrentZombieStats(SaveManager save, BodyEquipmentManager manager, Scene preview)
+    {
+        UnitData data = ScriptableObject.CreateInstance<UnitData>(); // 원본 에셋을 변경하지 않는 기본 좀비 데이터
+        CombatPowerBalanceSettings powerBalance = ScriptableObject.CreateInstance<CombatPowerBalanceSettings>(); // 격리 전투력 설정
+        UpgradeManager legacy = Create<UpgradeManager>(preview); // Awake를 실행하지 않는 구 저장 호환 원본
+        BodyEquipmentState previous = JsonUtility.FromJson<BodyEquipmentState>(JsonUtility.ToJson(manager.CaptureSaveData())); // 테스트 후 복원할 장비 저장 복제본
+        try
+        {
+            SerializedObject serialized = new(data); // Inspector와 같은 방식으로 기본값을 설정한다
+            serialized.FindProperty("maxHealth").floatValue = 100f;
+            serialized.FindProperty("attackPower").floatValue = 10f;
+            serialized.FindProperty("attackInterval").floatValue = 2f;
+            serialized.FindProperty("healthRegen").floatValue = 3f;
+            serialized.FindProperty("moveSpeed").floatValue = 4f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            UpgradeState oldState = new(); // 아주 큰 구 가챠 누적값을 가진 이전 형식 저장
+            foreach (UpgradeStatType type in Enum.GetValues(typeof(UpgradeStatType)))
+                oldState.stats.Add(new UpgradeStatValue { statType = type, accumulatedValue = 100000000, researchLevel = 100 });
+            legacy.RestoreSaveData(JsonUtility.FromJson<UpgradeState>(JsonUtility.ToJson(oldState)));
+            Check(save.RegisterProvider(legacy, true), "구 강화 호환 저장 등록 실패");
+            foreach (UpgradeStatType type in Enum.GetValues(typeof(UpgradeStatType)))
+                Check(legacy.GetStatSnapshot(type).FinalBonus == 0f && legacy.GetStatSnapshot(type).EffectiveAccumulatedValue == 0f, "구 가챠 누적 또는 증폭 보너스 재적용");
+            manager.ResetSaveData();
+            UnitStats baseline = UnitStats.CreateZombie(data, legacy); // 구 저장이 있어도 유지되는 실제 기본 수치
+            Check(baseline.MaxHealth == 100f && baseline.AttackPower == 10f && baseline.HealthRegen == 3f &&
+                  baseline.AttackInterval == 2f && baseline.MoveSpeed == 4f, "새 게임 기본 스탯 손실 또는 구 가챠 적용");
+            manager.RestoreSaveData(previous);
+            UnitStats current = UnitStats.CreateZombie(data, legacy); // 현재 장착 장비가 반영된 공통 결과
+            EquipmentModifierSnapshot modifiers = manager.CurrentModifiers; // 실제 장비 합산 원본
+            Check(Mathf.Approximately(current.AttackPower, (10f + modifiers.Attack) * (1f + modifiers.DamagePercent / 100f)) &&
+                  Mathf.Approximately(current.MaxHealth, (100f + modifiers.Health) * (1f + modifiers.HealthPercent / 100f)) &&
+                  Mathf.Approximately(current.AttackInterval, 2f / (1f + modifiers.AttackSpeedPercent / 100f)), "장비 Flat/Percent 계산 불일치");
+            CombatPowerSnapshot power = CombatPowerCalculator.Calculate(data, legacy, powerBalance); // 전투와 공유하는 HUD 계산
+            Check(Mathf.Approximately(power.Attack, current.AttackPower) && Mathf.Approximately(power.MaxHealth, current.MaxHealth), "전투력 UI와 실제 최종 스탯 불일치");
+            foreach (BodyEquipmentSlot slot in Enum.GetValues(typeof(BodyEquipmentSlot))) manager.TryUnequip(slot);
+            current.ApplyZombieEquipment(data, manager.CurrentModifiers);
+            Check(current.AttackPower == 10f && current.MaxHealth == 100f, "장비 해제 후 캐시 보너스 잔류");
+            manager.RestoreSaveData(previous);
+            foreach (BodyEquipmentInstance item in manager.Inventory)
+            {
+                if (manager.IsEquipped(item.uniqueId)) continue;
+                Check(manager.TryEquip(item.uniqueId, out _), "장비 교체 실패");
+                current.ApplyZombieEquipment(data, manager.CurrentModifiers);
+                Check(Mathf.Approximately(current.AttackPower, UnitStats.CreateZombie(data, legacy).AttackPower), "교체 후 캐시 재계산 불일치");
+                break;
+            }
+            Check(save.SaveGame() && save.LoadGame(), "큰 구 가챠 누적값의 저장 복원 실패");
+            Check(legacy.GetStatSnapshot(UpgradeStatType.Attack).RawAccumulatedValue == 100000000 &&
+                  legacy.GetStatSnapshot(UpgradeStatType.Attack).FinalBonus == 0f, "구 저장 원본 손실 또는 로드 후 보너스 재등장");
+            Check(Mathf.Approximately(UnitStats.CreateZombie(data, legacy).AttackPower,
+                  CombatPowerCalculator.Calculate(data, legacy, powerBalance).Attack), "재생성 및 저장 로드 후 공통 스탯 불일치");
+            Debug.Log("[CurrentZombieStats] PASS: 기본 수치/큰 구 저장 차단/장비 Flat·Percent/해제·교체·캐시/Save Load/전투력 공통 원본");
+        }
+        finally
+        {
+            save.UnregisterProvider(legacy);
+            manager.RestoreSaveData(previous);
+            UnityEngine.Object.DestroyImmediate(data);
+            UnityEngine.Object.DestroyImmediate(powerBalance);
         }
     }
 

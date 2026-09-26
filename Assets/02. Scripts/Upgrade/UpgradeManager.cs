@@ -248,17 +248,11 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         return result;
     }
 
-    // 전투 시스템이 그대로 사용하는 최종 스탯 Snapshot API입니다.
+    // 구 가챠 저장값은 호환 조회만 허용하고 성장 보너스는 항상 0으로 반환한다.
     public UpgradeStatSnapshot GetStatSnapshot(UpgradeStatType type)
     {
-        UpgradeStatDefinition definition = balanceSettings == null ? null : balanceSettings.GetStat(type); // 요청 스탯 정의
         UpgradeStatValue value = GetValue(type); // 요청 스탯 저장값
-        if (definition == null)
-            return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel, 0f, 0f);
-        float efficiency = definition.baseCoefficient * GetResearchMultiplier(definition, value.researchLevel); // 수치 1당 효율
-        float effective = value.accumulatedValue; // 전역 증폭 적용 전 유효 누적값
-        if (type != UpgradeStatType.StatIncrease) effective *= 1f + GetStatIncreaseEffect();
-        return new UpgradeStatSnapshot(type, value.accumulatedValue, effective, value.researchLevel, efficiency, effective * efficiency);
+        return new UpgradeStatSnapshot(type, value.accumulatedValue, 0f, value.researchLevel, 0f, 0f);
     }
 
     // 현재 초당 재화 생산량을 반환합니다.
@@ -400,31 +394,6 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         _state.gachaLevel++;
         _state.drawsAtCurrentLevel = 0;
         return true;
-    }
-
-    // 자기 자신을 제외한 다른 스탯에 적용할 전역 증폭값을 반환합니다.
-    private float GetStatIncreaseEffect()
-    {
-        UpgradeStatSnapshot increase = GetStatSnapshotWithoutAmplifier(UpgradeStatType.StatIncrease); // 전역 증폭 자체 스냅샷
-        return increase.FinalBonus;
-    }
-
-    // 전역 증폭을 재귀 적용하지 않은 스탯 스냅샷을 반환합니다.
-    private UpgradeStatSnapshot GetStatSnapshotWithoutAmplifier(UpgradeStatType type)
-    {
-        UpgradeStatDefinition definition = balanceSettings == null ? null : balanceSettings.GetStat(type); // 요청 스탯 정의
-        UpgradeStatValue value = GetValue(type); // 요청 스탯 저장값
-        if (definition == null)
-            return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel, 0f, 0f);
-        float efficiency = definition.baseCoefficient * GetResearchMultiplier(definition, value.researchLevel); // 연구 적용 효율
-        return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel,
-            efficiency, value.accumulatedValue * efficiency);
-    }
-
-    // 연구 레벨에 따른 완만한 효율 배율을 계산합니다.
-    private static float GetResearchMultiplier(UpgradeStatDefinition definition, int level)
-    {
-        return 1f + definition.researchMaxMultiplierBonus * (1f - Mathf.Exp(-definition.researchCurveRate * level));
     }
 
     // 저장 상태에서 지정한 스탯 값을 찾거나 기본값으로 추가합니다.

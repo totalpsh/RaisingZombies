@@ -7,7 +7,7 @@ public readonly struct CombatPowerSnapshot
     public readonly float Attack; // 실제 좀비가 사용하는 최종 1회 공격력
     public readonly float AttackSpeed; // 실제 공격 간격을 초당 공격 횟수로 변환한 값
     public readonly float MaxHealth; // 실제 좀비가 사용하는 최종 최대 체력
-    public readonly float HealthRegen; // Defense 업그레이드가 실제 적용되는 초당 체력 회복량
+    public readonly float HealthRegen; // 기본 회복량과 현재 장비의 실제 초당 체력 회복량
     public readonly float MoveSpeed; // 실제 좀비가 사용하는 최종 이동속도
     public readonly double OffenseRatio; // 기본 좀비 대비 기대 DPS 비율
     public readonly double DefenseRatio; // 기본 좀비 대비 유효 생존량 비율
@@ -45,7 +45,7 @@ public static class CombatPowerCalculator
 {
     private const double MinimumInterval = 0.0001d; // 0초 공격 간격으로 인한 무한 공격속도를 막는 최소값
 
-    // 현재 UpgradeManager로 생성되는 실제 좀비 스탯을 전투력으로 계산합니다.
+    // 기본 데이터와 현재 신체 장비로 생성되는 실제 좀비 스탯을 계산한다.
     public static CombatPowerSnapshot Calculate(
         UnitData zombieData,
         UpgradeManager upgradeManager,

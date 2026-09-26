@@ -25,6 +25,7 @@ public class UnitController : MonoBehaviour, ICombatTarget
     private CombatTargetAssignment _assignment;
     private float _slowEndTime;
     private BattleArea _battleArea;
+    private BodyEquipmentManager _equipmentManager; // 살아 있는 좀비의 장착 스탯 변경 원본
     
     // 프로퍼티
     public UnitData Data => data;
@@ -96,6 +97,13 @@ public class UnitController : MonoBehaviour, ICombatTarget
         battleArea.RegisterUnit(this);
 
         _isInitialized = true;
+        BodyEquipmentManager.AvailabilityChanged -= BindEquipmentStats;
+        if (data.Team == UnitTeam.Zombie)
+        {
+            BodyEquipmentManager.AvailabilityChanged += BindEquipmentStats;
+            BindEquipmentStats(BodyEquipmentManager.HasInstance ? BodyEquipmentManager.Instance : null);
+        }
+        else BindEquipmentStats(null);
         unitCollider.enabled = true;
         enabled = true;
 
@@ -282,8 +290,30 @@ public class UnitController : MonoBehaviour, ICombatTarget
         return targetObj != null && targetObj.gameObject.activeInHierarchy && !target.IsDead && unitAction.CanTarget(this, target);
     }
 
+    // 원본 생성 및 제거 시 기존 장착 이벤트 구독을 교체한다.
+    private void BindEquipmentStats(BodyEquipmentManager manager)
+    {
+        if (_equipmentManager != null) _equipmentManager.EquippedStatsChanged -= RefreshEquipmentStats;
+        _equipmentManager = manager;
+        if (_equipmentManager != null) _equipmentManager.EquippedStatsChanged += RefreshEquipmentStats;
+        RefreshEquipmentStats();
+    }
+
+    // AI와 전투 상태는 유지하고 기본 데이터부터 장착 스탯만 다시 계산한다.
+    private void RefreshEquipmentStats()
+    {
+        if (!_isInitialized || model == null || data.Team != UnitTeam.Zombie) return;
+        model.Stats.ApplyZombieEquipment(data, _equipmentManager == null ? default : _equipmentManager.CurrentModifiers);
+        model.Heal(0f); // 현재 체력은 늘리지 않고 감소한 최대 체력 안으로만 제한한다
+        healthBar.SetHealth(model.CurrentHealth, model.Stats.MaxHealth);
+    }
+
+    // 풀 반환 시 장착 스탯 이벤트와 기존 전투 등록을 정리한다.
     private void OnDisable()
     {
+        BodyEquipmentManager.AvailabilityChanged -= BindEquipmentStats;
+        if (_equipmentManager != null) _equipmentManager.EquippedStatsChanged -= RefreshEquipmentStats;
+        _equipmentManager = null;
         ClearAssignment();
         _battleArea?.UnregisterUnit(this);
         _battleArea = null;
