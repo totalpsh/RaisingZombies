@@ -26,6 +26,7 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
     public QuestSettings Settings => settings; // UI와 테스트가 읽는 생성 밸런스
     public string SaveKey => "main_quest"; // 기존 통합 파일의 독립 저장 구역
     public Type SaveDataType => typeof(QuestState); // 역직렬화 형식
+    public bool CanRecordDungeonClear => _ready && _save != null && !_save.IsRestoring && _state != null; // 도전 보상을 확정하기 전 확인할 퀘스트 준비 상태
 
     // 전투나 UI 생성 전에 저장된 퀘스트를 준비합니다.
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -120,10 +121,18 @@ public sealed class QuestManager : Singleton<QuestManager>, ISaveDataProvider
     // Dungeon 시스템이 실제 클리어 한 건을 같은 Quest 원본에 기록할 Hook입니다.
     public void NotifyDungeonCleared()
     {
-        if (!_ready || _save == null || _save.IsRestoring) return;
+        TryNotifyDungeonCleared();
+    }
+
+    // 보상 브리지가 퀘스트 기록 성공 여부를 확인할 수 있게 한 건을 증가시킨다.
+    public bool TryNotifyDungeonCleared()
+    {
+        if (!CanRecordDungeonClear) return false;
         if (_state.dungeonClearCount < long.MaxValue) _state.dungeonClearCount++;
         _save.MarkDirty();
-        RefreshProgress();
+        try { RefreshProgress(); }
+        catch (Exception exception) { Debug.LogException(exception, this); } // UI Listener 오류가 기록 완료된 클리어를 다시 지급시키지 않게 한다.
+        return true;
     }
 
     // Stage 원본이 다음 번호로 변경되면 클리어 상태를 갱신합니다.

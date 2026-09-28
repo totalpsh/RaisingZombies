@@ -23,6 +23,19 @@ public static class BodyEquipmentSmokeTestTool
     [MenuItem("Tools/Raising Zombies/Body Equipment/Run Body Equipment Smoke Test")]
     public static void Run()
     {
+        RunTests(false);
+    }
+
+    // 다른 UI 참조 검증과 분리해 현재 좀비 최종 스탯 회귀만 실행한다.
+    [MenuItem("Tools/Raising Zombies/Body Equipment/Run Current Zombie Stats Smoke Test")]
+    public static void RunCurrentZombieStats()
+    {
+        RunTests(true);
+    }
+
+    // 같은 격리 저장 준비를 재사용하고 요청한 검증 범위만 실행한다.
+    private static void RunTests(bool statsOnly) // 스탯 검증 후 다른 UI 검증을 생략할지 여부
+    {
         Check(!EditorApplication.isPlayingOrWillChangePlaymode, "플레이 종료 후 실행하세요.");
         string directory = Path.Combine(Path.GetTempPath(), "RaisingZombiesBodyEquipmentSmoke_" + Guid.NewGuid().ToString("N")); // 사용자 저장과 분리된 임시 위치
         SaveFileService files = new(directory); // 격리 JSON 파일 서비스
@@ -63,8 +76,10 @@ public static class BodyEquipmentSmokeTestTool
             Check(save.RegisterProvider(manager), "Body Equipment Provider 등록 실패");
             Set(manager, "_ready", true);
 
-            Check(wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 10L, "새 저장의 기본 신체 뽑기권 오류");
-            Check(wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, 10L) && !manager.CanDraw(1), "뽑기권 부족 차단 실패");
+            Check(wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "새 저장의 기본 신체 뽑기권은 0이어야 합니다.");
+            Check(!wallet.CanAfford(GameCurrencyType.BodyDrawTicket, 1L) && !wallet.TrySpendCurrency(GameCurrencyType.BodyDrawTicket, 1L) && !manager.CanDraw(1), "뽑기권 부족 차단 실패");
+            Check(manager.GetDrawTicketCost(1) == 1 && manager.GetDrawTicketCost(10) == 10, "기본 1회 또는 10회 Ticket 비용 오류");
+            Check(!manager.TryDraw(1, out _) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "실패한 Draw가 Ticket을 소비했습니다.");
             Check(manager.AddBodyDrawTickets(1L), "공통 신체 뽑기권 1개 지급 API 실패");
             Check(wallet.AddCurrency(GameCurrencyType.PremiumCurrency, 7L) && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 1L, "재화 타입 간 값 분리 실패");
             UnityEngine.Random.InitState(20260909);
@@ -133,7 +148,12 @@ public static class BodyEquipmentSmokeTestTool
             Check(manager.InventoryCount == savedCount && manager.ResearchLevel == savedLevel && manager.GetEquipment(savedEquippedId) != null &&
                   wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == savedTickets, "Inventory, 장착, 연구 또는 Ticket 저장 복원 실패");
 
+            ValidateCurrentZombieStats(save, manager, preview);
+            if (statsOnly) return;
             ValidateQuestConnection(save, wallet, manager, preview, ref questSettings);
+            ValidateChallengeReward(save, wallet, manager);
+            Check(manager.AddBodyDrawTickets(10L), "기존 UI 회귀 테스트용 Ticket 지급 실패");
+            ValidateEquippedSlotInteraction(manager);
             ValidateUIPrefabs(manager, preview);
             ValidateLegacyQuestMigration();
             Debug.Log("[BodyEquipmentSmokeTest] PASS: 기본 데이터/12단계 Weight/1회·10회 Ticket Draw/고유 ID·Roll·Sub 중복 방지/Inventory/장착·교체/잠금·파기/연구 UTC 완료·확률 변경/통합 저장 복원/50개 UI 카드 제한/Prefab 참조/기존 Quest 이전을 검증했습니다.");
@@ -149,6 +169,193 @@ public static class BodyEquipmentSmokeTestTool
             if (questSettings != null) UnityEngine.Object.DestroyImmediate(questSettings);
             files.DeleteAll();
             if (Directory.Exists(directory)) Directory.Delete(directory, false);
+        }
+    }
+
+    // 구 저장 누적값 차단과 장착 교체 및 저장 복원 후 공통 최종 스탯을 검사한다.
+    private static void ValidateCurrentZombieStats(SaveManager save, BodyEquipmentManager manager, Scene preview)
+    {
+        UnitData data = ScriptableObject.CreateInstance<UnitData>(); // 원본 에셋을 변경하지 않는 기본 좀비 데이터
+        CombatPowerBalanceSettings powerBalance = ScriptableObject.CreateInstance<CombatPowerBalanceSettings>(); // 격리 전투력 설정
+        UpgradeManager legacy = Create<UpgradeManager>(preview); // Awake를 실행하지 않는 구 저장 호환 원본
+        BodyEquipmentState previous = JsonUtility.FromJson<BodyEquipmentState>(JsonUtility.ToJson(manager.CaptureSaveData())); // 테스트 후 복원할 장비 저장 복제본
+        try
+        {
+            SerializedObject serialized = new(data); // Inspector와 같은 방식으로 기본값을 설정한다
+            serialized.FindProperty("maxHealth").floatValue = 100f;
+            serialized.FindProperty("attackPower").floatValue = 10f;
+            serialized.FindProperty("attackInterval").floatValue = 2f;
+            serialized.FindProperty("healthRegen").floatValue = 3f;
+            serialized.FindProperty("moveSpeed").floatValue = 4f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            UpgradeState oldState = new(); // 아주 큰 구 가챠 누적값을 가진 이전 형식 저장
+            foreach (UpgradeStatType type in Enum.GetValues(typeof(UpgradeStatType)))
+                oldState.stats.Add(new UpgradeStatValue { statType = type, accumulatedValue = 100000000, researchLevel = 100 });
+            legacy.RestoreSaveData(JsonUtility.FromJson<UpgradeState>(JsonUtility.ToJson(oldState)));
+            Check(save.RegisterProvider(legacy, true), "구 강화 호환 저장 등록 실패");
+            foreach (UpgradeStatType type in Enum.GetValues(typeof(UpgradeStatType)))
+                Check(legacy.GetStatSnapshot(type).FinalBonus == 0f && legacy.GetStatSnapshot(type).EffectiveAccumulatedValue == 0f, "구 가챠 누적 또는 증폭 보너스 재적용");
+            manager.ResetSaveData();
+            UnitStats baseline = UnitStats.CreateZombie(data, legacy); // 구 저장이 있어도 유지되는 실제 기본 수치
+            Check(baseline.MaxHealth == 100f && baseline.AttackPower == 10f && baseline.HealthRegen == 3f &&
+                  baseline.AttackInterval == 2f && baseline.MoveSpeed == 4f, "새 게임 기본 스탯 손실 또는 구 가챠 적용");
+            manager.RestoreSaveData(previous);
+            UnitStats current = UnitStats.CreateZombie(data, legacy); // 현재 장착 장비가 반영된 공통 결과
+            EquipmentModifierSnapshot modifiers = manager.CurrentModifiers; // 실제 장비 합산 원본
+            Check(Mathf.Approximately(current.AttackPower, (10f + modifiers.Attack) * (1f + modifiers.DamagePercent / 100f)) &&
+                  Mathf.Approximately(current.MaxHealth, (100f + modifiers.Health) * (1f + modifiers.HealthPercent / 100f)) &&
+                  Mathf.Approximately(current.AttackInterval, 2f / (1f + modifiers.AttackSpeedPercent / 100f)), "장비 Flat/Percent 계산 불일치");
+            CombatPowerSnapshot power = CombatPowerCalculator.Calculate(data, legacy, powerBalance); // 전투와 공유하는 HUD 계산
+            Check(Mathf.Approximately(power.Attack, current.AttackPower) && Mathf.Approximately(power.MaxHealth, current.MaxHealth), "전투력 UI와 실제 최종 스탯 불일치");
+            foreach (BodyEquipmentSlot slot in Enum.GetValues(typeof(BodyEquipmentSlot))) manager.TryUnequip(slot);
+            current.ApplyZombieEquipment(data, manager.CurrentModifiers);
+            Check(current.AttackPower == 10f && current.MaxHealth == 100f, "장비 해제 후 캐시 보너스 잔류");
+            manager.RestoreSaveData(previous);
+            foreach (BodyEquipmentInstance item in manager.Inventory)
+            {
+                if (manager.IsEquipped(item.uniqueId)) continue;
+                Check(manager.TryEquip(item.uniqueId, out _), "장비 교체 실패");
+                current.ApplyZombieEquipment(data, manager.CurrentModifiers);
+                Check(Mathf.Approximately(current.AttackPower, UnitStats.CreateZombie(data, legacy).AttackPower), "교체 후 캐시 재계산 불일치");
+                break;
+            }
+            Check(save.SaveGame() && save.LoadGame(), "큰 구 가챠 누적값의 저장 복원 실패");
+            Check(legacy.GetStatSnapshot(UpgradeStatType.Attack).RawAccumulatedValue == 100000000 &&
+                  legacy.GetStatSnapshot(UpgradeStatType.Attack).FinalBonus == 0f, "구 저장 원본 손실 또는 로드 후 보너스 재등장");
+            Check(Mathf.Approximately(UnitStats.CreateZombie(data, legacy).AttackPower,
+                  CombatPowerCalculator.Calculate(data, legacy, powerBalance).Attack), "재생성 및 저장 로드 후 공통 스탯 불일치");
+            Debug.Log("[CurrentZombieStats] PASS: 기본 수치/큰 구 저장 차단/장비 Flat·Percent/해제·교체·캐시/Save Load/전투력 공통 원본");
+        }
+        finally
+        {
+            save.UnregisterProvider(legacy);
+            manager.RestoreSaveData(previous);
+            UnityEngine.Object.DestroyImmediate(data);
+            UnityEngine.Object.DestroyImmediate(powerBalance);
+        }
+    }
+
+    // 실제 프리팹 복제본에서 장착 슬롯 클릭과 단일 상세 팝업 재사용을 검사한다.
+    private static void ValidateEquippedSlotInteraction(BodyEquipmentManager manager)
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(UpgradeMenuPath); // 사용자 프리팹을 변경하지 않는 복제본
+        BodyDrawPanel panel = root.GetComponentInChildren<BodyDrawPanel>(true); // 기존 신체 장비 화면
+        try
+        {
+            Call(panel, "OnEnable");
+            Call(panel, "OnEnable");
+            BodyEquipmentDetailPopup popup = Get<BodyEquipmentDetailPopup>(panel, "detailPopup"); // 재사용할 단일 상세 팝업
+            Check(popup != null, "장착 상세 팝업 참조 누락");
+            foreach (BodyEquipmentSlotView slot in Get<BodyEquipmentSlotView[]>(panel, "equippedSlots"))
+            {
+                popup.Close();
+                Call(slot, "OnEnable");
+                Call(slot, "OnEnable");
+                BodyEquipmentInstance equipment = manager.GetEquipped(slot.SlotType); // 실제 장착 여부
+                Check(Get<GameObject>(slot, "equippedObject") != null &&
+                      Get<GameObject>(slot, "equippedObject").activeSelf == (equipment != null), "장착 슬롯 Item 활성 상태 오류");
+                Call(slot, "OpenDetail");
+                Check(popup.gameObject.activeSelf == (equipment != null), "빈 슬롯 또는 장착 슬롯 상세 표시 오류");
+                if (equipment != null)
+                {
+                    Check(Get<BodyEquipmentSlot>(popup, "_displayedSlot") == slot.SlotType, "상세 팝업 장착 부위 불일치");
+                    panel.Refresh();
+                    Call(popup, "OnEnable");
+                    Call(popup, "OnEnable");
+                    Get<Button>(popup, "closeButton").onClick.Invoke();
+                    Check(!popup.gameObject.activeSelf, "상세 팝업 닫기 실패");
+                    Call(slot, "OpenDetail");
+                    Check(popup.gameObject.activeSelf, "상세 팝업 재열기 실패");
+                }
+            }
+            Check(CountListeners(manager, "StateChanged", panel) == 1, "장착 UI 이벤트 중복 등록");
+            Button legacyButton = Get<Button>(panel, "inventoryButton"); // 호환성을 위해 남긴 이전 버튼
+            Check(legacyButton == null || !legacyButton.gameObject.activeSelf, "이전 인벤토리 버튼이 활성 상태입니다.");
+            BodyEquipmentComparePopup compare = Get<BodyEquipmentComparePopup>(panel, "comparePopup"); // 기존 뽑기 결과 비교 창
+            foreach (BodyEquipmentInstance item in manager.Inventory)
+            {
+                if (manager.IsEquipped(item.uniqueId) || item.isLocked) continue;
+                compare.Open(manager, item.uniqueId);
+                Call(compare, "OnEnable");
+                Call(compare, "OnEnable");
+                Button dismantle = Get<Button>(compare, "dismantleButton"); // 명시적으로 연결한 새 장비 파기 버튼
+                Button cancel = Get<Button>(compare, "cancelDismantleButton"); // 기존 확인 영역의 취소 버튼
+                Check(dismantle != null && dismantle.GetComponent<Graphic>().raycastTarget &&
+                      cancel != null && cancel.GetComponent<Graphic>().raycastTarget, "파기 또는 취소 클릭 Graphic 누락");
+                dismantle.onClick.Invoke();
+                Check(Get<GameObject>(compare, "confirmationRoot").activeSelf, "파기 확인 창 열기 실패");
+                cancel.onClick.Invoke();
+                Check(!Get<GameObject>(compare, "confirmationRoot").activeSelf && manager.GetEquipment(item.uniqueId) != null, "파기 취소 후 장비 보존 실패");
+                compare.Close();
+                break;
+            }
+            Debug.Log("[EquippedSlotInteraction] PASS: 실제 슬롯/빈 슬롯/단일 팝업/닫기·재열기/이벤트 중복 방지");
+        }
+        finally
+        {
+            if (panel != null) Call(panel, "OnDisable");
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    // 던전별 보상, 중복 방지, 퀘스트 진행과 즉시 저장을 같은 진입점에서 검사합니다.
+    private static void ValidateChallengeReward(SaveManager save, CurrencyWalletManager wallet, BodyEquipmentManager manager)
+    {
+        GameObject navigation = PrefabUtility.LoadPrefabContents("Assets/03. Prefabs/UI/Common/MainNavigationController.prefab"); // 실제 연결된 프리팹의 격리 미리보기
+        GameObject upgrade = PrefabUtility.LoadPrefabContents(UpgradeMenuPath); // 실제 티켓 표시와 버튼을 검증할 격리 미리보기
+        BodyDrawPanel drawPanel = upgrade.GetComponentInChildren<BodyDrawPanel>(true); // 실제 신체 뽑기 UI
+        try
+        {
+            ChallengeDungeonClearBridge bridge = navigation.GetComponent<ChallengeDungeonClearBridge>(); // 활성 루트에 연결된 실제 보상 브리지
+            Check(bridge != null && navigation.activeSelf && navigation.GetComponent<MainNavigationController>().ChallengeClearBridge == bridge, "활성 네비게이션 루트의 Bridge 연결 누락");
+            Set(bridge, "_save", save);
+            Check(save.RegisterProvider(bridge), "Challenge Clear Provider 등록 실패");
+            Set(bridge, "_ready", true);
+            ChallengeDungeonRewardView[] views = navigation.GetComponentsInChildren<ChallengeDungeonRewardView>(true); // 실제 두 보상 카드
+            Check(views.Length == 2, "Challenge 보상 카드 수 오류");
+            foreach (ChallengeDungeonRewardView view in views)
+            {
+                string id = Get<string>(view, "dungeonId"); // 카드에 연결한 던전 ID
+                Check(bridge.TryGetReward(id, out ChallengeDungeonRewardSO reward) && Get<ChallengeDungeonClearBridge>(view, "clearBridge") == bridge, "Challenge UI와 지급 보상 원본 불일치");
+                Call(view, "OnEnable");
+                TMP_Text amountText = Get<TMP_Text>(view, "rewardAmountText"); // 전용 보상 수량 TMP
+                Check(amountText != null && amountText.name == "RewardValueText" && amountText.text == reward.Amount.ToString(), "전용 보상 텍스트 값 또는 연결 오류");
+                Check(Get<Image>(view, "rewardIcon").sprite == reward.Icon && reward.Icon != null, "티켓 보상 아이콘 연결 오류");
+                Check(reward.Amount == (id == "body_challenge_01" ? 1L : 2L), "초기 던전 보상 수량 오류");
+            }
+            wallet.ResetSaveData();
+            Call(drawPanel, "OnEnable");
+            Call(drawPanel, "OnEnable");
+            TMP_Text ticketText = Get<TMP_Text>(drawPanel, "ticketText"); // 기존 신체 뽑기권 표시
+            QuestManager quests = QuestManager.Instance; // 이미 준비된 기존 퀘스트 원본
+            long questBefore = ((QuestState)quests.CaptureSaveData()).dungeonClearCount; // 클리어 전 퀘스트 진행도
+            Check(!bridge.TryProcessDungeonClear("unknown", "run_1"), "알 수 없는 던전을 처리했습니다.");
+            Check(bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && ticketText.text == "1", "1 Ticket 클리어 또는 즉시 UI 갱신 실패");
+            Check(!bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && ticketText.text == "1", "같은 실행에 중복 보상을 지급했습니다.");
+            Check(bridge.TryProcessDungeonClear("body_challenge_02", "run_2") && ticketText.text == "3", "2 Ticket 클리어 또는 합산 오류");
+            Check(((QuestState)quests.CaptureSaveData()).dungeonClearCount == questBefore + 2L, "Dungeon Quest 중복 진행 오류");
+            Check(save.HasProviderData(bridge.SaveKey), "Challenge Clear 처리 결과가 즉시 저장되지 않았습니다.");
+            Check(CountListeners(wallet, "CurrencyChanged", drawPanel) == 1 && CountListeners(manager, "StateChanged", drawPanel) == 1, "Body Draw Listener 중복 등록");
+            Check(Get<TMP_Text>(drawPanel, "singleCostText").text == "1" && Get<TMP_Text>(drawPanel, "tenCostText").text == "10", "Body Draw 비용 표시 오류");
+            Check(Get<Button>(drawPanel, "drawOneButton").interactable && !Get<Button>(drawPanel, "drawTenButton").interactable, "현재 지갑 기준 버튼 상태 오류");
+            Check(manager.TryDraw(1, out IReadOnlyList<BodyDrawResult> one) && one.Count == 1 && ticketText.text == "2", "Challenge Ticket으로 1회 장비 뽑기 실패");
+            for (int index = 0; index < 4; index++) Check(bridge.TryProcessDungeonClear("body_challenge_02", "ten_run_" + index), "10회 테스트를 위한 별도 클리어 실패");
+            Check(ticketText.text == "10" && Get<Button>(drawPanel, "drawTenButton").interactable, "10 Ticket UI 또는 버튼 상태 오류");
+            Check(manager.TryDraw(10, out IReadOnlyList<BodyDrawResult> ten) && ten.Count == 10 && ticketText.text == "0", "Challenge Ticket으로 10회 장비 뽑기 실패");
+            bridge.ResetSaveData();
+            Check(save.LoadGame() && !bridge.TryProcessDungeonClear("body_challenge_01", "run_1") && wallet.GetAmount(GameCurrencyType.BodyDrawTicket) == 0L, "재로드 후 중복 방지 또는 지갑 복원 실패");
+            ChallengeDungeonRewardBinding[] bindings = Get<ChallengeDungeonRewardBinding[]>(bridge, "dungeonRewards"); // 테스트 복제본의 보상표
+            Set(bridge, "dungeonRewards", new[] { bindings[0], bindings[1], new ChallengeDungeonRewardBinding { dungeonId = "missing_reward" } });
+            Call(bridge, "BuildRewardLookup");
+            Check(!bridge.TryProcessDungeonClear("missing_reward", "run_3") && ticketText.text == "0", "누락 보상 안전 차단 실패");
+            Check(CountListeners(wallet, "CurrencyChanged", drawPanel) == 1, "저장 복원 후 Listener 중복 등록");
+            Debug.Log("[ChallengeRewardFlow] PASS: 실제 카드 1/2 Ticket, 동일 SO/아이콘, 중복/무효/누락 차단, Quest, 저장 복원, 즉시 UI, 1회/10회 장비 뽑기");
+        }
+        finally
+        {
+            if (drawPanel != null) Call(drawPanel, "OnDisable");
+            PrefabUtility.UnloadPrefabContents(upgrade);
+            PrefabUtility.UnloadPrefabContents(navigation);
         }
     }
 
@@ -314,11 +521,39 @@ public static class BodyEquipmentSmokeTestTool
         Check(drawPanel != null && Get<Button>(drawPanel, "drawOneButton") != null && Get<Button>(drawPanel, "drawTenButton") != null &&
               Get<Button>(drawPanel, "researchButton") != null && Get<Button>(drawPanel, "probabilityButton") != null && Get<Button>(drawPanel, "inventoryButton") != null,
               "UpgradeMenu 신체 장비 화면 또는 버튼 참조 누락");
+        BodyEquipmentSlotView[] slotViews = Get<BodyEquipmentSlotView[]>(drawPanel, "equippedSlots"); // 실제 메인 화면에 고정된 8개 슬롯
+        Check(slotViews != null && slotViews.Length == 8, "메인 신체 화면의 8개 장착 슬롯 참조 누락");
+        HashSet<BodyEquipmentSlot> connectedSlots = new(); // enum 중복 및 누락 검사
+        foreach (BodyEquipmentSlotView slotView in slotViews)
+            Check(slotView != null && connectedSlots.Add(slotView.SlotType) && Get<Button>(slotView, "slotButton") != null &&
+                  Get<GameObject>(slotView, "emptyObject") != null && Get<Image>(slotView, "equipmentIcon") != null &&
+                  Get<Image>(slotView, "rarityFrame") != null, "장착 슬롯 종류 중복 또는 UI 참조 누락");
+        Check(connectedSlots.Count == 8 && Get<BodyEquipmentInfoView>(drawPanel, "centerResultView") != null &&
+              Get<GameObject>(drawPanel, "centerResultRoot") != null, "중앙 뽑기 결과 연결 누락");
+        BodyEquipmentDetailPopup detailPopup = Get<BodyEquipmentDetailPopup>(drawPanel, "detailPopup"); // 슬롯 클릭용 상세 팝업
+        BodyEquipmentComparePopup comparePopup = Get<BodyEquipmentComparePopup>(drawPanel, "comparePopup"); // 새 장비 비교 팝업
+        Check(detailPopup != null && comparePopup != null && Get<BodyEquipmentInfoView>(detailPopup, "equipmentView") != null &&
+              Get<BodyEquipmentInfoView>(comparePopup, "currentView") != null && Get<BodyEquipmentInfoView>(comparePopup, "newView") != null,
+              "상세/비교 팝업 필수 참조 누락");
+        BodyEquipmentInfoView currentInfo = Get<BodyEquipmentInfoView>(comparePopup, "currentView"); // Popup_1 현재 장비 정보 View
+        BodyEquipmentInfoView newInfo = Get<BodyEquipmentInfoView>(comparePopup, "newView"); // Popup_2 새 장비 정보 View
+        Check(newInfo.GetComponentsInChildren<Button>(true).Length >= 2, "Popup_2의 파괴/장착 버튼 누락");
+        Check(Get<BodyEquipmentStatRowView[]>(currentInfo, "statRows").Length == 5 &&
+              Get<BodyEquipmentStatRowView[]>(newInfo, "statRows").Length == 5,
+              "ItemDetail의 Main과 최대 4개 Sub Stat 행 연결 누락");
+        Check(detailPopup.transform.IsChildOf(menuAsset.transform) && comparePopup.transform.IsChildOf(menuAsset.transform) &&
+              detailPopup.transform.root == menuAsset.transform && comparePopup.transform.root == menuAsset.transform,
+              "신체 장비 팝업이 UpgradeMenuController 루트 밖에 있음");
         GameObject menuInstance = (GameObject)PrefabUtility.InstantiatePrefab(menuAsset, preview); // 버튼 중복 실행을 검사할 메뉴 인스턴스
         BodyDrawPanel drawInstance = menuInstance.GetComponentInChildren<BodyDrawPanel>(true); // 인스턴스의 새 Draw 화면
+        BodyEquipmentComparePopup compareInstance = Get<BodyEquipmentComparePopup>(drawInstance, "comparePopup"); // 중첩 버튼 참조를 복구할 실제 비교 팝업
         drawInstance.gameObject.SetActive(true);
         Call(drawInstance, "OnEnable");
         Call(drawInstance, "OnEnable");
+        Call(compareInstance, "OnEnable");
+        Check(Get<Button>(compareInstance, "equipButton") != null && Get<Button>(compareInstance, "dismantleButton") != null,
+              "Popup_2 중첩 Prefab의 장착/파괴 버튼 참조 복구 실패");
+        ValidateItemDetailComparison(manager, drawInstance);
         long drawCountBefore = manager.TotalBodyDrawCount; // 버튼 한 번 전 누적 Draw 수
         Get<Button>(drawInstance, "drawOneButton").onClick.Invoke();
         Check(manager.TotalBodyDrawCount == drawCountBefore + 1L, "Draw 버튼 Listener가 중복 실행됨");
@@ -328,6 +563,73 @@ public static class BodyEquipmentSmokeTestTool
         UnityEngine.Object.DestroyImmediate(menuInstance);
         UpgradePanel[] legacyPanels = menuAsset.GetComponentsInChildren<UpgradePanel>(true); // 보존하되 비활성화한 기존 Stat Gacha UI
         for (int index = 0; index < legacyPanels.Length; index++) Check(!legacyPanels[index].gameObject.activeSelf, "기존 Stat Gacha UI가 활성 상태로 남아 있음");
+    }
+
+    // CI와 BatchMode에서 테스트 결과에 맞는 종료 코드를 반환한다.
+    public static void RunBatch()
+    {
+        try
+        {
+            Run();
+            EditorApplication.Exit(0);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogException(exception);
+            EditorApplication.Exit(1);
+        }
+    }
+
+    // ItemDetail 고정 행의 상승, 하락, 동일, 신규와 손실 옵션 표시를 검증한다.
+    private static void ValidateItemDetailComparison(BodyEquipmentManager manager, BodyDrawPanel panel)
+    {
+        BodyEquipmentComparePopup popup = Get<BodyEquipmentComparePopup>(panel, "comparePopup"); // 실제 ItemDetail 비교 Controller
+        BodyEquipmentInfoView currentView = Get<BodyEquipmentInfoView>(popup, "currentView"); // Popup_1 현재 장비 View
+        BodyEquipmentInfoView newView = Get<BodyEquipmentInfoView>(popup, "newView"); // Popup_2 새 장비 View
+        BodyEquipmentInstance source = manager.Inventory[0]; // 유효한 Definition과 Rarity를 빌릴 실제 장비
+        BodyEquipmentInstance current = source.Clone(); // 비교용 현재 장비 복제본
+        current.mainStat = new EquipmentStatRoll { statType = EquipmentStatType.Attack, value = 100f };
+        current.subStats = new List<EquipmentStatRoll>
+        {
+            new() { statType = EquipmentStatType.Health, value = 10f },
+            new() { statType = EquipmentStatType.CriticalChance, value = 5f }
+        };
+        BodyEquipmentInstance next = source.Clone(); // 비교용 새 장비 복제본
+        next.mainStat = new EquipmentStatRoll { statType = EquipmentStatType.Attack, value = 150f };
+        next.subStats = new List<EquipmentStatRoll>
+        {
+            new() { statType = EquipmentStatType.Defense, value = 8f },
+            new() { statType = EquipmentStatType.CriticalChance, value = 5f },
+            new() { statType = EquipmentStatType.AttackSpeed, value = 7.2f }
+        };
+        currentView.Bind(manager, current, null, false);
+        newView.Bind(manager, next, current, true);
+        BodyEquipmentStatRowView attack = FindStatRow(newView, EquipmentStatType.Attack); // 상승 비교 행
+        BodyEquipmentStatRowView defense = FindStatRow(newView, EquipmentStatType.Defense); // 새 장비에만 있는 행
+        BodyEquipmentStatRowView health = FindStatRow(newView, EquipmentStatType.Health); // 새 장비에서 사라지는 행
+        BodyEquipmentStatRowView critical = FindStatRow(newView, EquipmentStatType.CriticalChance); // 동일 Percent 행
+        BodyEquipmentStatRowView attackSpeed = FindStatRow(newView, EquipmentStatType.AttackSpeed); // 디자인 이름과 무관한 실제 Roll 행
+        Check(Get<GameObject>(attack, "upIcon").activeSelf && !Get<GameObject>(attack, "downIcon").activeSelf, "Attack 상승 아이콘 오류");
+        Check(Get<GameObject>(defense, "upIcon").activeSelf && !Get<GameObject>(defense, "downIcon").activeSelf, "새 장비에만 있는 Defense 상승 표시 오류");
+        Check(health.gameObject.activeSelf && !Get<GameObject>(health, "upIcon").activeSelf && Get<GameObject>(health, "downIcon").activeSelf,
+              "기존 장비에만 있는 HP 손실 표시 오류");
+        Check(!Get<GameObject>(critical, "upIcon").activeSelf && !Get<GameObject>(critical, "downIcon").activeSelf &&
+              Get<TMP_Text>(critical, "statValueText").text.Contains("%"), "동일 Percent Stat 표시 오류");
+        Check(Get<GameObject>(attackSpeed, "upIcon").activeSelf && Get<TMP_Text>(attackSpeed, "statValueText").text.Contains("%"),
+              "다섯 번째 재사용 행의 공격속도 Roll 또는 상승 표시 오류");
+        newView.Bind(manager, next, null, true);
+        attack = FindStatRow(newView, EquipmentStatType.Attack);
+        Check(!Get<GameObject>(attack, "upIcon").activeSelf && !Get<GameObject>(attack, "downIcon").activeSelf,
+              "현재 장비가 없을 때 비교 아이콘이 표시됨");
+    }
+
+    // 공통 InfoView에서 지정 StatType을 현재 표시 중인 재사용 행을 반환한다.
+    private static BodyEquipmentStatRowView FindStatRow(BodyEquipmentInfoView view, EquipmentStatType type)
+    {
+        BodyEquipmentStatRowView[] rows = Get<BodyEquipmentStatRowView[]>(view, "statRows"); // ItemDetail에 연결된 재사용 행
+        foreach (BodyEquipmentStatRowView row in rows)
+            if (row != null && row.StatType == type) return row;
+        throw new InvalidOperationException($"ItemDetail에 {type} Stat Row가 없습니다.");
     }
 
     // 기본 Quest Asset의 기존 스탯 가챠 조건이 신체 장비 Draw로 이전됐는지 검사합니다.

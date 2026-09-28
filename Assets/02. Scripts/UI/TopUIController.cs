@@ -32,6 +32,7 @@ public sealed class TopUIController : MonoBehaviour
     private UpgradeManager upgradeManager; // 실제 재화 원본과 변경 이벤트를 제공하는 기존 매니저
     private StageManager stageManager; // 현재 씬에서 실제 Stage 진행값을 제공하는 매니저
     private CombatPowerSnapshot currentCombatPower; // 가장 최근 실제 최종 스탯으로 계산한 전투력 결과
+    private BodyEquipmentManager equipmentManager; // 전투와 동일한 현재 장착 스탯 원본
     private bool settingsListenerRegistered; // 설정 버튼 Listener 중복 등록 방지 상태
     private bool combatInfoListenerRegistered; // 전투력 정보 버튼 Listener 중복 등록 방지 상태
     private bool settingsCloseEventRegistered; // Settings 닫기 이벤트 중복 구독 방지 상태
@@ -68,6 +69,9 @@ public sealed class TopUIController : MonoBehaviour
     // 활성화될 때 버튼 입력과 Upgrade 상태 변경 이벤트를 연결합니다.
     private void OnEnable()
     {
+        BodyEquipmentManager.AvailabilityChanged -= BindEquipmentStats;
+        BodyEquipmentManager.AvailabilityChanged += BindEquipmentStats;
+        BindEquipmentStats(BodyEquipmentManager.HasInstance ? BodyEquipmentManager.Instance : null);
         RegisterSettingsListener();
         RegisterSettingsCloseEvent();
         RegisterCombatInfoListener();
@@ -82,6 +86,9 @@ public sealed class TopUIController : MonoBehaviour
     // 비활성화될 때 버튼 입력과 Upgrade 상태 변경 이벤트를 해제합니다.
     private void OnDisable()
     {
+        BodyEquipmentManager.AvailabilityChanged -= BindEquipmentStats;
+        if (equipmentManager != null) equipmentManager.EquippedStatsChanged -= RefreshCombatPower;
+        equipmentManager = null;
         UnregisterSettingsListener();
         UnregisterSettingsCloseEvent();
         UnregisterCombatInfoListener();
@@ -178,6 +185,15 @@ public sealed class TopUIController : MonoBehaviour
         }
 
         if (combatInfoPanel != null) combatInfoPanel.RefreshIfOpen(currentCombatPower);
+    }
+
+    // 장비 저장 복원과 교체 후 전투력 및 열린 상세 패널을 즉시 갱신한다.
+    private void BindEquipmentStats(BodyEquipmentManager manager)
+    {
+        if (equipmentManager != null) equipmentManager.EquippedStatsChanged -= RefreshCombatPower;
+        equipmentManager = manager;
+        if (equipmentManager != null) equipmentManager.EquippedStatsChanged += RefreshCombatPower;
+        RefreshCombatPower();
     }
 
     // 기존 UpgradeManager의 상태 변경 이벤트를 중복 없이 구독합니다.

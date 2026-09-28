@@ -18,8 +18,13 @@ public sealed class BodyDrawPanel : MonoBehaviour
     [SerializeField] private Button drawTenButton; // 장비를 10회 뽑는다
     [SerializeField] private Button researchButton; // 뽑기 연구 팝업을 연다
     [SerializeField] private Button probabilityButton; // 실제 레어도 확률 팝업을 연다
-    [SerializeField] private Button inventoryButton; // 장비 인벤토리 팝업을 연다
+    [SerializeField] private Button inventoryButton; // 이전 프리팹의 인벤토리 버튼은 숨겨 호환 참조만 유지한다
     [SerializeField] private Button backButton; // 기존 강화 종류 선택 화면으로 돌아간다
+    [SerializeField] private BodyEquipmentSlotView[] equippedSlots; // 기존 화면에 항상 보이는 8개 장착 슬롯
+    [SerializeField] private BodyEquipmentInfoView centerResultView; // 중앙에 마지막 획득 장비를 간단히 보여준다
+    [SerializeField] private GameObject centerResultRoot; // 뽑기 전에는 숨길 중앙 결과 영역
+    [SerializeField] private BodyEquipmentComparePopup comparePopup; // 새 장비와 현재 장비를 비교하는 루트 내부 팝업
+    [SerializeField] private BodyEquipmentDetailPopup detailPopup; // 장착 슬롯을 눌렀을 때 열 루트 내부 팝업
     private BodyEquipmentManager _manager; // 장비 Draw와 Inventory 실제 원본
     private CurrencyWalletManager _wallet; // 신체 뽑기권 실제 원본
 
@@ -38,8 +43,12 @@ public sealed class BodyDrawPanel : MonoBehaviour
         AddButtonListener(drawTenButton, DrawTen);
         AddButtonListener(researchButton, OpenResearch);
         AddButtonListener(probabilityButton, OpenProbability);
-        AddButtonListener(inventoryButton, OpenInventory);
+        if (inventoryButton != null) inventoryButton.gameObject.SetActive(false);
+        if (inventoryCountText != null) inventoryCountText.gameObject.SetActive(false);
         AddButtonListener(backButton, GoBack);
+        if (equippedSlots != null)
+            foreach (BodyEquipmentSlotView slot in equippedSlots) if (slot != null) slot.Bind(_manager, OpenDetail);
+        if (centerResultRoot != null) centerResultRoot.SetActive(false);
         Refresh();
     }
 
@@ -56,8 +65,9 @@ public sealed class BodyDrawPanel : MonoBehaviour
         RemoveButtonListener(drawTenButton, DrawTen);
         RemoveButtonListener(researchButton, OpenResearch);
         RemoveButtonListener(probabilityButton, OpenProbability);
-        RemoveButtonListener(inventoryButton, OpenInventory);
         RemoveButtonListener(backButton, GoBack);
+        if (comparePopup != null) comparePopup.Close();
+        if (detailPopup != null) detailPopup.Close();
     }
 
     // Ticket, 연구 레벨, 인벤토리와 Draw 가능 상태를 이벤트 시점에만 갱신합니다.
@@ -74,6 +84,9 @@ public sealed class BodyDrawPanel : MonoBehaviour
         SetText(inventoryCountText, capacity <= 0 ? _manager.InventoryCount.ToString() : $"{_manager.InventoryCount} / {capacity}");
         if (drawOneButton != null) drawOneButton.interactable = _manager.CanDraw(1);
         if (drawTenButton != null) drawTenButton.interactable = _manager.CanDraw(10);
+        if (equippedSlots != null)
+            foreach (BodyEquipmentSlotView slot in equippedSlots) if (slot != null) slot.Refresh();
+        if (detailPopup != null && detailPopup.gameObject.activeSelf) detailPopup.RefreshEquipped(_manager);
     }
 
     // 1회 뽑기를 실행합니다.
@@ -82,7 +95,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
     // 10회 뽑기를 실행합니다.
     private void DrawTen() { Draw(10); }
 
-    // 실제 Manager에서 Ticket을 소비하고 성공 결과 팝업을 엽니다.
+    // 실제 Manager에서 Ticket을 소비하고 1회는 비교, 10회는 기존 결과 목록으로 연결합니다.
     private async void Draw(int count)
     {
         if (_manager == null || !_manager.TryDraw(count, out IReadOnlyList<BodyDrawResult> results))
@@ -92,7 +105,14 @@ public sealed class BodyDrawPanel : MonoBehaviour
             return;
         }
         SetText(messageText, string.Empty);
-        try { await BodyDrawResultPopup.ShowAsync(results); }
+        if (results == null || results.Count == 0) return;
+        if (count == 1)
+        {
+            BodyEquipmentInstance equipment = results[0].Equipment; // 이미 Inventory에 저장된 이번 결과
+            if (equipment != null) OpenComparison(equipment.uniqueId);
+            return;
+        }
+        try { await BodyDrawResultPopup.ShowAsync(results, OpenComparison); }
         catch (System.Exception exception) { Debug.LogException(exception, this); }
     }
 
@@ -114,6 +134,24 @@ public sealed class BodyDrawPanel : MonoBehaviour
         BodyEquipmentInstance equipment = results[results.Count - 1].Equipment; // 최근 결과의 마지막 장비
         if (!BodyEquipmentUIFormatter.TryGetDefinitions(_manager, equipment, out BodyEquipmentDefinitionSO definition, out BodyRarityDefinitionSO rarity)) return;
         SetText(recentResultText, $"최근 획득: {rarity.DisplayName} {definition.DisplayName}");
+        if (centerResultRoot != null) centerResultRoot.SetActive(true);
+        if (centerResultView != null) centerResultView.Bind(_manager, equipment);
+    }
+
+    // 현재 장착 슬롯을 누르면 그 장비 하나의 상세 팝업을 엽니다.
+    private void OpenDetail(BodyEquipmentSlot slotType)
+    {
+        BodyEquipmentInstance equipment = _manager == null ? null : _manager.GetEquipped(slotType); // 클릭 시점의 장착 원본
+        if (equipment == null) return;
+        if (comparePopup != null) comparePopup.Close();
+        if (detailPopup != null) detailPopup.Open(_manager, equipment);
+    }
+
+    // 결과 ID가 아직 Inventory에 있을 때만 같은 부위의 현재 장비와 비교합니다.
+    private void OpenComparison(string instanceId)
+    {
+        if (detailPopup != null) detailPopup.Close();
+        if (comparePopup != null) comparePopup.Open(_manager, instanceId);
     }
 
     // 신체 뽑기권이 바뀔 때만 화면을 갱신합니다.
@@ -136,13 +174,6 @@ public sealed class BodyDrawPanel : MonoBehaviour
         catch (System.Exception exception) { Debug.LogException(exception, this); }
     }
 
-    // 소유 장비 인벤토리 팝업을 엽니다.
-    private async void OpenInventory()
-    {
-        try { await BodyInventoryPopup.ShowAsync(); }
-        catch (System.Exception exception) { Debug.LogException(exception, this); }
-    }
-
     // 기존 강화 종류 선택 화면으로 돌아갑니다.
     private void GoBack()
     {
@@ -156,7 +187,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
         button.onClick.RemoveListener(action);
         button.onClick.AddListener(action);
     }
-
+    
     // 등록한 버튼 Listener를 제거합니다.
     private static void RemoveButtonListener(Button button, UnityEngine.Events.UnityAction action) { if (button != null) button.onClick.RemoveListener(action); }
 

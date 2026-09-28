@@ -248,17 +248,11 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         return result;
     }
 
-    // 전투 시스템이 그대로 사용하는 최종 스탯 Snapshot API입니다.
+    // 구 가챠 저장값은 호환 조회만 허용하고 성장 보너스는 항상 0으로 반환한다.
     public UpgradeStatSnapshot GetStatSnapshot(UpgradeStatType type)
     {
-        UpgradeStatDefinition definition = balanceSettings == null ? null : balanceSettings.GetStat(type); // 요청 스탯 정의
         UpgradeStatValue value = GetValue(type); // 요청 스탯 저장값
-        if (definition == null)
-            return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel, 0f, 0f);
-        float efficiency = definition.baseCoefficient * GetResearchMultiplier(definition, value.researchLevel); // 수치 1당 효율
-        float effective = value.accumulatedValue; // 전역 증폭 적용 전 유효 누적값
-        if (type != UpgradeStatType.StatIncrease) effective *= 1f + GetStatIncreaseEffect();
-        return new UpgradeStatSnapshot(type, value.accumulatedValue, effective, value.researchLevel, efficiency, effective * efficiency);
+        return new UpgradeStatSnapshot(type, value.accumulatedValue, 0f, value.researchLevel, 0f, 0f);
     }
 
     // 현재 초당 재화 생산량을 반환합니다.
@@ -320,7 +314,7 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         reward = _pendingOfflineReward;
         if (!_hasPendingOfflineReward) return false;
         _hasPendingOfflineReward = false;
-        return reward.EarnedCurrency > 0;
+        return reward.EarnedCurrency > 0 || reward.EarnedBodyDrawTickets > 0L;
     }
 
     // 입력한 경과 초에 현재 상한과 효율을 적용한 오프라인 보상을 계산합니다.
@@ -331,7 +325,10 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         float efficiency = GetOfflineEfficiency(); // 현재 오프라인 효율
         double rawReward = GetCurrencyPerSecond() * appliedSeconds * efficiency; // 반올림 전 보상
         int earnedCurrency = ToSafeCurrency(Math.Floor(rawReward)); // 비정상 수치와 지갑 범위를 보호한 정수 보상
-        return new OfflineCurrencyReward(safeActualSeconds, appliedSeconds, efficiency, earnedCurrency);
+        long hourlyTickets = currencyUpgradeBalance == null ? 0L : Math.Max(0L, currencyUpgradeBalance.offlineBodyDrawTicketsPerHour); // Inspector에 정의된 시간당 티켓 수
+        double rawTickets = (double)hourlyTickets * appliedSeconds * efficiency / 3600d; // 기존 오프라인 시간 상한과 효율을 적용한 티켓 수
+        long earnedTickets = rawTickets <= 0d || double.IsNaN(rawTickets) ? 0L : rawTickets >= long.MaxValue ? long.MaxValue : (long)Math.Floor(rawTickets); // 지갑과 같은 long 범위
+        return new OfflineCurrencyReward(safeActualSeconds, appliedSeconds, efficiency, earnedCurrency, earnedTickets);
     }
 
     // 현재 가챠 1회를 실행하고 저장 전 결과를 만듭니다.
@@ -397,31 +394,6 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
         _state.gachaLevel++;
         _state.drawsAtCurrentLevel = 0;
         return true;
-    }
-
-    // 자기 자신을 제외한 다른 스탯에 적용할 전역 증폭값을 반환합니다.
-    private float GetStatIncreaseEffect()
-    {
-        UpgradeStatSnapshot increase = GetStatSnapshotWithoutAmplifier(UpgradeStatType.StatIncrease); // 전역 증폭 자체 스냅샷
-        return increase.FinalBonus;
-    }
-
-    // 전역 증폭을 재귀 적용하지 않은 스탯 스냅샷을 반환합니다.
-    private UpgradeStatSnapshot GetStatSnapshotWithoutAmplifier(UpgradeStatType type)
-    {
-        UpgradeStatDefinition definition = balanceSettings == null ? null : balanceSettings.GetStat(type); // 요청 스탯 정의
-        UpgradeStatValue value = GetValue(type); // 요청 스탯 저장값
-        if (definition == null)
-            return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel, 0f, 0f);
-        float efficiency = definition.baseCoefficient * GetResearchMultiplier(definition, value.researchLevel); // 연구 적용 효율
-        return new UpgradeStatSnapshot(type, value.accumulatedValue, value.accumulatedValue, value.researchLevel,
-            efficiency, value.accumulatedValue * efficiency);
-    }
-
-    // 연구 레벨에 따른 완만한 효율 배율을 계산합니다.
-    private static float GetResearchMultiplier(UpgradeStatDefinition definition, int level)
-    {
-        return 1f + definition.researchMaxMultiplierBonus * (1f - Mathf.Exp(-definition.researchCurveRate * level));
     }
 
     // 저장 상태에서 지정한 스탯 값을 찾거나 기본값으로 추가합니다.
@@ -768,11 +740,15 @@ public sealed class UpgradeManager : Singleton<UpgradeManager>, ISaveDataProvide
             DateTimeStyles.RoundtripKind, out DateTime savedUtc); // UTC 파싱 성공 여부
         if (!parsed) return false;
         OfflineCurrencyReward reward = CalculateOfflineReward((nowUtc - savedUtc.ToUniversalTime()).TotalSeconds); // 이번 접속 보상
-        if (reward.EarnedCurrency <= 0) return false;
-        _state.currency = (int)Math.Min(int.MaxValue, (long)_state.currency + reward.EarnedCurrency);
-        _pendingOfflineReward = reward;
+        if (reward.EarnedCurrency <= 0 && reward.EarnedBodyDrawTickets <= 0L) return false;
+        long grantedTickets = 0L; // 기존 지갑 지급에 성공한 신체 뽑기권 수
+        if (reward.EarnedBodyDrawTickets > 0L && CurrencyWalletManager.EnsureInstance().AddCurrency(GameCurrencyType.BodyDrawTicket, reward.EarnedBodyDrawTickets))
+            grantedTickets = reward.EarnedBodyDrawTickets;
+        if (reward.EarnedCurrency > 0) _state.currency = (int)Math.Min(int.MaxValue, (long)_state.currency + reward.EarnedCurrency);
+        if (reward.EarnedCurrency <= 0 && grantedTickets <= 0L) return false;
+        _pendingOfflineReward = new OfflineCurrencyReward(reward.ActualSeconds, reward.AppliedSeconds, reward.Efficiency, reward.EarnedCurrency, grantedTickets);
         _hasPendingOfflineReward = true;
-        offlineRewardGranted?.Invoke(reward);
+        offlineRewardGranted?.Invoke(_pendingOfflineReward);
         return true;
     }
 

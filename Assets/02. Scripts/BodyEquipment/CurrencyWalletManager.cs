@@ -8,7 +8,7 @@ public sealed class CurrencyWalletManager : Singleton<CurrencyWalletManager>, IS
 {
     private const string ProviderKey = "currency_wallet"; // 통합 저장에서 사용할 안정적인 Provider 키
     private const int CurrentSaveVersion = 1; // Currency Wallet 내부 저장 형식 버전
-    [SerializeField, Min(0)] private int startingBodyDrawTickets = 10; // 새 저장이 시작할 기본 신체 뽑기권
+    [SerializeField, Min(0)] private int startingBodyDrawTickets; // 새 저장과 지갑 구역이 없는 이전 저장의 기본 신체 뽑기권
     [SerializeField, Min(0)] private int testBodyDrawTickets = 100; // ContextMenu에서 지급할 테스트 뽑기권 수
     private CurrencyWalletState _state = new(); // 종류별 재화 영구 원본
     private readonly Dictionary<GameCurrencyType, GameCurrencyEntry> _entries = new(); // 반복 탐색을 막는 타입별 캐시
@@ -50,6 +50,12 @@ public sealed class CurrencyWalletManager : Singleton<CurrencyWalletManager>, IS
     {
         EnsureEntryCache();
         return _entries.TryGetValue(type, out GameCurrencyEntry entry) ? Math.Max(0L, entry.amount) : 0L;
+    }
+
+    // 지정 재화를 요청한 양만큼 지불할 수 있는지 확인합니다.
+    public bool CanAfford(GameCurrencyType type, long amount)
+    {
+        return _ready && amount >= 0L && GetAmount(type) >= amount;
     }
 
     // 외부 보상 시스템이 같은 경로로 양수 재화를 지급합니다.

@@ -21,7 +21,7 @@ public static class UpgradeSetupTool
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Selection.activeObject = panelPrefab == null ? balance : panelPrefab.gameObject;
+        Selection.activeObject = panelPrefab == null ? (Object)balance : panelPrefab.gameObject;
         EditorGUIUtility.PingObject(Selection.activeObject);
 
         Debug.Log(

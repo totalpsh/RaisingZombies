@@ -10,6 +10,7 @@ public sealed class OfflineCurrencyRewardPopup : MonoBehaviour
     [SerializeField] private TMP_Text appliedTimeText; // 상한 적용 시간
     [SerializeField] private TMP_Text efficiencyText; // 적용 효율
     [SerializeField] private TMP_Text rewardText; // 최종 획득 재화
+    [SerializeField] private TMP_Text bodyDrawTicketText; // 설정된 경우 실제 지급된 신체 뽑기권
     [SerializeField] private Button confirmButton; // 팝업 닫기 버튼
 
     // 확인 버튼을 한 번 연결합니다.
@@ -31,6 +32,7 @@ public sealed class OfflineCurrencyRewardPopup : MonoBehaviour
         SetText(appliedTimeText, $"적립 적용 시간: {FormatDuration(reward.AppliedSeconds)}");
         SetText(efficiencyText, $"적립 효율: {reward.Efficiency * 100f:0.##}%");
         SetText(rewardText, $"획득 재화: {reward.EarnedCurrency:N0}");
+        SetText(bodyDrawTicketText, reward.EarnedBodyDrawTickets > 0L ? $"신체 뽑기권: {reward.EarnedBodyDrawTickets:N0}" : string.Empty);
     }
 
     // 확인 버튼 이벤트를 해제합니다.
