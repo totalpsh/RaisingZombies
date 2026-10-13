@@ -20,6 +20,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
     [SerializeField] private Button probabilityButton; // 실제 레어도 확률 팝업을 연다
     [SerializeField] private Button inventoryButton; // 이전 프리팹의 인벤토리 버튼은 숨겨 호환 참조만 유지한다
     [SerializeField] private Button backButton; // 기존 강화 종류 선택 화면으로 돌아간다
+    [SerializeField] private Button testCurrencyTicket; // 누를 때마다 테스트용 신체 뽑기권 10장을 지급한다
     [SerializeField] private BodyEquipmentSlotView[] equippedSlots; // 기존 화면에 항상 보이는 8개 장착 슬롯
     [SerializeField] private BodyEquipmentInfoView centerResultView; // 중앙에 마지막 획득 장비를 간단히 보여준다
     [SerializeField] private GameObject centerResultRoot; // 뽑기 전에는 숨길 중앙 결과 영역
@@ -46,6 +47,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
         if (inventoryButton != null) inventoryButton.gameObject.SetActive(false);
         if (inventoryCountText != null) inventoryCountText.gameObject.SetActive(false);
         AddButtonListener(backButton, GoBack);
+        AddButtonListener(testCurrencyTicket, GrantTestTickets);
         if (equippedSlots != null)
             foreach (BodyEquipmentSlotView slot in equippedSlots) if (slot != null) slot.Bind(_manager, OpenDetail);
         if (centerResultRoot != null) centerResultRoot.SetActive(false);
@@ -66,6 +68,7 @@ public sealed class BodyDrawPanel : MonoBehaviour
         RemoveButtonListener(researchButton, OpenResearch);
         RemoveButtonListener(probabilityButton, OpenProbability);
         RemoveButtonListener(backButton, GoBack);
+        RemoveButtonListener(testCurrencyTicket, GrantTestTickets);
         if (comparePopup != null) comparePopup.Close();
         if (detailPopup != null) detailPopup.Close();
     }
@@ -94,6 +97,13 @@ public sealed class BodyDrawPanel : MonoBehaviour
 
     // 10회 뽑기를 실행합니다.
     private void DrawTen() { Draw(10); }
+
+    // 기존 지갑 API로 테스트용 뽑기권 10장을 지급하고 저장한다.
+    private void GrantTestTickets()
+    {
+        if (_manager == null || !_manager.AddBodyDrawTickets(10L)) return;
+        SaveManager.EnsureInstance().SaveGame();
+    }
 
     // 실제 Manager에서 Ticket을 소비하고 1회는 비교, 10회는 기존 결과 목록으로 연결합니다.
     private async void Draw(int count)
